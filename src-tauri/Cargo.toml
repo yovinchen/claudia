@@ -53,6 +53,10 @@ zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
 serde_yaml = "0.9"
+fluent = "0.16"
+fluent-bundle = "0.15"
+unic-langid = "0.9"
+once_cell = "1.19"
 
 
 [target.'cfg(target_os = "macos")'.dependencies]

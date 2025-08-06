@@ -5,6 +5,7 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
+mod i18n;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -43,6 +44,7 @@ use commands::storage::{
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
+use commands::language::{get_current_language, set_language, get_supported_languages};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -249,6 +251,11 @@ fn main() {
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,
+            
+            // Language Settings
+            get_current_language,
+            set_language,
+            get_supported_languages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

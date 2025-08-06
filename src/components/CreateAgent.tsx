@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { useTranslation } from "@/hooks/useTranslation";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import MDEditor from "@uiw/react-md-editor";
@@ -43,6 +44,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   onAgentCreated,
   className,
 }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState(agent?.name || "");
   const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
@@ -92,9 +94,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       onAgentCreated();
     } catch (err) {
       console.error("Failed to save agent:", err);
-      setError(isEditMode ? "Failed to update agent" : "Failed to create agent");
+      setError(isEditMode ? t('agents.updateFailed') : t('agents.createFailed'));
       setToast({ 
-        message: isEditMode ? "Failed to update agent" : "Failed to create agent", 
+        message: isEditMode ? t('agents.updateFailed') : t('agents.createFailed'), 
         type: "error" 
       });
     } finally {
@@ -108,7 +110,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
          systemPrompt !== (agent?.system_prompt || "") ||
          defaultTask !== (agent?.default_task || "") ||
          model !== (agent?.model || "sonnet")) && 
-        !confirm("You have unsaved changes. Are you sure you want to leave?")) {
+        !confirm(t('messages.unsavedChanges'))) {
       return;
     }
     onBack();
@@ -135,10 +137,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             </Button>
             <div>
               <h2 className="text-lg font-semibold">
-                {isEditMode ? "Edit CC Agent" : "Create CC Agent"}
+                {isEditMode ? t('agents.editAgent') : t('agents.createAgent')}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {isEditMode ? "Update your Claude Code agent" : "Create a new Claude Code agent"}
+                {isEditMode ? t('agents.updateAgentDescription') : t('agents.createAgentDescription')}
               </p>
             </div>
           </div>
@@ -153,7 +155,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {saving ? "Saving..." : "Save"}
+            {saving ? t('app.loading') : t('app.save')}
           </Button>
         </motion.div>
         

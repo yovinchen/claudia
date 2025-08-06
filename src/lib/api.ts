@@ -1879,5 +1879,49 @@ export const api = {
       console.error("Failed to delete slash command:", error);
       throw error;
     }
+  },
+
+  // ================================
+  // Language Settings
+  // ================================
+
+  /**
+   * Gets the current language setting
+   * @returns Promise resolving to the current language locale
+   */
+  async getCurrentLanguage(): Promise<string> {
+    try {
+      return await invoke<string>("get_current_language");
+    } catch (error) {
+      console.error("Failed to get current language:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sets the language setting
+   * @param locale - Language locale to set (e.g., 'en-US', 'zh-CN')
+   * @returns Promise resolving when language is set
+   */
+  async setLanguage(locale: string): Promise<void> {
+    try {
+      await invoke<void>("set_language", { locale });
+    } catch (error) {
+      console.error("Failed to set language:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets the list of supported languages
+   * @returns Promise resolving to array of supported language locales
+   */
+  async getSupportedLanguages(): Promise<string[]> {
+    try {
+      return await invoke<string[]>("get_supported_languages");
+    } catch (error) {
+      console.error("Failed to get supported languages:", error);
+      throw error;
+    }
   }
 };
