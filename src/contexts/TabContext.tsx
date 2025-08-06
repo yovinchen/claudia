@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export interface Tab {
   id: string;
@@ -37,6 +38,7 @@ const TabContext = createContext<TabContextType | undefined>(undefined);
 const MAX_TABS = 20;
 
 export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const defaultTab: Tab = {
       id: generateTabId(),
       type: 'projects',
-      title: 'CC Projects',
+      title: t('ccProjects'),
       status: 'idle',
       hasUnsavedChanges: false,
       order: 0,
@@ -55,7 +57,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setTabs([defaultTab]);
     setActiveTabId(defaultTab.id);
-  }, []);
+  }, [t]);
 
   // Tab persistence disabled - no longer saving to localStorage
   // useEffect(() => {
@@ -75,7 +77,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addTab = useCallback((tabData: Omit<Tab, 'id' | 'order' | 'createdAt' | 'updatedAt'>): string => {
     if (tabs.length >= MAX_TABS) {
-      throw new Error(`Maximum number of tabs (${MAX_TABS}) reached`);
+      throw new Error(t('maximumTabsReached', { max: MAX_TABS }));
     }
 
     const newTab: Tab = {
@@ -89,7 +91,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTabs(prevTabs => [...prevTabs, newTab]);
     setActiveTabId(newTab.id);
     return newTab.id;
-  }, [tabs.length]);
+  }, [tabs.length, t]);
 
   const removeTab = useCallback((id: string) => {
     setTabs(prevTabs => {

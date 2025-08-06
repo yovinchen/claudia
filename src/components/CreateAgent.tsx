@@ -59,12 +59,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("Agent name is required");
+      setError(t('agents.agentNameRequired'));
       return;
     }
 
     if (!systemPrompt.trim()) {
-      setError("System prompt is required");
+      setError(t('agents.systemPromptRequired'));
       return;
     }
 
@@ -181,24 +181,24 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium mb-4">Basic Information</h3>
+                    <h3 className="text-sm font-medium mb-4">{t('agents.basicInformation')}</h3>
                   </div>
               
               {/* Name and Icon */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Agent Name</Label>
+                  <Label htmlFor="name">{t('agents.agentName')}</Label>
                   <Input
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., Code Assistant"
+                    placeholder={t('placeholders.enterAgentName')}
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Agent Icon</Label>
+                  <Label>{t('agents.agentIcon')}</Label>
                   <div
                     onClick={() => setShowIconPicker(true)}
                     className="h-10 px-3 py-2 bg-background border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between"
@@ -221,7 +221,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
               {/* Model Selection */}
               <div className="space-y-2">
-                <Label>Model</Label>
+                <Label>{t('agents.model')}</Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
@@ -245,7 +245,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-semibold">Claude 4 Sonnet</div>
-                        <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
+                        <div className="text-xs opacity-80">{t('agents.sonnetDescription')}</div>
                       </div>
                     </div>
                   </button>
@@ -272,7 +272,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-semibold">Claude 4 Opus</div>
-                        <div className="text-xs opacity-80">More capable, better for complex tasks</div>
+                        <div className="text-xs opacity-80">{t('agents.opusDescription')}</div>
                       </div>
                     </div>
                   </button>
@@ -281,25 +281,25 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
               {/* Default Task */}
               <div className="space-y-2">
-                <Label htmlFor="default-task">Default Task (Optional)</Label>
+                <Label htmlFor="default-task">{t('agents.defaultTask')} ({t('agents.optional')})</Label>
                 <Input
                   id="default-task"
                   type="text"
-                  placeholder="e.g., Review this code for security issues"
+                  placeholder={t('placeholders.enterDefaultTask')}
                   value={defaultTask}
                   onChange={(e) => setDefaultTask(e.target.value)}
                   className="max-w-md"
                 />
                 <p className="text-xs text-muted-foreground">
-                  This will be used as the default task placeholder when executing the agent
+                  {t('agents.defaultTaskDescription')}
                 </p>
               </div>
 
               {/* System Prompt Editor */}
               <div className="space-y-2">
-                <Label>System Prompt</Label>
+                <Label>{t('agents.systemPrompt')}</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Define the behavior and capabilities of your CC Agent
+                  {t('agents.systemPromptDescription')}
                 </p>
                 <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
                   <MDEditor

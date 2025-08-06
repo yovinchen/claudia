@@ -30,6 +30,7 @@ impl SimpleI18n {
         }
     }
 
+    #[allow(dead_code)]
     pub fn t(&self, key: &str) -> String {
         let locale = self.get_current_locale();
         
@@ -63,6 +64,7 @@ fn get_i18n() -> &'static SimpleI18n {
 }
 
 // 便捷函数用于全局访问
+#[allow(dead_code)]
 pub fn t(key: &str) -> String {
     get_i18n().t(key)
 }

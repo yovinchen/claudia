@@ -9,6 +9,7 @@ import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Lazy load heavy components
 const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
@@ -29,6 +30,7 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
+  const { t } = useTranslation();
   const { updateTab, createChatTab } = useTabState();
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
@@ -54,7 +56,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
-      setError("Failed to load projects. Please ensure ~/.claude directory exists.");
+      setError(t('failedToLoadProjects'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setSelectedProject(project);
     } catch (err) {
       console.error("Failed to load sessions:", err);
-      setError("Failed to load sessions for this project.");
+      setError(t('failedToLoadSessions'));
     } finally {
       setLoading(false);
     }
@@ -96,9 +98,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             <div className="container mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('ccProjects')}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Browse your Claude Code sessions
+                  {t('browseClaudeCodeSessions')}
                 </p>
               </div>
 
@@ -174,7 +176,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           className="w-full max-w-md"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
+                          {t('newClaudeCodeSession')}
                         </Button>
                       </motion.div>
 
@@ -196,7 +198,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
+                            {t('noProjectsFound')}
                           </p>
                         </div>
                       )}
@@ -217,7 +219,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
                 type: 'projects',
-                title: 'CC Projects',
+                title: t('ccProjects'),
               });
             }}
           />
@@ -225,7 +227,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'agent':
         if (!tab.agentRunId) {
-          return <div className="p-4">No agent run ID specified</div>;
+          return <div className="p-4">{t('messages.noAgentRunIdSpecified')}</div>;
         }
         return (
           <AgentRunOutputViewer
@@ -249,15 +251,15 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'claude-file':
         if (!tab.claudeFileId) {
-          return <div className="p-4">No Claude file ID specified</div>;
+          return <div className="p-4">{t('messages.noClaudeFileIdSpecified')}</div>;
         }
         // Note: We need to get the actual file object for ClaudeFileEditor
         // For now, returning a placeholder
-        return <div className="p-4">Claude file editor not yet implemented in tabs</div>;
+        return <div className="p-4">{t('messages.claudeFileEditorNotImplemented')}</div>;
       
       case 'agent-execution':
         if (!tab.agentData) {
-          return <div className="p-4">No agent data specified</div>;
+          return <div className="p-4">{t('messages.noAgentDataSpecified')}</div>;
         }
         return (
           <AgentExecution
@@ -282,10 +284,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'import-agent':
         // TODO: Implement import agent component
-        return <div className="p-4">Import agent functionality coming soon...</div>;
+        return <div className="p-4">{t('messages.importAgentComingSoon')}</div>;
       
       default:
-        return <div className="p-4">Unknown tab type: {tab.type}</div>;
+        return <div className="p-4">{t('messages.unknownTabType')}: {tab.type}</div>;
     }
   };
 
@@ -311,6 +313,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 };
 
 export const TabContent: React.FC = () => {
+  const { t } = useTranslation();
   const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   
   // Listen for events to open sessions in tabs
@@ -415,8 +418,8 @@ export const TabContent: React.FC = () => {
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center">
-            <p className="text-lg mb-2">No tabs open</p>
-            <p className="text-sm">Click the + button to start a new chat</p>
+            <p className="text-lg mb-2">{t('messages.noTabsOpen')}</p>
+            <p className="text-sm">{t('messages.clickPlusToStartChat')}</p>
           </div>
         </div>
       )}

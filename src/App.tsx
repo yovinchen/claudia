@@ -27,6 +27,7 @@ import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
+import { useTranslation } from "@/hooks/useTranslation";
 
 type View = 
   | "welcome" 
@@ -48,6 +49,7 @@ type View =
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>("tabs");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -158,7 +160,7 @@ function AppContent() {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
-      setError("Failed to load projects. Please ensure ~/.claude directory exists.");
+      setError(t('failedToLoadProjects'));
     } finally {
       setLoading(false);
     }
@@ -176,7 +178,7 @@ function AppContent() {
       setSelectedProject(project);
     } catch (err) {
       console.error("Failed to load sessions:", err);
-      setError("Failed to load sessions for this project.");
+      setError(t('failedToLoadSessions'));
     } finally {
       setLoading(false);
     }
@@ -246,7 +248,7 @@ function AppContent() {
               >
                 <h1 className="text-4xl font-bold tracking-tight">
                   <span className="rotating-symbol"></span>
-                  Welcome to Claudia
+                  {t('welcomeToClaudia')}
                 </h1>
               </motion.div>
 
@@ -264,7 +266,7 @@ function AppContent() {
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">CC Agents</h2>
+                      <h2 className="text-xl font-semibold">{t('ccAgents')}</h2>
                     </div>
                   </Card>
                 </motion.div>
@@ -281,7 +283,7 @@ function AppContent() {
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">CC Projects</h2>
+                      <h2 className="text-xl font-semibold">{t('ccProjects')}</h2>
                     </div>
                   </Card>
                 </motion.div>
@@ -329,12 +331,12 @@ function AppContent() {
                   onClick={() => handleViewChange("welcome")}
                   className="mb-4"
                 >
-                  ← Back to Home
+                  {t('backToHome')}
                 </Button>
                 <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t('ccProjects')}</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Browse your Claude Code sessions
+                    {t('browseClaudeCodeSessions')}
                   </p>
                 </div>
               </motion.div>
@@ -396,7 +398,7 @@ function AppContent() {
                           className="w-full max-w-md"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
+                          {t('newClaudeCodeSession')}
                         </Button>
                       </motion.div>
 
@@ -415,7 +417,7 @@ function AppContent() {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
+                            {t('noProjectsFound')}
                           </p>
                         </div>
                       )}
@@ -508,7 +510,7 @@ function AppContent() {
         open={showClaudeBinaryDialog}
         onOpenChange={setShowClaudeBinaryDialog}
         onSuccess={() => {
-          setToast({ message: "Claude binary path saved successfully", type: "success" });
+          setToast({ message: t('claudeBinaryPathSaved'), type: "success" });
           // Trigger a refresh of the Claude version check
           window.location.reload();
         }}

@@ -20,6 +20,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface FloatingPromptInputProps {
   /**
@@ -72,42 +73,7 @@ type ThinkingModeConfig = {
   phrase?: string; // The phrase to append
 };
 
-const THINKING_MODES: ThinkingModeConfig[] = [
-  {
-    id: "auto",
-    name: "Auto",
-    description: "Let Claude decide",
-    level: 0
-  },
-  {
-    id: "think",
-    name: "Think",
-    description: "Basic reasoning",
-    level: 1,
-    phrase: "think"
-  },
-  {
-    id: "think_hard",
-    name: "Think Hard",
-    description: "Deeper analysis",
-    level: 2,
-    phrase: "think hard"
-  },
-  {
-    id: "think_harder",
-    name: "Think Harder",
-    description: "Extensive reasoning",
-    level: 3,
-    phrase: "think harder"
-  },
-  {
-    id: "ultrathink",
-    name: "Ultrathink",
-    description: "Maximum computation",
-    level: 4,
-    phrase: "ultrathink"
-  }
-];
+// Thinking modes configuration will be defined inside the component to use translations
 
 /**
  * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
@@ -173,6 +139,45 @@ const FloatingPromptInputInner = (
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
+  const { t } = useTranslation();
+
+  // Define THINKING_MODES inside component to access translations
+  const THINKING_MODES: ThinkingModeConfig[] = [
+    {
+      id: "auto",
+      name: "Auto",
+      description: t('messages.letClaudeDecide'),
+      level: 0
+    },
+    {
+      id: "think",
+      name: "Think",
+      description: t('messages.basicReasoning'),
+      level: 1,
+      phrase: "think"
+    },
+    {
+      id: "think_hard",
+      name: "Think Hard",
+      description: t('messages.deeperAnalysis'),
+      level: 2,
+      phrase: "think hard"
+    },
+    {
+      id: "think_harder",
+      name: "Think Harder",
+      description: t('messages.extensiveReasoning'),
+      level: 3,
+      phrase: "think harder"
+    },
+    {
+      id: "ultrathink",
+      name: "Ultrathink",
+      description: t('messages.maximumAnalysis'),
+      level: 4,
+      phrase: "ultrathink"
+    }
+  ];
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
@@ -758,7 +763,7 @@ const FloatingPromptInputInner = (
                 value={prompt}
                 onChange={handleTextChange}
                 onPaste={handlePaste}
-                placeholder="Type your prompt here..."
+                placeholder={t('messages.typeYourPromptHere')}
                 className="min-h-[200px] resize-none"
                 disabled={disabled}
                 onDragEnter={handleDrag}
@@ -1001,7 +1006,7 @@ const FloatingPromptInputInner = (
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
+                  placeholder={dragActive ? t('messages.dropImagesHere') : t('messages.askClaudeAnything')}
                   disabled={disabled}
                   className={cn(
                     "min-h-[44px] max-h-[120px] resize-none pr-10",
@@ -1065,7 +1070,7 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, / for commands, drag & drop or paste images"}
+              {t('input.pressEnterToSend')}{projectPath?.trim() && t('input.withFileAndCommandSupport')}
             </div>
           </div>
         </div>

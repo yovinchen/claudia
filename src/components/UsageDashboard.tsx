@@ -17,6 +17,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface UsageDashboardProps {
   /**
@@ -32,6 +33,7 @@ interface UsageDashboardProps {
  * <UsageDashboard onBack={() => setView('welcome')} />
  */
 export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UsageStats | null>(null);
@@ -82,7 +84,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
       setSessionStats(sessionData);
     } catch (err) {
       console.error("Failed to load usage stats:", err);
-      setError("Failed to load usage statistics. Please try again.");
+      setError(t('usage.failedToLoadUsageStats'));
     } finally {
       setLoading(false);
     }
@@ -146,9 +148,9 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">Usage Dashboard</h1>
+              <h1 className="text-lg font-semibold">{t('usage.usageDashboardTitle')}</h1>
               <p className="text-xs text-muted-foreground">
-                Track your Claude Code usage and costs
+                {t('usage.trackUsageAndCosts')}
               </p>
             </div>
           </div>
@@ -165,7 +167,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   onClick={() => setSelectedDateRange(range)}
                   className="text-xs"
                 >
-                  {range === "all" ? "All Time" : range === "7d" ? "Last 7 Days" : "Last 30 Days"}
+                  {range === "all" ? t('usage.allTime') : range === "7d" ? t('usage.last7Days') : t('usage.last30Days')}
                 </Button>
               ))}
             </div>
@@ -179,7 +181,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">Loading usage statistics...</p>
+              <p className="text-sm text-muted-foreground">{t('usage.loadingUsageStats')}</p>
             </div>
           </div>
         ) : error ? (
@@ -187,7 +189,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             <div className="text-center max-w-md">
               <p className="text-sm text-destructive mb-4">{error}</p>
               <Button onClick={loadUsageStats} size="sm">
-                Try Again
+                {t('usage.tryAgain')}
               </Button>
             </div>
           </div>
@@ -204,7 +206,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Cost</p>
+                    <p className="text-xs text-muted-foreground">{t('usage.totalCost')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatCurrency(stats.total_cost)}
                     </p>
@@ -217,7 +219,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Sessions</p>
+                    <p className="text-xs text-muted-foreground">{t('usage.totalSessions')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatNumber(stats.total_sessions)}
                     </p>
@@ -230,7 +232,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Tokens</p>
+                    <p className="text-xs text-muted-foreground">{t('usage.totalTokens')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatTokens(stats.total_tokens)}
                     </p>
@@ -243,7 +245,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
+                    <p className="text-xs text-muted-foreground">{t('usage.avgCostPerSession')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatCurrency(
                         stats.total_sessions > 0 
@@ -260,32 +262,32 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             {/* Tabs for different views */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="models">By Model</TabsTrigger>
-                <TabsTrigger value="projects">By Project</TabsTrigger>
-                <TabsTrigger value="sessions">By Session</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="overview">{t('usage.overview')}</TabsTrigger>
+                <TabsTrigger value="models">{t('usage.byModel')}</TabsTrigger>
+                <TabsTrigger value="projects">{t('usage.byProject')}</TabsTrigger>
+                <TabsTrigger value="sessions">{t('usage.byDate')}</TabsTrigger>
+                <TabsTrigger value="timeline">{t('usage.timeline')}</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4">
                 <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">Token Breakdown</h3>
+                  <h3 className="text-sm font-semibold mb-4">{t('usage.tokenBreakdown')}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Input Tokens</p>
+                      <p className="text-xs text-muted-foreground">{t('usage.inputTokens')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_input_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Output Tokens</p>
+                      <p className="text-xs text-muted-foreground">{t('usage.outputTokens')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_output_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Write</p>
+                      <p className="text-xs text-muted-foreground">{t('usage.cacheWrite')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_cache_creation_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Read</p>
+                      <p className="text-xs text-muted-foreground">{t('usage.cacheRead')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_cache_read_tokens)}</p>
                     </div>
                   </div>
@@ -294,7 +296,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Most Used Models</h3>
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.mostUsedModels')}</h3>
                     <div className="space-y-3">
                       {stats.by_model.slice(0, 3).map((model) => (
                         <div key={model.model} className="flex items-center justify-between">
@@ -303,7 +305,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               {getModelDisplayName(model.model)}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {model.session_count} sessions
+                              {model.session_count} {t('usage.sessions')}
                             </span>
                           </div>
                           <span className="text-sm font-medium">
@@ -315,7 +317,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Top Projects</h3>
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.topProjects')}</h3>
                     <div className="space-y-3">
                       {stats.by_project.slice(0, 3).map((project) => (
                         <div key={project.project_path} className="flex items-center justify-between">
@@ -324,7 +326,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               {project.project_path}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {project.session_count} sessions
+                              {project.session_count} {t('usage.sessions')}
                             </span>
                           </div>
                           <span className="text-sm font-medium">
@@ -340,7 +342,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               {/* Models Tab */}
               <TabsContent value="models">
                 <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
+                  <h3 className="text-sm font-semibold mb-4">{t('usage.usageByModel')}</h3>
                   <div className="space-y-4">
                     {stats.by_model.map((model) => (
                       <div key={model.model} className="space-y-2">
@@ -353,7 +355,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               {getModelDisplayName(model.model)}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              {model.session_count} sessions
+                              {model.session_count} {t('usage.sessions')}
                             </span>
                           </div>
                           <span className="text-sm font-semibold">
@@ -362,11 +364,11 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                         </div>
                         <div className="grid grid-cols-4 gap-2 text-xs">
                           <div>
-                            <span className="text-muted-foreground">Input: </span>
+                            <span className="text-muted-foreground">{t('usage.input')}: </span>
                             <span className="font-medium">{formatTokens(model.input_tokens)}</span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Output: </span>
+                            <span className="text-muted-foreground">{t('usage.output')}: </span>
                             <span className="font-medium">{formatTokens(model.output_tokens)}</span>
                           </div>
                           <div>
@@ -387,7 +389,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               {/* Projects Tab */}
               <TabsContent value="projects">
                 <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">Usage by Project</h3>
+                  <h3 className="text-sm font-semibold mb-4">{t('usage.usageByProject')}</h3>
                   <div className="space-y-3">
                     {stats.by_project.map((project) => (
                       <div key={project.project_path} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -397,17 +399,17 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                           </span>
                           <div className="flex items-center space-x-3 mt-1">
                             <span className="text-xs text-muted-foreground">
-                              {project.session_count} sessions
+                              {project.session_count} {t('usage.sessions')}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {formatTokens(project.total_tokens)} tokens
+                              {formatTokens(project.total_tokens)} {t('usage.tokens')}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold">{formatCurrency(project.total_cost)}</p>
                           <p className="text-xs text-muted-foreground">
-                            {formatCurrency(project.total_cost / project.session_count)}/session
+                            {formatCurrency(project.total_cost / project.session_count)}/{t('usage.session')}
                           </p>
                         </div>
                       </div>
@@ -419,7 +421,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               {/* Sessions Tab */}
               <TabsContent value="sessions">
                   <Card className="p-6">
-                      <h3 className="text-sm font-semibold mb-4">Usage by Session</h3>
+                      <h3 className="text-sm font-semibold mb-4">{t('usage.usageBySession')}</h3>
                       <div className="space-y-3">
                           {sessionStats?.map((session) => (
                               <div key={`${session.project_path}-${session.project_name}`} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -451,7 +453,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-6 flex items-center space-x-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Daily Usage</span>
+                    <span>{t('usage.dailyUsage')}</span>
                   </h3>
                   {stats.by_date.length > 0 ? (() => {
                     const maxCost = Math.max(...stats.by_date.map(d => d.total_cost), 0);
@@ -484,13 +486,13 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                   <div className="bg-background border border-border rounded-lg shadow-lg p-3 whitespace-nowrap">
                                     <p className="text-sm font-semibold">{formattedDate}</p>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                      Cost: {formatCurrency(day.total_cost)}
+                                      {t('usage.cost')}: {formatCurrency(day.total_cost)}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {formatTokens(day.total_tokens)} tokens
+                                      {formatTokens(day.total_tokens)} {t('usage.tokens')}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {day.models_used.length} model{day.models_used.length !== 1 ? 's' : ''}
+                                      {day.models_used.length} {t('usage.models')}{day.models_used.length !== 1 ? 's' : ''}
                                     </p>
                                   </div>
                                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
@@ -517,13 +519,13 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                         
                         {/* X-axis label */}
                         <div className="mt-8 text-center text-xs text-muted-foreground">
-                          Daily Usage Over Time
+                          {t('usage.dailyUsageOverTime')}
                         </div>
                       </div>
                     )
                   })() : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      No usage data available for the selected period
+                      {t('usage.noUsageData')}
                     </div>
                   )}
                 </Card>
