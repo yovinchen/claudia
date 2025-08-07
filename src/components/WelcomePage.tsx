@@ -99,11 +99,11 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-5xl font-bold mb-4 flex items-center justify-center gap-4 text-white">
+          <h1 className="text-5xl font-bold mb-4 flex items-center justify-center gap-4 text-foreground">
             <ClaudiaLogoMinimal size={56} />
             {t("app.welcome")}
           </h1>
-          <p className="text-white/90 text-xl">
+          <p className="text-muted-foreground text-xl">
             {t("app.tagline")}
           </p>
         </motion.div>
@@ -123,7 +123,7 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
               }}
             >
               <div 
-                className="h-full group bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
+                className="h-full group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
                 onClick={() => handleCardClick(feature.view)}
               >
                 <div className="p-10">
@@ -132,10 +132,10 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
                       <feature.icon className={`h-10 w-10 ${feature.color}`} strokeWidth={1.5} />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-2xl font-bold mb-3 text-white group-hover:text-primary transition-colors">
+                      <h2 className="text-2xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors">
                         {feature.title}
                       </h2>
-                      <p className="text-white/80 text-base leading-relaxed">
+                      <p className="text-muted-foreground text-base leading-relaxed">
                         {feature.subtitle}
                       </p>
                     </div>
@@ -161,7 +161,7 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
               }}
             >
               <div 
-                className="h-32 group bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
+                className="h-32 group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
                 onClick={() => handleCardClick(feature.view)}
               >
                 <div className="h-full flex items-center p-6">
@@ -169,10 +169,10 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
                     <feature.icon className={`h-7 w-7 ${feature.color}`} strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold mb-1 text-white group-hover:text-primary transition-colors truncate">
+                    <h3 className="text-sm font-semibold mb-1 text-foreground group-hover:text-primary transition-colors truncate">
                       {feature.title}
                     </h3>
-                    <p className="text-xs text-white/70 line-clamp-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2">
                       {feature.subtitle}
                     </p>
                   </div>

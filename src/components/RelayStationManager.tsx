@@ -9,22 +9,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/hooks/useTranslation';
-import { 
-  RelayStation, 
-  CreateRelayStationRequest, 
-  UpdateRelayStationRequest, 
-  RelayStationAdapter, 
+import {
+  RelayStation,
+  CreateRelayStationRequest,
+  UpdateRelayStationRequest,
+  RelayStationAdapter,
   AuthMethod,
   ConnectionTestResult,
-  api 
+  api
 } from '@/lib/api';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Globe, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Globe,
+  CheckCircle,
+  XCircle,
   Wifi,
   WifiOff,
   Server,
@@ -48,7 +48,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [togglingEnable, setTogglingEnable] = useState<Record<string, boolean>>({});
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
-  
+
   const { t } = useTranslation();
 
   // 加载中转站列表
@@ -96,7 +96,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setTestingConnections(prev => ({ ...prev, [stationId]: true }));
       const result = await api.relayStationTestConnection(stationId);
       setConnectionTests(prev => ({ ...prev, [stationId]: result }));
-      
+
       if (result.success) {
         alert(t('relayStation.connectionSuccess'));
       } else {
@@ -113,7 +113,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   // 删除中转站
   const deleteStation = async (stationId: string) => {
     if (!confirm(t('relayStation.deleteConfirm'))) return;
-    
+
     try {
       await api.relayStationDelete(stationId);
       alert(t('relayStation.deleteSuccess'));
@@ -156,7 +156,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const getStatusBadge = (station: RelayStation) => {
     const enabled = station.enabled;
     const isToggling = togglingEnable[station.id];
-    
+
     return (
       <div className="flex items-center gap-2">
         <Switch
@@ -208,7 +208,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
-            <CreateStationDialog 
+            <CreateStationDialog
               onSuccess={() => {
                 setShowCreateDialog(false);
                 loadStations();
@@ -302,7 +302,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     <Globe className="mr-2 h-4 w-4" />
                     {station.api_url}
                   </div>
-                  
+
                   {station.description && (
                     <p className="text-sm text-muted-foreground">
                       {station.description}
@@ -341,7 +341,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                       )}
                       {t('relayStation.testConnection')}
                     </Button>
-                    
+
                     <div className="flex space-x-2">
                       <Button
                         variant="ghost"
@@ -408,12 +408,12 @@ const CreateStationDialog: React.FC<{
     enabled: false,  // 默认不启用，需要通过主界面切换
   });
   const [submitting, setSubmitting] = useState(false);
-  
+
   const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       alert(t('relayStation.nameRequired'));
       return;
@@ -458,12 +458,12 @@ const CreateStationDialog: React.FC<{
               placeholder={t('relayStation.namePlaceholder')}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="adapter">{t('relayStation.adapterType')}</Label>
             <Select
               value={formData.adapter}
-              onValueChange={(value: RelayStationAdapter) => 
+              onValueChange={(value: RelayStationAdapter) =>
                 setFormData(prev => ({ ...prev, adapter: value }))
               }
             >
@@ -498,7 +498,7 @@ const CreateStationDialog: React.FC<{
             type="url"
             value={formData.api_url}
             onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-            placeholder="https://api.example.com"
+            placeholder="https://api.packycode.com"
           />
         </div>
 
@@ -507,7 +507,7 @@ const CreateStationDialog: React.FC<{
             <Label htmlFor="auth_method">{t('relayStation.authMethod')}</Label>
             <Select
               value={formData.auth_method}
-              onValueChange={(value: AuthMethod) => 
+              onValueChange={(value: AuthMethod) =>
                 setFormData(prev => ({ ...prev, auth_method: value }))
               }
             >
@@ -550,7 +550,7 @@ const CreateStationDialog: React.FC<{
           <Switch
             id="enabled"
             checked={formData.enabled}
-            onCheckedChange={(checked) => 
+            onCheckedChange={(checked) =>
               setFormData(prev => ({ ...prev, enabled: checked }))
             }
           />
@@ -589,12 +589,12 @@ const EditStationDialog: React.FC<{
     enabled: station.enabled,
   });
   const [submitting, setSubmitting] = useState(false);
-  
+
   const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       alert(t('relayStation.nameRequired'));
       return;
@@ -630,12 +630,12 @@ const EditStationDialog: React.FC<{
               placeholder={t('relayStation.namePlaceholder')}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="adapter">{t('relayStation.adapterType')}</Label>
             <Select
               value={formData.adapter}
-              onValueChange={(value: RelayStationAdapter) => 
+              onValueChange={(value: RelayStationAdapter) =>
                 setFormData(prev => ({ ...prev, adapter: value }))
               }
             >
@@ -659,7 +659,7 @@ const EditStationDialog: React.FC<{
             type="url"
             value={formData.api_url}
             onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-            placeholder="https://api.example.com"
+            placeholder="https://api.packycode.com"
           />
         </div>
 
