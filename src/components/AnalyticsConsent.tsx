@@ -159,9 +159,17 @@ export const AnalyticsConsentBanner: React.FC<AnalyticsConsentBannerProps> = ({
     const checkConsent = async () => {
       if (hasChecked) return;
       
+      // Check if we've already shown the consent dialog before
+      const hasShownBefore = localStorage.getItem('claudia-analytics-consent-shown');
+      if (hasShownBefore === 'true') {
+        setHasChecked(true);
+        return;
+      }
+      
       await analytics.initialize();
       const settings = analytics.getSettings();
       
+      // Only show if user hasn't made a decision yet
       if (!settings?.hasConsented) {
         setVisible(true);
       }
@@ -175,11 +183,21 @@ export const AnalyticsConsentBanner: React.FC<AnalyticsConsentBannerProps> = ({
   
   const handleAccept = async () => {
     await analytics.enable();
+    // Mark that we've shown the consent dialog
+    localStorage.setItem('claudia-analytics-consent-shown', 'true');
     setVisible(false);
   };
   
   const handleDecline = async () => {
     await analytics.disable();
+    // Mark that we've shown the consent dialog
+    localStorage.setItem('claudia-analytics-consent-shown', 'true');
+    setVisible(false);
+  };
+  
+  const handleClose = () => {
+    // Even if they close without choosing, mark as shown
+    localStorage.setItem('claudia-analytics-consent-shown', 'true');
     setVisible(false);
   };
   
@@ -223,7 +241,7 @@ export const AnalyticsConsentBanner: React.FC<AnalyticsConsentBannerProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => setVisible(false)}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X className="h-4 w-4" />

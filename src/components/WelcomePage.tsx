@@ -3,7 +3,6 @@ import { Bot, FolderCode, BarChart, ServerCog, FileText, Settings, Network } fro
 import { useTranslation } from "@/hooks/useTranslation";
 import { Button } from "@/components/ui/button";
 import { ClaudiaLogoMinimal } from "@/components/ClaudiaLogo";
-import { BorderGlowCard } from "@/components/ui/glow-card";
 
 interface WelcomePageProps {
   onNavigate: (view: string) => void;
@@ -19,8 +18,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: Network,
       title: t("welcome.relayStationManagement"),
       subtitle: t("welcome.relayStationManagementDesc"),
-      color: "text-indigo-500",
-      bgColor: "bg-indigo-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "relay-stations"
     },
     {
@@ -37,8 +36,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: FolderCode,
       title: t("welcome.projectManagement"),
       subtitle: t("welcome.projectManagementDesc"),
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "projects"
     }
   ];
@@ -49,8 +48,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: BarChart,
       title: t("welcome.usageStatistics"),
       subtitle: t("welcome.usageStatisticsDesc"),
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "usage-dashboard"
     },
     {
@@ -58,8 +57,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: ServerCog,
       title: t("welcome.mcpBroker"),
       subtitle: t("welcome.mcpBrokerDesc"),
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "mcp"
     },
     {
@@ -67,8 +66,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: FileText,
       title: t("welcome.claudeMd"),
       subtitle: t("welcome.claudeMdDesc"),
-      color: "text-cyan-500",
-      bgColor: "bg-cyan-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "editor"
     },
     {
@@ -76,8 +75,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       icon: Settings,
       title: t("welcome.settings"),
       subtitle: t("welcome.settingsDesc"),
-      color: "text-gray-500",
-      bgColor: "bg-gray-500/10",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
       view: "settings"
     }
   ];
@@ -92,25 +91,25 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background overflow-hidden">
-      <div className="w-full max-w-6xl px-8">
+      <div className="w-full max-w-6xl px-8 -mt-20">
         {/* Header */}
         <motion.div 
-          className="text-center mb-16"
+          className="text-center mb-10"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-5xl font-bold mb-4 flex items-center justify-center gap-4 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold mb-4 flex items-center justify-center gap-4 text-white">
             <ClaudiaLogoMinimal size={56} />
             {t("app.welcome")}
           </h1>
-          <p className="text-muted-foreground text-xl">
+          <p className="text-white/90 text-xl">
             {t("app.tagline")}
           </p>
         </motion.div>
 
         {/* Main Feature Cards */}
-        <div className="grid grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-3 gap-8 mb-10">
           {mainFeatures.map((feature, index) => (
             <motion.div
               key={feature.id}
@@ -123,8 +122,8 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
                 stiffness: 100
               }}
             >
-              <BorderGlowCard 
-                className="h-full group" 
+              <div 
+                className="h-full group bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
                 onClick={() => handleCardClick(feature.view)}
               >
                 <div className="p-10">
@@ -133,22 +132,22 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
                       <feature.icon className={`h-10 w-10 ${feature.color}`} strokeWidth={1.5} />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+                      <h2 className="text-2xl font-bold mb-3 text-white group-hover:text-primary transition-colors">
                         {feature.title}
                       </h2>
-                      <p className="text-muted-foreground text-base leading-relaxed">
+                      <p className="text-white/80 text-base leading-relaxed">
                         {feature.subtitle}
                       </p>
                     </div>
                   </div>
                 </div>
-              </BorderGlowCard>
+              </div>
             </motion.div>
           ))}
         </div>
 
         {/* Bottom Feature Cards */}
-        <div className="grid grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-4 gap-6 mb-10">
           {bottomFeatures.map((feature, index) => (
             <motion.div
               key={feature.id}
@@ -161,22 +160,24 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
                 stiffness: 100
               }}
             >
-              <BorderGlowCard 
-                className="h-36 group" 
+              <div 
+                className="h-32 group bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
                 onClick={() => handleCardClick(feature.view)}
               >
-                <div className="h-full flex flex-col items-center justify-center p-6">
-                  <div className={`p-3 ${feature.bgColor} rounded-xl mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6`}>
-                    <feature.icon className={`h-8 w-8 ${feature.color}`} strokeWidth={1.5} />
+                <div className="h-full flex items-center p-6">
+                  <div className={`p-3 ${feature.bgColor} rounded-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 mr-4 flex-shrink-0`}>
+                    <feature.icon className={`h-7 w-7 ${feature.color}`} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-sm font-semibold mb-1 group-hover:text-primary transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground text-center line-clamp-2">
-                    {feature.subtitle}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold mb-1 text-white group-hover:text-primary transition-colors truncate">
+                      {feature.title}
+                    </h3>
+                    <p className="text-xs text-white/70 line-clamp-2">
+                      {feature.subtitle}
+                    </p>
+                  </div>
                 </div>
-              </BorderGlowCard>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -195,7 +196,7 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
         >
           <Button
             size="lg"
-            className="relative px-10 py-7 text-lg font-semibold bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white border-0 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 rounded-2xl group overflow-hidden"
+            className="relative px-10 py-7 text-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 rounded-2xl group overflow-hidden"
             onClick={handleButtonClick}
           >
             {/* Shimmer effect on button */}
@@ -203,10 +204,9 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
             </div>
             
-            <span className="relative z-10 flex items-center gap-3">
-              <span className="text-2xl">✨</span>
+            <span className="relative z-10 flex items-center gap-2">
+              <span className="text-2xl">+</span>
               {t("welcome.quickStartSession")}
-              <span className="text-2xl">🚀</span>
             </span>
           </Button>
         </motion.div>

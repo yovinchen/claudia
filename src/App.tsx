@@ -29,6 +29,7 @@ import { useAppLifecycle, useTrackEvent } from "@/hooks";
 import { useTranslation } from "@/hooks/useTranslation";
 import { WelcomePage } from "@/components/WelcomePage";
 import RelayStationManager from "@/components/RelayStationManager";
+import i18n from "@/lib/i18n";
 
 type View = 
   | "welcome" 
@@ -74,6 +75,25 @@ function AppContent() {
   // Track user journey milestones
   const [hasTrackedFirstChat] = useState(false);
   // const [hasTrackedFirstAgent] = useState(false);
+  
+  // Initialize backend language on app startup
+  useEffect(() => {
+    const initializeBackendLanguage = async () => {
+      try {
+        // Get the current frontend language
+        const frontendLang = i18n.language;
+        // Map to backend format
+        const backendLocale = frontendLang === 'zh' ? 'zh-CN' : 'en-US';
+        // Sync to backend
+        await api.setLanguage(backendLocale);
+        console.log('Backend language initialized to:', backendLocale);
+      } catch (error) {
+        console.error('Failed to initialize backend language:', error);
+      }
+    };
+    
+    initializeBackendLanguage();
+  }, []); // Run once on app startup
   
   // Track when user reaches different journey stages
   useEffect(() => {

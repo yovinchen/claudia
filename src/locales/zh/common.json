@@ -5,7 +5,7 @@
   "ccProjects": "Claude Code 项目",
   "browseClaudeCodeSessions": "浏览您的 Claude Code 会话",
   "newClaudeCodeSession": "新建 Claude Code 会话",
-  "ccAgents": "CC 智能体",
+  "ccAgents": "Agent 管理",
   "mcpServers": "MCP 服务器",
   "manageMcpServers": "管理模型上下文协议服务器",
   "app": {
@@ -35,7 +35,7 @@
   },
   "navigation": {
     "projects": "Claude Code 项目",
-    "agents": "CC 智能体",
+    "agents": "Agent 管理",
     "settings": "设置",
     "usage": "用量仪表板",
     "mcp": "MCP 管理器",
@@ -71,7 +71,7 @@
     "sessionHistory": "会话历史"
   },
   "agents": {
-    "title": "CC 智能体",
+    "title": "Agent 管理",
     "newAgent": "新建智能体",
     "createAgent": "创建智能体",
     "editAgent": "编辑智能体",

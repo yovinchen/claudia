@@ -121,54 +121,39 @@ export function ClaudiaLogoMinimal({ size = 48, className = "" }: ClaudiaLogoPro
       className={`relative inline-flex items-center justify-center ${className}`}
       style={{ width: size, height: size }}
       animate={{
-        rotate: [0, 5, -5, 5, 0],
+        rotate: [0, 3, -3, 3, 0],
       }}
       transition={{
-        duration: 6,
+        duration: 8,
         repeat: Infinity,
         ease: "easeInOut",
       }}
     >
-      {/* Gradient background */}
+      {/* Simple orange circle background */}
       <motion.div
-        className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600"
+        className="absolute inset-0 rounded-2xl bg-orange-500"
         animate={{
-          scale: [1, 1.1, 1],
+          scale: [1, 1.05, 1],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      
+      {/* Subtle inner shadow for depth */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-transparent to-black/10" />
+      
+      {/* Letter C - clean and simple */}
+      <motion.div
+        className="relative z-10 text-white font-bold flex items-center justify-center"
+        style={{ fontSize: size * 0.5, fontFamily: 'system-ui, -apple-system, sans-serif' }}
+        animate={{
+          scale: [1, 1.05, 1],
         }}
         transition={{
           duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      
-      {/* Inner light effect */}
-      <motion.div
-        className="absolute inset-1 rounded-xl bg-gradient-to-br from-orange-300/50 to-transparent"
-        animate={{
-          opacity: [0.5, 1, 0.5],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      
-      {/* Letter C with animation */}
-      <motion.div
-        className="relative z-10 text-white font-bold flex items-center justify-center"
-        style={{ fontSize: size * 0.5 }}
-        animate={{
-          scale: [1, 1.1, 1],
-          textShadow: [
-            "0 0 10px rgba(255,255,255,0.5)",
-            "0 0 20px rgba(255,255,255,0.8)",
-            "0 0 10px rgba(255,255,255,0.5)",
-          ],
-        }}
-        transition={{
-          duration: 2,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -176,23 +161,19 @@ export function ClaudiaLogoMinimal({ size = 48, className = "" }: ClaudiaLogoPro
         C
       </motion.div>
       
-      {/* Pulse rings */}
-      {[...Array(2)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute inset-0 rounded-2xl border-2 border-orange-400"
-          animate={{
-            scale: [1, 1.5, 2],
-            opacity: [0.5, 0.2, 0],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            delay: i * 1.5,
-            ease: "easeOut",
-          }}
-        />
-      ))}
+      {/* Single subtle pulse ring */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl border border-orange-400/30"
+        animate={{
+          scale: [1, 1.3, 1.5],
+          opacity: [0.3, 0.1, 0],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+      />
     </motion.div>
   );
 }

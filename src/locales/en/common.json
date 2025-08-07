@@ -5,7 +5,7 @@
   "ccProjects": "CC Projects",
   "browseClaudeCodeSessions": "Browse your Claude Code sessions",
   "newClaudeCodeSession": "New Claude Code session",
-  "ccAgents": "CC Agents",
+  "ccAgents": "Agent Management",
   "mcpServers": "MCP Servers",
   "manageMcpServers": "Manage Model Context Protocol servers",
   "app": {
@@ -38,7 +38,7 @@
   },
   "navigation": {
     "projects": "CC Projects",
-    "agents": "CC Agents",
+    "agents": "Agent Management",
     "settings": "Settings",
     "usage": "Usage Dashboard",
     "mcp": "MCP Manager",
@@ -74,7 +74,7 @@
     "sessionHistory": "Session History"
   },
   "agents": {
-    "title": "CC Agents",
+    "title": "Agent Management",
     "newAgent": "New Agent",
     "createAgent": "Create Agent",
     "editAgent": "Edit Agent",
