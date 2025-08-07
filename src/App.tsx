@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { Plus, Loader2, ArrowLeft } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
 import { SessionList } from "@/components/SessionList";
 import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
@@ -28,6 +27,7 @@ import { useTabState } from "@/hooks/useTabState";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
 import { useTranslation } from "@/hooks/useTranslation";
+import { WelcomePage } from "@/components/WelcomePage";
 
 type View = 
   | "welcome" 
@@ -50,7 +50,7 @@ type View =
  */
 function AppContent() {
   const { t } = useTranslation();
-  const [view, setView] = useState<View>("tabs");
+  const [view, setView] = useState<View>("welcome");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -149,6 +149,18 @@ function AppContent() {
     };
   }, []);
 
+  // Listen for switch to welcome view event
+  useEffect(() => {
+    const handleSwitchToWelcome = () => {
+      setView("welcome");
+    };
+
+    window.addEventListener('switch-to-welcome', handleSwitchToWelcome);
+    return () => {
+      window.removeEventListener('switch-to-welcome', handleSwitchToWelcome);
+    };
+  }, []);
+
   /**
    * Loads all projects from the ~/.claude/projects directory
    */
@@ -219,9 +231,9 @@ function AppContent() {
   /**
    * Handles view changes with navigation protection
    */
-  const handleViewChange = (newView: View) => {
+  const handleViewChange = (newView: string) => {
     // No need for navigation protection with tabs since sessions stay open
-    setView(newView);
+    setView(newView as View);
   };
 
   /**
@@ -237,60 +249,10 @@ function AppContent() {
     switch (view) {
       case "welcome":
         return (
-          <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
-            <div className="w-full max-w-4xl">
-              {/* Welcome Header */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-12 text-center"
-              >
-                <h1 className="text-4xl font-bold tracking-tight">
-                  <span className="rotating-symbol"></span>
-                  {t('welcomeToClaudia')}
-                </h1>
-              </motion.div>
-
-              {/* Navigation Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                {/* CC Agents Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                  <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("cc-agents")}
-                  >
-                    <div className="h-full flex flex-col items-center justify-center p-8">
-                      <Bot className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">{t('ccAgents')}</h2>
-                    </div>
-                  </Card>
-                </motion.div>
-
-                {/* CC Projects Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("projects")}
-                  >
-                    <div className="h-full flex flex-col items-center justify-center p-8">
-                      <FolderCode className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">{t('ccProjects')}</h2>
-                    </div>
-                  </Card>
-                </motion.div>
-
-              </div>
-            </div>
-          </div>
+          <WelcomePage 
+            onNavigate={handleViewChange}
+            onNewSession={handleNewSession}
+          />
         );
 
       case "cc-agents":
@@ -325,19 +287,20 @@ function AppContent() {
                 transition={{ duration: 0.5 }}
                 className="mb-6"
               >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleViewChange("welcome")}
-                  className="mb-4"
-                >
-                  {t('backToHome')}
-                </Button>
-                <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">{t('ccProjects')}</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t('browseClaudeCodeSessions')}
-                  </p>
+                <div className="flex items-center gap-3 mb-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewChange("welcome")}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('ccProjects')}</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('browseClaudeCodeSessions')}
+                    </p>
+                  </div>
                 </div>
               </motion.div>
 
@@ -375,6 +338,19 @@ function AppContent() {
                         projectPath={selectedProject.path}
                         onBack={handleBack}
                         onEditClaudeFile={handleEditClaudeFile}
+                        onSessionClick={(session) => {
+                          // Navigate to session detail view in tabs mode
+                          setView("tabs");
+                          // Create a new tab for this session
+                          setTimeout(() => {
+                            window.dispatchEvent(new CustomEvent('open-session-tab', { 
+                              detail: { 
+                                session,
+                                projectPath: selectedProject.path
+                              } 
+                            }));
+                          }, 100);
+                        }}
                       />
                     </motion.div>
                   ) : (
@@ -480,19 +456,19 @@ function AppContent() {
     <div className="h-screen bg-background flex flex-col">
       {/* Topbar */}
       <Topbar
-        onClaudeClick={() => createClaudeMdTab()}
-        onSettingsClick={() => createSettingsTab()}
-        onUsageClick={() => createUsageTab()}
-        onMCPClick={() => createMCPTab()}
+        onClaudeClick={() => view === 'tabs' ? createClaudeMdTab() : handleViewChange('editor')}
+        onSettingsClick={() => view === 'tabs' ? createSettingsTab() : handleViewChange('settings')}
+        onUsageClick={() => view === 'tabs' ? createUsageTab() : handleViewChange('usage-dashboard')}
+        onMCPClick={() => view === 'tabs' ? createMCPTab() : handleViewChange('mcp')}
         onInfoClick={() => setShowNFO(true)}
-        onAgentsClick={() => setShowAgentsModal(true)}
+        onAgentsClick={() => view === 'tabs' ? setShowAgentsModal(true) : handleViewChange('cc-agents')}
       />
       
       {/* Analytics Consent Banner */}
       <AnalyticsConsentBanner />
       
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {renderContent()}
       </div>
       

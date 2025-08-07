@@ -108,7 +108,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
     }
     
     if (!stdioCommand.trim()) {
-      onError(t('commandRequired'));
+      onError(t('mcp.commandRequired'));
       return;
     }
     
@@ -154,7 +154,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         onError(result.message);
       }
     } catch (error) {
-      onError(t('failedToAddServer'));
+      onError(t('mcp.failedToAddServer'));
       console.error("Failed to add stdio server:", error);
     } finally {
       setSaving(false);
@@ -171,7 +171,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
     }
     
     if (!sseUrl.trim()) {
-      onError(t('urlRequired'));
+      onError(t('mcp.urlRequired'));
       return;
     }
     
@@ -213,7 +213,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         onError(result.message);
       }
     } catch (error) {
-      onError(t('failedToAddServer'));
+      onError(t('mcp.failedToAddServer'));
       console.error("Failed to add SSE server:", error);
     } finally {
       setSaving(false);
@@ -227,7 +227,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">{t('environmentVariables')}</Label>
+          <Label className="text-sm font-medium">{t('mcp.environmentVariables')}</Label>
           <Button
             variant="outline"
             size="sm"
@@ -235,7 +235,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
             className="gap-2"
           >
             <Plus className="h-3 w-3" />
-            {t('addVariable')}
+            {t('mcp.addVariable')}
           </Button>
         </div>
         
@@ -244,14 +244,14 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
             {envVars.map((envVar) => (
               <div key={envVar.id} className="flex items-center gap-2">
                 <Input
-                  placeholder="KEY"
+                  placeholder={t('settings.placeholders.envVarKey')}
                   value={envVar.key}
                   onChange={(e) => updateEnvVar(type, envVar.id, "key", e.target.value)}
                   className="flex-1 font-mono text-sm"
                 />
                 <span className="text-muted-foreground">=</span>
                 <Input
-                  placeholder="value"
+                  placeholder={t('settings.placeholders.envVarValue')}
                   value={envVar.value}
                   onChange={(e) => updateEnvVar(type, envVar.id, "value", e.target.value)}
                   className="flex-1 font-mono text-sm"
@@ -275,9 +275,9 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h3 className="text-base font-semibold">{t('addMcpServer')}</h3>
+        <h3 className="text-base font-semibold">{t('mcp.addMcpServer')}</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          {t('configureNewMcpServer')}
+          {t('mcp.configureNewMcpServer')}
         </p>
       </div>
 
@@ -298,7 +298,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
           <Card className="p-6 space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="stdio-name">{t('serverName')}</Label>
+                <Label htmlFor="stdio-name">{t('mcp.serverName')}</Label>
                 <Input
                   id="stdio-name"
                   placeholder="my-server"
@@ -306,12 +306,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   onChange={(e) => setStdioName(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('uniqueNameToIdentify')}
+                  {t('mcp.uniqueNameToIdentify')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stdio-command">{t('command')}</Label>
+                <Label htmlFor="stdio-command">{t('mcp.command')}</Label>
                 <Input
                   id="stdio-command"
                   placeholder="/path/to/server"
@@ -320,12 +320,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('commandToExecuteServer')}
+                  {t('mcp.commandToExecuteServer')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stdio-args">{t('argumentsOptional')}</Label>
+                <Label htmlFor="stdio-args">{t('mcp.argumentsOptional')}</Label>
                 <Input
                   id="stdio-args"
                   placeholder="arg1 arg2 arg3"
@@ -334,19 +334,19 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('spaceSeparatedArgs')}
+                  {t('mcp.spaceSeparatedArgs')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stdio-scope">{t('scope')}</Label>
+                <Label htmlFor="stdio-scope">{t('mcp.scope')}</Label>
                 <SelectComponent
                   value={stdioScope}
                   onValueChange={(value: string) => setStdioScope(value)}
                   options={[
-                    { value: "local", label: t('localProjectOnly') },
-                    { value: "project", label: t('projectSharedViaMcp') },
-                    { value: "user", label: t('userAllProjects') },
+                    { value: "local", label: t('mcp.localProjectOnly') },
+                    { value: "project", label: t('mcp.projectSharedViaMcp') },
+                    { value: "user", label: t('mcp.userAllProjects') },
                   ]}
                 />
               </div>
@@ -363,12 +363,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('addingServer')}
+                    {t('mcp.addingServer')}
                   </>
                 ) : (
                   <>
                     <Plus className="h-4 w-4" />
-                    {t('addStdioServer')}
+                    {t('mcp.addStdioServer')}
                   </>
                 )}
               </Button>
@@ -381,7 +381,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
           <Card className="p-6 space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="sse-name">{t('serverName')}</Label>
+                <Label htmlFor="sse-name">{t('mcp.serverName')}</Label>
                 <Input
                   id="sse-name"
                   placeholder="sse-server"
@@ -389,12 +389,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   onChange={(e) => setSseName(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('uniqueNameToIdentify')}
+                  {t('mcp.uniqueNameToIdentify')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sse-url">{t('url')}</Label>
+                <Label htmlFor="sse-url">{t('mcp.url')}</Label>
                 <Input
                   id="sse-url"
                   placeholder="https://example.com/sse-endpoint"
@@ -403,19 +403,19 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t('sseEndpointUrl')}
+                  {t('mcp.sseEndpointUrl')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sse-scope">{t('scope')}</Label>
+                <Label htmlFor="sse-scope">{t('mcp.scope')}</Label>
                 <SelectComponent
                   value={sseScope}
                   onValueChange={(value: string) => setSseScope(value)}
                   options={[
-                    { value: "local", label: t('localProjectOnly') },
-                    { value: "project", label: t('projectSharedViaMcp') },
-                    { value: "user", label: t('userAllProjects') },
+                    { value: "local", label: t('mcp.localProjectOnly') },
+                    { value: "project", label: t('mcp.projectSharedViaMcp') },
+                    { value: "user", label: t('mcp.userAllProjects') },
                   ]}
                 />
               </div>
@@ -432,12 +432,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('addingServer')}
+                    {t('mcp.addingServer')}
                   </>
                 ) : (
                   <>
                     <Plus className="h-4 w-4" />
-                    {t('addSseServer')}
+                    {t('mcp.addSseServer')}
                   </>
                 )}
               </Button>
@@ -451,7 +451,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Info className="h-4 w-4 text-primary" />
-            <span>{t('exampleCommands')}</span>
+            <span>{t('mcp.exampleCommands')}</span>
           </div>
           <div className="space-y-2 text-xs text-muted-foreground">
             <div className="font-mono bg-background p-2 rounded">

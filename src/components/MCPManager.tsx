@@ -155,15 +155,15 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="servers" className="gap-2">
                   <Network className="h-4 w-4 text-blue-500" />
-                  {t('servers')}
+                  {t('mcp.servers')}
                 </TabsTrigger>
                 <TabsTrigger value="add" className="gap-2">
                   <Plus className="h-4 w-4 text-green-500" />
-                  {t('addServer')}
+                  {t('mcp.addServer')}
                 </TabsTrigger>
                 <TabsTrigger value="import" className="gap-2">
                   <Download className="h-4 w-4 text-purple-500" />
-                  {t('importExport')}
+                  {t('mcp.importExport')}
                 </TabsTrigger>
               </TabsList>
 

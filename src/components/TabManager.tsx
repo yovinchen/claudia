@@ -142,6 +142,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     createProjectsTab,
     closeTab,
     switchToTab,
+    updateTab,
     canAddTab
   } = useTabState();
 
@@ -209,11 +210,30 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
       }
     };
 
+    const handleOpenSessionTab = (event: CustomEvent) => {
+      const { session, projectPath } = event.detail;
+      if (session && canAddTab()) {
+        // Create a new chat tab with the session data
+        const tabId = createChatTab();
+        // Update the tab with session data
+        setTimeout(() => {
+          updateTab(tabId, {
+            type: 'chat',
+            title: session.project_path.split('/').pop() || 'Session',
+            sessionId: session.id,
+            sessionData: session,
+            initialProjectPath: projectPath || session.project_path,
+          });
+        }, 100);
+      }
+    };
+
     window.addEventListener('create-chat-tab', handleCreateTab);
     window.addEventListener('close-current-tab', handleCloseTab);
     window.addEventListener('switch-to-next-tab', handleNextTab);
     window.addEventListener('switch-to-previous-tab', handlePreviousTab);
     window.addEventListener('switch-to-tab-by-index', handleTabByIndex as EventListener);
+    window.addEventListener('open-session-tab', handleOpenSessionTab as EventListener);
 
     return () => {
       window.removeEventListener('create-chat-tab', handleCreateTab);
@@ -221,8 +241,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
       window.removeEventListener('switch-to-next-tab', handleNextTab);
       window.removeEventListener('switch-to-previous-tab', handlePreviousTab);
       window.removeEventListener('switch-to-tab-by-index', handleTabByIndex as EventListener);
+      window.removeEventListener('open-session-tab', handleOpenSessionTab as EventListener);
     };
-  }, [tabs, activeTabId, createChatTab, closeTab, switchToTab]);
+  }, [tabs, activeTabId, createChatTab, closeTab, switchToTab, updateTab, canAddTab]);
 
   // Check scroll buttons visibility
   const checkScrollButtons = () => {
@@ -319,7 +340,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
             className={cn(
               "p-1.5 hover:bg-muted/80 rounded-sm z-20 ml-1",
               "transition-colors duration-200 flex items-center justify-center",
-              "bg-background/80 backdrop-blur-sm shadow-sm border border-border/50"
+              "bg-background/98 backdrop-blur-xl backdrop-saturate-[1.8] shadow-sm border border-border/60"
             )}
             title="Scroll tabs left"
           >
@@ -373,7 +394,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
             className={cn(
               "p-1.5 hover:bg-muted/80 rounded-sm z-20 mr-1",
               "transition-colors duration-200 flex items-center justify-center",
-              "bg-background/80 backdrop-blur-sm shadow-sm border border-border/50"
+              "bg-background/98 backdrop-blur-xl backdrop-saturate-[1.8] shadow-sm border border-border/60"
             )}
             title="Scroll tabs right"
           >
@@ -390,7 +411,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         disabled={!canAddTab()}
         className={cn(
           "p-2 mx-2 rounded-md transition-all duration-200 flex items-center justify-center",
-          "border border-border/50 bg-background/50 backdrop-blur-sm",
+          "border border-border/60 bg-background/85 backdrop-blur-xl backdrop-saturate-[1.8]",
           canAddTab()
             ? "hover:bg-muted/80 hover:border-border text-muted-foreground hover:text-foreground hover:shadow-sm"
             : "opacity-50 cursor-not-allowed bg-muted/30"

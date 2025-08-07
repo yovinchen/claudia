@@ -145,6 +145,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 /**
  * Icon categories for better organization
@@ -333,6 +334,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   // Filter icons based on search query
   const filteredCategories = useMemo(() => {
@@ -368,7 +370,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] p-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Choose an icon</DialogTitle>
+          <DialogTitle>{t('agents.chooseAnIcon')}</DialogTitle>
         </DialogHeader>
 
         {/* Search Bar */}
@@ -376,7 +378,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search icons..."
+              placeholder={t('agents.searchIcons')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -390,7 +392,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           {Object.keys(filteredCategories).length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-center">
               <p className="text-sm text-muted-foreground">
-                No icons found for "{searchQuery}"
+                {t('agents.noIconsFound')} "{searchQuery}"
               </p>
             </div>
           ) : (
@@ -405,7 +407,15 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                     transition={{ duration: 0.2 }}
                   >
                     <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                      {category}
+                      {category === "Interface & Navigation" ? t('agents.iconCategories.interfaceNavigation') :
+                       category === "Development & Tech" ? t('agents.iconCategories.developmentTech') :
+                       category === "Business & Finance" ? t('agents.iconCategories.businessFinance') :
+                       category === "Creative & Design" ? t('agents.iconCategories.creativeDesign') :
+                       category === "Nature & Science" ? t('agents.iconCategories.natureScience') :
+                       category === "Gaming & Entertainment" ? t('agents.iconCategories.gamingEntertainment') :
+                       category === "Communication" ? t('agents.iconCategories.communication') :
+                       category === "Miscellaneous" ? t('agents.iconCategories.miscellaneous') :
+                       category}
                     </h3>
                     <div className="grid grid-cols-10 gap-2">
                       {icons.map((item: IconItem) => {
@@ -444,7 +454,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         {/* Footer */}
         <div className="px-6 py-3 border-t bg-muted/50">
           <p className="text-xs text-muted-foreground text-center">
-            Click an icon to select • {allIcons.length} icons available
+            {t('agents.clickToSelect')} • {allIcons.length} {t('agents.iconsAvailable')}
           </p>
         </div>
       </DialogContent>

@@ -230,24 +230,24 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 <div className="flex gap-2 mb-4 pt-4">
                   <Button onClick={handleCreateAgent} className="flex-1">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Agent
+                    {t('agents.createAgent')}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="flex-1">
                         <Import className="w-4 h-4 mr-2" />
-                        Import Agent
+                        {t('agents.import')}
                         <ChevronDown className="w-4 h-4 ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={handleImportFromFile}>
                         <FileJson className="w-4 h-4 mr-2" />
-                        From File
+                        {t('agents.importFromFile')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleImportFromGitHub}>
                         <Globe className="w-4 h-4 mr-2" />
-                        From GitHub
+                        {t('agents.importFromGitHub')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -268,7 +268,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                       window.dispatchEvent(new CustomEvent('open-create-agent-tab'));
                     }}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Create Agent
+                      {t('agents.createAgent')}
                     </Button>
                   </div>
                 ) : (
@@ -299,7 +299,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                               onClick={() => handleExportAgent(agent)}
                             >
                               <Download className="w-3 h-3 mr-1" />
-                              Export
+                              {t('agents.export')}
                             </Button>
                             <Button
                               size="sm"
@@ -308,14 +308,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
+                              {t('app.delete')}
                             </Button>
                             <Button
                               size="sm"
                               onClick={() => handleRunAgent(agent)}
                             >
                               <Play className="w-3 h-3 mr-1" />
-                              Run
+                              {t('agents.runAgent')}
                             </Button>
                           </div>
                         </div>
@@ -331,9 +331,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 {runningAgents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <Clock className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium mb-2">No running agents</p>
+                    <p className="text-lg font-medium mb-2">{t('agents.noRunningAgents')}</p>
                     <p className="text-sm text-muted-foreground">
-                      Agent executions will appear here when started
+                      {t('agents.agentExecutionsWillAppear')}
                     </p>
                   </div>
                 ) : (
@@ -373,7 +373,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                 handleOpenAgentRun(run);
                               }}
                             >
-                              View
+                              {t('agents.view')}
                             </Button>
                           </div>
                         </motion.div>
@@ -392,9 +392,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
     <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Agent</DialogTitle>
+          <DialogTitle>{t('agents.deleteAgentTitle')}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{agentToDelete?.name}"? This action cannot be undone.
+            {t('agents.deleteConfirmation', { name: agentToDelete?.name })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-4">
@@ -405,13 +405,13 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
               setAgentToDelete(null);
             }}
           >
-            Cancel
+            {t('app.cancel')}
           </Button>
           <Button
             variant="destructive"
             onClick={confirmDelete}
           >
-            Delete
+            {t('app.delete')}
           </Button>
         </div>
       </DialogContent>

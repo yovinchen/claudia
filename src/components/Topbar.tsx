@@ -107,7 +107,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         variant="ghost"
         size="sm"
         className="h-auto py-1 px-2 hover:bg-accent"
-        onClick={onSettingsClick}
+        onClick={() => {
+          // Emit event to return to home
+          window.dispatchEvent(new CustomEvent('switch-to-welcome'));
+        }}
+        title="Return to Home"
       >
         <div className="flex items-center space-x-2 text-xs">
           <Circle
@@ -172,7 +176,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        "flex items-center justify-between px-4 py-3 border-b border-border bg-background/98 backdrop-blur-xl backdrop-saturate-[1.8] supports-[backdrop-filter]:bg-background/85 shadow-sm",
         className
       )}
     >

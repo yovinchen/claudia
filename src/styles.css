@@ -10,6 +10,21 @@
   display: none;
 }
 
+/* Custom animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animation utilities */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
 /* Dark theme configuration */
 @theme {
   /* Colors */
@@ -45,8 +60,8 @@
   --radius-xl: 1rem;
 
   /* Fonts */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-sans: "Maple Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --font-mono: "Maple Mono", ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
@@ -56,26 +71,26 @@
 /* Theme Variations */
 /* Default is dark theme - already defined above */
 
-/* Light Theme */
+/* Light Theme - Enhanced Contrast */
 .theme-light {
-  --color-background: oklch(0.98 0.01 240);
-  --color-foreground: oklch(0.12 0.01 240);
-  --color-card: oklch(0.96 0.01 240);
-  --color-card-foreground: oklch(0.12 0.01 240);
-  --color-popover: oklch(0.98 0.01 240);
-  --color-popover-foreground: oklch(0.12 0.01 240);
-  --color-primary: oklch(0.12 0.01 240);
-  --color-primary-foreground: oklch(0.98 0.01 240);
-  --color-secondary: oklch(0.94 0.01 240);
-  --color-secondary-foreground: oklch(0.12 0.01 240);
-  --color-muted: oklch(0.94 0.01 240);
+  --color-background: oklch(0.99 0.005 240);
+  --color-foreground: oklch(0.08 0.01 240);
+  --color-card: oklch(0.97 0.005 240);
+  --color-card-foreground: oklch(0.08 0.01 240);
+  --color-popover: oklch(0.99 0.005 240);
+  --color-popover-foreground: oklch(0.08 0.01 240);
+  --color-primary: oklch(0.08 0.01 240);
+  --color-primary-foreground: oklch(0.99 0.005 240);
+  --color-secondary: oklch(0.95 0.005 240);
+  --color-secondary-foreground: oklch(0.08 0.01 240);
+  --color-muted: oklch(0.95 0.005 240);
   --color-muted-foreground: oklch(0.45 0.01 240);
-  --color-accent: oklch(0.94 0.01 240);
-  --color-accent-foreground: oklch(0.12 0.01 240);
+  --color-accent: oklch(0.95 0.005 240);
+  --color-accent-foreground: oklch(0.08 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.90 0.01 240);
-  --color-input: oklch(0.90 0.01 240);
+  --color-destructive-foreground: oklch(0.99 0.005 240);
+  --color-border: oklch(0.85 0.005 240);
+  --color-input: oklch(0.85 0.005 240);
   --color-ring: oklch(0.52 0.015 240);
   
   /* Additional colors for status messages */
@@ -155,6 +170,11 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  /* Optimize Maple Mono rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga" 1, "calt" 1;
+  letter-spacing: -0.01em;
 }
 
 /* Placeholder text styling */
@@ -591,6 +611,12 @@ button:focus-visible,
   }
 }
 
+/* Animation for shimmer effect */
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
 .shimmer-hover {
   position: relative;
   overflow: hidden;
@@ -776,4 +802,34 @@ code::-webkit-scrollbar-thumb:hover {
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
+}
+
+/* Glass Morphism Effects - Enhanced for better contrast */
+.glass-panel {
+  background: var(--color-background);
+  background: color-mix(in srgb, var(--color-background) 98%, transparent);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: 
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+}
+
+.theme-light .glass-panel {
+  background: color-mix(in srgb, var(--color-background) 85%, transparent);
+  box-shadow: 
+    0 2px 8px 0 rgb(0 0 0 / 0.08),
+    0 1px 3px -1px rgb(0 0 0 / 0.06),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.8);
+}
+
+/* Enhanced text contrast for light theme */
+.theme-light .text-muted-foreground {
+  color: oklch(0.45 0.01 240);
+}
+
+.theme-light .hover\:text-muted-foreground:hover {
+  color: oklch(0.40 0.01 240);
 } 

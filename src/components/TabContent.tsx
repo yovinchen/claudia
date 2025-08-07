@@ -315,6 +315,22 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 export const TabContent: React.FC = () => {
   const { t } = useTranslation();
   const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  const [hasInitialized, setHasInitialized] = React.useState(false);
+  
+  // Auto redirect to home when no tabs (but not on initial load)
+  useEffect(() => {
+    if (hasInitialized && tabs.length === 0) {
+      // Dispatch event to switch back to welcome view
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('switch-to-welcome'));
+      }, 100);
+    }
+  }, [tabs.length, hasInitialized]);
+  
+  // Mark as initialized after first render
+  useEffect(() => {
+    setHasInitialized(true);
+  }, []);
   
   // Listen for events to open sessions in tabs
   useEffect(() => {
