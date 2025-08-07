@@ -42,9 +42,12 @@
     "settings": "Settings",
     "usage": "Usage Dashboard",
     "mcp": "MCP Manager",
+    "relayStations": "Relay Stations",
     "about": "About"
   },
   "welcome": {
+    "relayStationManagement": "Relay Stations",
+    "relayStationManagementDesc": "Manage Claude API relay stations",
     "agentManagement": "Agent Management",
     "agentManagementDesc": "Create and manage intelligent agents",
     "projectManagement": "Project Management",
@@ -705,5 +708,77 @@
   "input": {
     "pressEnterToSend": "Press Enter to send, Shift+Enter for new line",
     "withFileAndCommandSupport": ", @ to mention files, / for commands, drag & drop or paste images"
+  },
+  "relayStation": {
+    "title": "Relay Stations",
+    "description": "Manage Claude API relay stations for network access",
+    "create": "Add Station",
+    "createTitle": "Create Relay Station",
+    "createFirst": "Create First Station",
+    "edit": "Edit Station",
+    "editTitle": "Edit Relay Station", 
+    "delete": "Delete Station",
+    "deleteConfirm": "Are you sure you want to delete this relay station?",
+    "noStations": "No relay stations configured",
+    "noStationsDesc": "Add a relay station to access Claude API through proxy services",
+    "name": "Station Name",
+    "namePlaceholder": "My Relay Station",
+    "nameRequired": "Station name is required",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description for this station",
+    "apiUrl": "API URL",
+    "apiUrlRequired": "API URL is required",
+    "adapterType": "Adapter Type",
+    "authMethod": "Authentication Method",
+    "systemToken": "System Token",
+    "tokenPlaceholder": "Enter your API token",
+    "tokenRequired": "System token is required",
+    "userId": "User ID",
+    "userIdPlaceholder": "Required for NewAPI/OneAPI",
+    "enabled": "Enabled",
+    "testConnection": "Test Connection",
+    "connectionSuccess": "Connection successful",
+    "connectionFailed": "Connection test failed",
+    "createSuccess": "Relay station created successfully",
+    "createFailed": "Failed to create relay station",
+    "updateSuccess": "Relay station updated successfully", 
+    "updateFailed": "Failed to update relay station",
+    "deleteSuccess": "Relay station deleted successfully",
+    "deleteFailed": "Failed to delete relay station",
+    "loadFailed": "Failed to load relay stations",
+    "custom": "Custom",
+    "enabledSuccess": "Relay station enabled successfully",
+    "disabledSuccess": "Relay station disabled successfully",
+    "toggleEnableFailed": "Failed to toggle relay station status",
+    "syncConfig": "Sync Config",
+    "syncFailed": "Failed to sync configuration",
+    "currentConfig": "Current Configuration",
+    "notConfigured": "Not configured",
+    "configLocation": "Config file location"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "unknown": "Unknown",
+    "disabled": "Disabled",
+    "enabled": "Enabled"
+  },
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "updating": "Updating..."
+  },
+  "error": {
+    "title": "Error"
+  },
+  "success": {
+    "title": "Success"
+  },
+  "warning": {
+    "title": "Warning"
   }
 }

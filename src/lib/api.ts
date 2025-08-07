@@ -440,6 +440,117 @@ export interface ImportServerResult {
   error?: string;
 }
 
+// ================================
+// Relay Station Types
+// ================================
+
+/** 中转站适配器类型 */
+export type RelayStationAdapter = 
+  | 'newapi'    // NewAPI 兼容平台
+  | 'oneapi'    // OneAPI 兼容平台
+  | 'yourapi'   // YourAPI 特定平台
+  | 'custom';   // 自定义简单配置
+
+/** 认证方式 */
+export type AuthMethod = 
+  | 'bearer_token'  // Bearer Token 认证（推荐）
+  | 'api_key'       // API Key 认证
+  | 'custom';       // 自定义认证方式
+
+/** 中转站配置 */
+export interface RelayStation {
+  id: string;                    // 唯一标识符
+  name: string;                  // 显示名称
+  description?: string;          // 描述信息
+  api_url: string;              // API 基础 URL
+  adapter: RelayStationAdapter; // 适配器类型
+  auth_method: AuthMethod;      // 认证方式
+  system_token: string;         // 系统令牌
+  user_id?: string;             // 用户 ID（NewAPI 必需）
+  adapter_config?: Record<string, any>; // 适配器特定配置
+  enabled: boolean;             // 启用状态
+  created_at: number;          // 创建时间
+  updated_at: number;          // 更新时间
+}
+
+/** 创建中转站请求 */
+export interface CreateRelayStationRequest {
+  name: string;
+  description?: string;
+  api_url: string;
+  adapter: RelayStationAdapter;
+  auth_method: AuthMethod;
+  system_token: string;
+  user_id?: string;
+  adapter_config?: Record<string, any>;
+  enabled: boolean;
+}
+
+/** 更新中转站请求 */
+export interface UpdateRelayStationRequest {
+  id: string;
+  name: string;
+  description?: string;
+  api_url: string;
+  adapter: RelayStationAdapter;
+  auth_method: AuthMethod;
+  system_token: string;
+  user_id?: string;
+  adapter_config?: Record<string, any>;
+  enabled: boolean;
+}
+
+/** 站点信息 */
+export interface StationInfo {
+  name: string;                              // 站点名称
+  announcement?: string;                     // 公告信息
+  api_url: string;                          // API 地址
+  version?: string;                         // 版本信息
+  metadata?: Record<string, any>;           // 扩展元数据
+  quota_per_unit?: number;                  // 单位配额（用于价格转换）
+}
+
+/** 用户信息 */
+export interface UserInfo {
+  user_id: string;                          // 用户 ID
+  username?: string;                        // 用户名
+  email?: string;                          // 邮箱
+  balance_remaining?: number;              // 剩余余额（美元）
+  amount_used?: number;                    // 已用金额（美元）
+  request_count?: number;                  // 请求次数
+  status?: string;                         // 账户状态
+  metadata?: Record<string, any>;          // 原始数据
+}
+
+/** 连接测试结果 */
+export interface ConnectionTestResult {
+  success: boolean;                // 连接是否成功
+  response_time?: number;         // 响应时间（毫秒）
+  message: string;                // 结果消息
+  error?: string;                 // 错误信息
+}
+
+/** Token 信息 */
+export interface TokenInfo {
+  id: string;
+  name: string;
+  token: string;
+  quota?: number;
+  used_quota?: number;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+/** Token 分页响应 */
+export interface TokenPaginationResponse {
+  tokens: TokenInfo[];
+  total: number;
+  page: number;
+  size: number;
+  has_more: boolean;
+}
+
 /**
  * API client for interacting with the Rust backend
  */
@@ -1921,6 +2032,275 @@ export const api = {
       return await invoke<string[]>("get_supported_languages");
     } catch (error) {
       console.error("Failed to get supported languages:", error);
+      throw error;
+    }
+  },
+
+  // ================================
+  // Relay Stations
+  // ================================
+
+  /**
+   * Lists all relay stations
+   * @returns Promise resolving to array of relay stations
+   */
+  async relayStationsList(): Promise<RelayStation[]> {
+    try {
+      return await invoke<RelayStation[]>("relay_stations_list");
+    } catch (error) {
+      console.error("Failed to list relay stations:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets a single relay station by ID
+   * @param id - The relay station ID
+   * @returns Promise resolving to the relay station
+   */
+  async relayStationGet(id: string): Promise<RelayStation> {
+    try {
+      return await invoke<RelayStation>("relay_station_get", { id });
+    } catch (error) {
+      console.error("Failed to get relay station:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new relay station
+   * @param request - The relay station creation request
+   * @returns Promise resolving to the created relay station
+   */
+  async relayStationCreate(request: CreateRelayStationRequest): Promise<RelayStation> {
+    try {
+      return await invoke<RelayStation>("relay_station_create", { request });
+    } catch (error) {
+      console.error("Failed to create relay station:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates an existing relay station
+   * @param request - The relay station update request
+   * @returns Promise resolving to the updated relay station
+   */
+  async relayStationUpdate(request: UpdateRelayStationRequest): Promise<RelayStation> {
+    try {
+      return await invoke<RelayStation>("relay_station_update", { request });
+    } catch (error) {
+      console.error("Failed to update relay station:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a relay station
+   * @param id - The relay station ID
+   * @returns Promise resolving to success message
+   */
+  async relayStationDelete(id: string): Promise<string> {
+    try {
+      return await invoke<string>("relay_station_delete", { id });
+    } catch (error) {
+      console.error("Failed to delete relay station:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggles relay station enable status (ensures only one station is enabled)
+   * @param id - The relay station ID
+   * @param enabled - Whether to enable or disable the station
+   * @returns Promise resolving to success message
+   */
+  async relayStationToggleEnable(id: string, enabled: boolean): Promise<string> {
+    try {
+      return await invoke<string>("relay_station_toggle_enable", { id, enabled });
+    } catch (error) {
+      console.error("Failed to toggle relay station enable status:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Syncs relay station config to Claude settings.json
+   * @returns Promise resolving to sync result message
+   */
+  async relayStationSyncConfig(): Promise<string> {
+    try {
+      return await invoke<string>("relay_station_sync_config");
+    } catch (error) {
+      console.error("Failed to sync relay station config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Restores Claude config from backup
+   * @returns Promise resolving to restore result message
+   */
+  async relayStationRestoreConfig(): Promise<string> {
+    try {
+      return await invoke<string>("relay_station_restore_config");
+    } catch (error) {
+      console.error("Failed to restore config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets current API config from Claude settings
+   * @returns Promise resolving to current config info
+   */
+  async relayStationGetCurrentConfig(): Promise<Record<string, string | null>> {
+    try {
+      return await invoke<Record<string, string | null>>("relay_station_get_current_config");
+    } catch (error) {
+      console.error("Failed to get current config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets relay station information
+   * @param stationId - The relay station ID
+   * @returns Promise resolving to station information
+   */
+  async relayStationGetInfo(stationId: string): Promise<StationInfo> {
+    try {
+      return await invoke<StationInfo>("relay_station_get_info", { stationId });
+    } catch (error) {
+      console.error("Failed to get station info:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets user information from relay station
+   * @param stationId - The relay station ID
+   * @param userId - The user ID
+   * @returns Promise resolving to user information
+   */
+  async relayStationGetUserInfo(stationId: string, userId: string): Promise<UserInfo> {
+    try {
+      return await invoke<UserInfo>("relay_station_get_user_info", { stationId, userId });
+    } catch (error) {
+      console.error("Failed to get user info:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Tests relay station connection
+   * @param stationId - The relay station ID
+   * @returns Promise resolving to connection test result
+   */
+  async relayStationTestConnection(stationId: string): Promise<ConnectionTestResult> {
+    try {
+      return await invoke<ConnectionTestResult>("relay_station_test_connection", { stationId });
+    } catch (error) {
+      console.error("Failed to test connection:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets usage logs from relay station
+   * @param stationId - The relay station ID
+   * @param userId - The user ID
+   * @param page - Page number (optional)
+   * @param size - Page size (optional)
+   * @returns Promise resolving to usage logs
+   */
+  async relayStationGetUsageLogs(
+    stationId: string, 
+    userId: string, 
+    page?: number, 
+    size?: number
+  ): Promise<any> {
+    try {
+      return await invoke<any>("relay_station_get_usage_logs", { stationId, userId, page, size });
+    } catch (error) {
+      console.error("Failed to get usage logs:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Lists tokens from relay station
+   * @param stationId - The relay station ID
+   * @param page - Page number (optional)
+   * @param size - Page size (optional)
+   * @returns Promise resolving to token pagination response
+   */
+  async relayStationListTokens(
+    stationId: string, 
+    page?: number, 
+    size?: number
+  ): Promise<TokenPaginationResponse> {
+    try {
+      return await invoke<TokenPaginationResponse>("relay_station_list_tokens", { stationId, page, size });
+    } catch (error) {
+      console.error("Failed to list tokens:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new token on relay station
+   * @param stationId - The relay station ID
+   * @param name - Token name
+   * @param quota - Token quota (optional)
+   * @returns Promise resolving to created token info
+   */
+  async relayStationCreateToken(
+    stationId: string, 
+    name: string, 
+    quota?: number
+  ): Promise<TokenInfo> {
+    try {
+      return await invoke<TokenInfo>("relay_station_create_token", { stationId, name, quota });
+    } catch (error) {
+      console.error("Failed to create token:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a token on relay station
+   * @param stationId - The relay station ID
+   * @param tokenId - The token ID
+   * @param name - New token name (optional)
+   * @param quota - New token quota (optional)
+   * @returns Promise resolving to updated token info
+   */
+  async relayStationUpdateToken(
+    stationId: string, 
+    tokenId: string, 
+    name?: string, 
+    quota?: number
+  ): Promise<TokenInfo> {
+    try {
+      return await invoke<TokenInfo>("relay_station_update_token", { stationId, tokenId, name, quota });
+    } catch (error) {
+      console.error("Failed to update token:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a token from relay station
+   * @param stationId - The relay station ID
+   * @param tokenId - The token ID
+   * @returns Promise resolving to success message
+   */
+  async relayStationDeleteToken(stationId: string, tokenId: string): Promise<string> {
+    try {
+      return await invoke<string>("relay_station_delete_token", { stationId, tokenId });
+    } catch (error) {
+      console.error("Failed to delete token:", error);
       throw error;
     }
   }

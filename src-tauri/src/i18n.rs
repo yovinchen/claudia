@@ -43,12 +43,38 @@ impl SimpleI18n {
             ("en-US", "agent-not-found") => "Agent not found".to_string(),
             ("en-US", "claude-not-installed") => "Claude Code is not installed".to_string(),
             
+            // Relay Station English translations
+            ("en-US", "relay_adapter.custom_no_test") => "Custom configuration, connection test skipped".to_string(),
+            ("en-US", "relay_adapter.user_info_not_available") => "User info not available for this configuration".to_string(),
+            ("en-US", "relay_adapter.usage_logs_not_available") => "Usage logs not available for this configuration".to_string(),
+            ("en-US", "relay_adapter.token_management_not_available") => "Token management not available for this configuration".to_string(),
+            ("en-US", "relay_adapter.connection_success") => "Connection successful".to_string(),
+            ("en-US", "relay_adapter.api_error") => "API returned error".to_string(),
+            ("en-US", "relay_adapter.parse_error") => "Failed to parse response".to_string(),
+            ("en-US", "relay_adapter.http_error") => "HTTP request failed".to_string(),
+            ("en-US", "relay_adapter.network_error") => "Network connection failed".to_string(),
+            ("en-US", "relay_station.enabled_success") => "Relay station enabled successfully".to_string(),
+            ("en-US", "relay_station.disabled_success") => "Relay station disabled successfully".to_string(),
+            
             // 中文翻译
             ("zh-CN", "error-failed-to-create") => "创建失败".to_string(),
             ("zh-CN", "error-failed-to-update") => "更新失败".to_string(),
             ("zh-CN", "error-failed-to-delete") => "删除失败".to_string(),
             ("zh-CN", "agent-not-found") => "未找到智能体".to_string(),
             ("zh-CN", "claude-not-installed") => "未安装 Claude Code".to_string(),
+            
+            // Relay Station Chinese translations
+            ("zh-CN", "relay_adapter.custom_no_test") => "自定义配置，跳过连接测试".to_string(),
+            ("zh-CN", "relay_adapter.user_info_not_available") => "该配置不支持用户信息查询".to_string(),
+            ("zh-CN", "relay_adapter.usage_logs_not_available") => "该配置不支持使用日志查询".to_string(),
+            ("zh-CN", "relay_adapter.token_management_not_available") => "该配置不支持 Token 管理".to_string(),
+            ("zh-CN", "relay_adapter.connection_success") => "连接成功".to_string(),
+            ("zh-CN", "relay_adapter.api_error") => "API 返回错误".to_string(),
+            ("zh-CN", "relay_adapter.parse_error") => "解析响应失败".to_string(),
+            ("zh-CN", "relay_adapter.http_error") => "HTTP 请求失败".to_string(),
+            ("zh-CN", "relay_adapter.network_error") => "网络连接失败".to_string(),
+            ("zh-CN", "relay_station.enabled_success") => "中转站启用成功".to_string(),
+            ("zh-CN", "relay_station.disabled_success") => "中转站禁用成功".to_string(),
             
             // 默认情况
             _ => key.to_string(),

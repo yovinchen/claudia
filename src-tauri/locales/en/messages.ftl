@@ -38,6 +38,48 @@ project-not-found = Project not found
 project-access-denied = Access denied to project
 session-not-found = Session not found
 
+# Relay Station Messages
+relay-station-not-found = Relay station not found
+relay-station-create-failed = Failed to create relay station
+relay-station-update-failed = Failed to update relay station
+relay-station-delete-failed = Failed to delete relay station
+relay-station-delete-success = Relay station deleted successfully
+relay-station-name-required = Relay station name is required
+relay-station-api-url-required = API URL is required
+relay-station-invalid-url = Invalid URL format
+relay-station-https-required = Only HTTPS URLs are allowed for security
+relay-station-token-required = System token is required
+relay-station-token-too-short = Token is too short (minimum 10 characters)
+relay-station-token-invalid-chars = Token contains invalid characters
+relay-station-invalid-adapter = Invalid adapter type
+relay-station-invalid-auth-method = Invalid authentication method
+relay-station-invalid-config = Invalid adapter configuration
+
+# Relay Adapter Messages
+relay-adapter-connection-success = Connection successful
+relay-adapter-api-error = API returned error
+relay-adapter-parse-error = Failed to parse response
+relay-adapter-http-error = HTTP request failed
+relay-adapter-network-error = Network connection failed
+relay-adapter-custom-no-test = Custom configuration, connection test skipped
+relay-adapter-user-info-not-available = User info not available for this configuration
+relay-adapter-usage-logs-not-available = Usage logs not available for this configuration
+relay-adapter-token-management-not-available = Token management not available for this configuration
+relay-adapter-token-deleted = Token deleted successfully
+relay-adapter-get-info-failed = Failed to get station information
+relay-adapter-get-user-info-failed = Failed to get user information
+relay-adapter-connection-test-failed = Connection test failed
+relay-adapter-get-usage-logs-failed = Failed to get usage logs
+relay-adapter-list-tokens-failed = Failed to list tokens
+relay-adapter-create-token-failed = Failed to create token
+relay-adapter-update-token-failed = Failed to update token
+relay-adapter-delete-token-failed = Failed to delete token
+
+# Database Messages
+database-lock-failed = Failed to acquire database lock
+database-init-failed = Failed to initialize database
+database-query-failed = Database query failed
+
 # General Messages
 operation-cancelled = Operation cancelled
 timeout-error = Operation timed out

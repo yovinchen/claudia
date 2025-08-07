@@ -6,6 +6,7 @@ mod claude_binary;
 mod commands;
 mod process;
 mod i18n;
+mod claude_config;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -45,6 +46,16 @@ use commands::storage::{
 };
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
 use commands::language::{get_current_language, set_language, get_supported_languages};
+use commands::relay_stations::{
+    relay_stations_list, relay_station_get, relay_station_create, relay_station_update,
+    relay_station_delete, relay_station_toggle_enable, relay_station_sync_config,
+    relay_station_restore_config, relay_station_get_current_config,
+};
+use commands::relay_adapters::{
+    relay_station_get_info, relay_station_get_user_info,
+    relay_station_test_connection, relay_station_get_usage_logs, relay_station_list_tokens,
+    relay_station_create_token, relay_station_update_token, relay_station_delete_token,
+};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -256,6 +267,25 @@ fn main() {
             get_current_language,
             set_language,
             get_supported_languages,
+            
+            // Relay Stations
+            relay_stations_list,
+            relay_station_get,
+            relay_station_create,
+            relay_station_update,
+            relay_station_delete,
+            relay_station_toggle_enable,
+            relay_station_sync_config,
+            relay_station_restore_config,
+            relay_station_get_current_config,
+            relay_station_get_info,
+            relay_station_get_user_info,
+            relay_station_test_connection,
+            relay_station_get_usage_logs,
+            relay_station_list_tokens,
+            relay_station_create_token,
+            relay_station_update_token,
+            relay_station_delete_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

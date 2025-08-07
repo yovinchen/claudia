@@ -39,9 +39,12 @@
     "settings": "设置",
     "usage": "用量仪表板",
     "mcp": "MCP 管理器",
+    "relayStations": "中转站",
     "about": "关于"
   },
   "welcome": {
+    "relayStationManagement": "中转站管理",
+    "relayStationManagementDesc": "管理 Claude API 中转站",
     "agentManagement": "Agent 管理",
     "agentManagementDesc": "创建和管理智能 Agent",
     "projectManagement": "项目管理",
@@ -632,6 +635,78 @@
   "input": {
     "pressEnterToSend": "按 Enter 发送，Shift+Enter 换行",
     "withFileAndCommandSupport": "，@ 提及文件，/ 调用命令，拖拽或粘贴图片"
+  },
+  "relayStation": {
+    "title": "中转站",
+    "description": "管理 Claude API 中转站以实现网络访问",
+    "create": "添加中转站",
+    "createTitle": "创建中转站",
+    "createFirst": "创建第一个中转站",
+    "edit": "编辑中转站",
+    "editTitle": "编辑中转站",
+    "delete": "删除中转站",
+    "deleteConfirm": "确定要删除这个中转站吗？",
+    "noStations": "未配置中转站",
+    "noStationsDesc": "添加中转站以通过代理服务访问 Claude API",
+    "name": "中转站名称",
+    "namePlaceholder": "我的中转站",
+    "nameRequired": "中转站名称必填",
+    "description": "描述",
+    "descriptionPlaceholder": "此中转站的可选描述",
+    "apiUrl": "API 地址",
+    "apiUrlRequired": "API 地址必填",
+    "adapterType": "适配器类型",
+    "authMethod": "认证方式",
+    "systemToken": "系统令牌",
+    "tokenPlaceholder": "输入您的 API 令牌",
+    "tokenRequired": "系统令牌必填",
+    "userId": "用户 ID",
+    "userIdPlaceholder": "NewAPI/OneAPI 必需",
+    "enabled": "启用",
+    "testConnection": "测试连接",
+    "connectionSuccess": "连接成功",
+    "connectionFailed": "连接测试失败",
+    "createSuccess": "中转站创建成功",
+    "createFailed": "创建中转站失败",
+    "updateSuccess": "中转站更新成功",
+    "updateFailed": "更新中转站失败",
+    "deleteSuccess": "中转站删除成功",
+    "deleteFailed": "删除中转站失败",
+    "loadFailed": "加载中转站失败",
+    "custom": "自定义",
+    "enabledSuccess": "中转站启用成功",
+    "disabledSuccess": "中转站禁用成功",
+    "toggleEnableFailed": "切换中转站状态失败",
+    "syncConfig": "同步配置",
+    "syncFailed": "同步配置失败",
+    "currentConfig": "当前配置",
+    "notConfigured": "未配置",
+    "configLocation": "配置文件位置"
+  },
+  "status": {
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "unknown": "未知",
+    "disabled": "已禁用",
+    "enabled": "已启用"
+  },
+  "common": {
+    "loading": "加载中...",
+    "cancel": "取消",
+    "save": "保存",
+    "create": "创建",
+    "edit": "编辑",
+    "delete": "删除",
+    "updating": "更新中..."
+  },
+  "error": {
+    "title": "错误"
+  },
+  "success": {
+    "title": "成功"
+  },
+  "warning": {
+    "title": "警告"
   }
 }
 

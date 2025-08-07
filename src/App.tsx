@@ -28,6 +28,7 @@ import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
 import { useTranslation } from "@/hooks/useTranslation";
 import { WelcomePage } from "@/components/WelcomePage";
+import RelayStationManager from "@/components/RelayStationManager";
 
 type View = 
   | "welcome" 
@@ -41,6 +42,7 @@ type View =
   | "agent-execution"
   | "agent-run-view"
   | "mcp"
+  | "relay-stations"
   | "usage-dashboard"
   | "project-settings"
   | "tabs"; // New view for tab-based interface
@@ -253,6 +255,11 @@ function AppContent() {
             onNavigate={handleViewChange}
             onNewSession={handleNewSession}
           />
+        );
+
+      case "relay-stations":
+        return (
+          <RelayStationManager onBack={() => handleViewChange("welcome")} />
         );
 
       case "cc-agents":
