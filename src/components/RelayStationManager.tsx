@@ -786,6 +786,26 @@ const CreateStationDialog: React.FC<{
                   </SelectContent>
                   </Select>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    setFormToast({ message: "正在测速，请稍候...", type: "success" });
+                    try {
+                      const best = await api.autoSelectBestNode();
+                      setPackycodeNode(best.url);
+                      setFormData(prev => ({ ...prev, api_url: best.url }));
+                      setFormToast({ 
+                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`, 
+                        type: "success" 
+                      });
+                    } catch (error) {
+                      setFormToast({ message: "节点测速失败", type: "error" });
+                    }
+                  }}
+                >
+                  自动选择
+                </Button>
               </div>
               
               <p className="text-xs text-muted-foreground">
@@ -1163,6 +1183,26 @@ const EditStationDialog: React.FC<{
                     </SelectContent>
                   </Select>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    setFormToast({ message: "正在测速，请稍候...", type: "success" });
+                    try {
+                      const best = await api.autoSelectBestNode();
+                      setPackycodeNode(best.url);
+                      setFormData(prev => ({ ...prev, api_url: best.url }));
+                      setFormToast({ 
+                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`, 
+                        type: "success" 
+                      });
+                    } catch (error) {
+                      setFormToast({ message: "节点测速失败", type: "error" });
+                    }
+                  }}
+                >
+                  自动选择
+                </Button>
               </div>
               
               <p className="text-xs text-muted-foreground">

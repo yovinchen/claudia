@@ -2349,12 +2349,11 @@ export const api = {
   
   /**
    * Tests all PackyCode nodes and returns speed test results
-   * @param token - API token for authentication
    * @returns Promise resolving to array of node speed test results
    */
-  async testAllPackycodeNodes(token: string): Promise<NodeSpeedTestResult[]> {
+  async testAllPackycodeNodes(): Promise<NodeSpeedTestResult[]> {
     try {
-      return await invoke<NodeSpeedTestResult[]>("test_all_packycode_nodes", { token });
+      return await invoke<NodeSpeedTestResult[]>("test_all_packycode_nodes");
     } catch (error) {
       console.error("Failed to test PackyCode nodes:", error);
       throw error;
@@ -2363,12 +2362,11 @@ export const api = {
 
   /**
    * Automatically selects the best PackyCode node based on speed
-   * @param token - API token for authentication
    * @returns Promise resolving to the best node
    */
-  async autoSelectBestNode(token: string): Promise<PackycodeNode> {
+  async autoSelectBestNode(): Promise<PackycodeNode> {
     try {
-      return await invoke<PackycodeNode>("auto_select_best_node", { token });
+      return await invoke<PackycodeNode>("auto_select_best_node");
     } catch (error) {
       console.error("Failed to auto-select best node:", error);
       throw error;

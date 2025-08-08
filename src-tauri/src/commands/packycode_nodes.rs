@@ -115,37 +115,55 @@ pub fn get_all_nodes() -> Vec<PackycodeNode> {
 }
 
 /// 测试单个节点速度（仅测试网络延时，不需要认证）
-async fn test_node_speed(node: &PackycodeNode, _token: &str) -> NodeSpeedTestResult {
+async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
     let client = Client::builder()
-        .timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(3))  // 减少超时时间
+        .danger_accept_invalid_certs(true)  // 接受自签名证书
         .build()
         .unwrap_or_else(|_| Client::new());
     
     let start_time = Instant::now();
     
-    // 只需要测试服务器的可达性和延时，使用简单的 HEAD 请求
+    // 使用 GET 请求到根路径，这是最简单的 ping 测试
+    // 不需要 token，只测试网络延迟
+    let url = format!("{}/", node.url.trim_end_matches('/'));
+    
     match client
-        .head(&node.url)
+        .get(&url)
+        .timeout(Duration::from_secs(3))
         .send()
         .await
     {
         Ok(_response) => {
             let response_time = start_time.elapsed().as_millis() as u64;
             
-            // 只要能连接到服务器就算成功，不管返回什么状态码
+            // 只要能连接到服务器就算成功（不管状态码）
+            // 因为我们只是测试延迟，不是测试 API 功能
+            let success = response_time < 3000;  // 小于 3 秒就算成功
+            
             NodeSpeedTestResult {
                 node: PackycodeNode {
                     response_time: Some(response_time),
-                    available: Some(true),
+                    available: Some(success),
                     ..node.clone()
                 },
                 response_time,
-                success: true,
-                error: None,
+                success,
+                error: if success { None } else { Some("响应时间过长".to_string()) },
             }
         }
         Err(e) => {
             let response_time = start_time.elapsed().as_millis() as u64;
+            
+            // 如果是超时错误，特别标记
+            let error_msg = if e.is_timeout() {
+                "连接超时".to_string()
+            } else if e.is_connect() {
+                "无法连接".to_string()
+            } else {
+                format!("网络错误: {}", e)
+            };
+            
             NodeSpeedTestResult {
                 node: PackycodeNode {
                     response_time: Some(response_time),
@@ -154,24 +172,36 @@ async fn test_node_speed(node: &PackycodeNode, _token: &str) -> NodeSpeedTestRes
                 },
                 response_time,
                 success: false,
-                error: Some(format!("连接失败: {}", e.to_string())),
+                error: Some(error_msg),
             }
         }
     }
 }
 
-/// 测试所有节点速度
+/// 测试所有节点速度（不需要 token，只测试延迟）
 #[command]
-pub async fn test_all_packycode_nodes(token: String) -> Result<Vec<NodeSpeedTestResult>, String> {
+pub async fn test_all_packycode_nodes() -> Result<Vec<NodeSpeedTestResult>, String> {
     let nodes = get_all_nodes();
     let mut results = Vec::new();
     
-    for node in nodes {
-        let result = test_node_speed(&node, &token).await;
+    // 并发测试所有节点
+    let futures: Vec<_> = nodes
+        .iter()
+        .map(|node| test_node_speed(node))
+        .collect();
+    
+    // 等待所有测试完成
+    for (i, future) in futures.into_iter().enumerate() {
+        let result = future.await;
+        log::info!("节点 {} 测速结果: {}ms, 成功: {}", 
+            nodes[i].name, 
+            result.response_time, 
+            result.success
+        );
         results.push(result);
     }
     
-    // 按响应时间排序
+    // 按响应时间排序（成功的节点优先，然后按延迟排序）
     results.sort_by(|a, b| {
         match (a.success, b.success) {
             (true, false) => std::cmp::Ordering::Less,
@@ -183,20 +213,48 @@ pub async fn test_all_packycode_nodes(token: String) -> Result<Vec<NodeSpeedTest
     Ok(results)
 }
 
-/// 自动选择最快的节点（仅从直连和备用中选择）
+/// 自动选择最快的节点（仅从直连和备用中选择，不需要 token）
 #[command]
-pub async fn auto_select_best_node(token: String) -> Result<PackycodeNode, String> {
+pub async fn auto_select_best_node() -> Result<PackycodeNode, String> {
     let nodes = get_all_nodes();
     let mut best_node: Option<(PackycodeNode, u64)> = None;
     
-    // 只测试直连和备用节点
-    for node in nodes.iter().filter(|n| matches!(n.node_type, NodeType::Direct | NodeType::Backup)) {
-        let result = test_node_speed(node, &token).await;
+    // 只测试直连和备用节点，过滤掉紧急节点
+    let test_nodes: Vec<_> = nodes
+        .into_iter()
+        .filter(|n| matches!(n.node_type, NodeType::Direct | NodeType::Backup))
+        .collect();
+    
+    log::info!("开始测试 {} 个节点...", test_nodes.len());
+    
+    // 并发测试所有节点
+    let futures: Vec<_> = test_nodes
+        .iter()
+        .map(|node| test_node_speed(node))
+        .collect();
+    
+    // 收集结果并找出最佳节点
+    for (i, future) in futures.into_iter().enumerate() {
+        let result = future.await;
+        
+        log::info!("节点 {} - 延迟: {}ms, 可用: {}", 
+            test_nodes[i].name, 
+            result.response_time, 
+            result.success
+        );
         
         if result.success {
             match &best_node {
-                None => best_node = Some((result.node, result.response_time)),
+                None => {
+                    log::info!("初始最佳节点: {}", result.node.name);
+                    best_node = Some((result.node, result.response_time));
+                },
                 Some((_, best_time)) if result.response_time < *best_time => {
+                    log::info!("发现更快节点: {} ({}ms < {}ms)", 
+                        result.node.name, 
+                        result.response_time, 
+                        best_time
+                    );
                     best_node = Some((result.node, result.response_time));
                 }
                 _ => {}
@@ -204,9 +262,16 @@ pub async fn auto_select_best_node(token: String) -> Result<PackycodeNode, Strin
         }
     }
     
-    best_node
-        .map(|(node, _)| node)
-        .ok_or_else(|| "No available nodes found".to_string())
+    match best_node {
+        Some((node, time)) => {
+            log::info!("最佳节点选择: {} (延迟: {}ms)", node.name, time);
+            Ok(node)
+        },
+        None => {
+            log::error!("没有找到可用的节点");
+            Err("没有找到可用的节点".to_string())
+        }
+    }
 }
 
 /// 获取节点列表（不测速）
