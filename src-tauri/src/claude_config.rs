@@ -12,24 +12,20 @@ pub struct ClaudeConfig {
     pub env: ClaudeEnv,
     #[serde(default)]
     pub permissions: Option<ClaudePermissions>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
-    #[serde(rename = "apiKeyHelper")]
+    #[serde(rename = "apiKeyHelper", skip_serializing_if = "Option::is_none")]
     pub api_key_helper: Option<String>,
-    #[serde(flatten)]
-    pub other: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ClaudeEnv {
-    #[serde(rename = "ANTHROPIC_AUTH_TOKEN")]
+    #[serde(rename = "ANTHROPIC_AUTH_TOKEN", skip_serializing_if = "Option::is_none")]
     pub anthropic_auth_token: Option<String>,
-    #[serde(rename = "ANTHROPIC_BASE_URL")]
+    #[serde(rename = "ANTHROPIC_BASE_URL", skip_serializing_if = "Option::is_none")]
     pub anthropic_base_url: Option<String>,
-    #[serde(rename = "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC")]
+    #[serde(rename = "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", skip_serializing_if = "Option::is_none")]
     pub disable_nonessential_traffic: Option<String>,
-    #[serde(flatten)]
-    pub other: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -63,32 +59,63 @@ pub fn read_claude_config() -> Result<ClaudeConfig, String> {
             permissions: Some(ClaudePermissions::default()),
             model: None,
             api_key_helper: None,
-            other: json!({}),
         });
     }
     
     let content = fs::read_to_string(&config_path)
         .map_err(|e| format!("读取配置文件失败: {}", e))?;
     
-    serde_json::from_str(&content)
-        .map_err(|e| format!("解析配置文件失败: {}", e))
+    // 首先尝试解析为 JSON Value，以便处理可能的格式问题
+    let mut json_value: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("解析配置文件失败: {}", e))?;
+    
+    // 如果JSON解析成功，再转换为ClaudeConfig
+    if let Some(obj) = json_value.as_object_mut() {
+        // 确保必要的字段存在
+        if !obj.contains_key("env") {
+            obj.insert("env".to_string(), json!({}));
+        }
+    }
+    
+    serde_json::from_value(json_value)
+        .map_err(|e| format!("转换配置结构失败: {}", e))
 }
 
 /// 写入 Claude 配置文件
 pub fn write_claude_config(config: &ClaudeConfig) -> Result<(), String> {
     let config_path = get_claude_config_path()?;
     
+    log::info!("尝试写入配置文件到: {:?}", config_path);
+    
     // 确保目录存在
     if let Some(parent) = config_path.parent() {
+        log::info!("确保目录存在: {:?}", parent);
         fs::create_dir_all(parent)
-            .map_err(|e| format!("创建配置目录失败: {}", e))?;
+            .map_err(|e| {
+                let error_msg = format!("创建配置目录失败: {}", e);
+                log::error!("{}", error_msg);
+                error_msg
+            })?;
     }
     
     let content = serde_json::to_string_pretty(config)
-        .map_err(|e| format!("序列化配置失败: {}", e))?;
+        .map_err(|e| {
+            let error_msg = format!("序列化配置失败: {}", e);
+            log::error!("{}", error_msg);
+            error_msg
+        })?;
     
-    fs::write(&config_path, content)
-        .map_err(|e| format!("写入配置文件失败: {}", e))
+    log::info!("准备写入内容:\n{}", content);
+    
+    fs::write(&config_path, &content)
+        .map_err(|e| {
+            let error_msg = format!("写入配置文件失败: {} (路径: {:?})", e, config_path);
+            log::error!("{}", error_msg);
+            error_msg
+        })?;
+    
+    log::info!("配置文件写入成功: {:?}", config_path);
+    Ok(())
 }
 
 /// 备份当前配置
@@ -137,8 +164,11 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
     // 格式：echo 'token'
     config.api_key_helper = Some(format!("echo '{}'", station.system_token));
     
-    // 如果是自定义适配器，可能需要特殊处理
+    // 如果是特定适配器，可能需要特殊处理
     match station.adapter.as_str() {
+        "packycode" => {
+            // PackyCode 使用原始配置，不做特殊处理
+        }
         "newapi" | "oneapi" => {
             // NewAPI 和 OneAPI 兼容 OpenAI 格式，不需要特殊处理
         }

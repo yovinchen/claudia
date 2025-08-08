@@ -14,6 +14,7 @@ use crate::claude_config;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RelayStationAdapter {
+    Packycode, // PackyCode 平台（放在第一位）
     Newapi,    // NewAPI 兼容平台
     Oneapi,    // OneAPI 兼容平台
     Yourapi,   // YourAPI 特定平台
@@ -23,6 +24,7 @@ pub enum RelayStationAdapter {
 impl RelayStationAdapter {
     pub fn as_str(&self) -> &str {
         match self {
+            RelayStationAdapter::Packycode => "packycode",
             RelayStationAdapter::Newapi => "newapi",
             RelayStationAdapter::Oneapi => "oneapi",
             RelayStationAdapter::Yourapi => "yourapi",
@@ -520,12 +522,10 @@ pub async fn relay_station_toggle_enable(
         let station = relay_station_get_internal(&conn, &id)?;
         
         // 将中转站配置应用到 Claude 配置文件
-        if let Err(e) = claude_config::apply_relay_station_to_config(&station) {
+        claude_config::apply_relay_station_to_config(&station).map_err(|e| {
             log::error!("Failed to apply relay station config: {}", e);
-            // 不中断流程，但记录错误
-        } else {
-            log::info!("Applied relay station config to Claude settings");
-        }
+            format!("配置文件写入失败: {}", e)
+        })?;
     } else {
         // 如果禁用中转站，清除 Claude 配置中的相关设置
         if let Err(e) = claude_config::clear_relay_station_from_config() {

@@ -51,6 +51,237 @@ pub trait StationAdapter: Send + Sync {
     async fn delete_token(&self, station: &RelayStation, token_id: &str) -> Result<String>;
 }
 
+/// PackyCode 适配器（默认使用 API Key 认证）
+pub struct PackycodeAdapter;
+
+#[async_trait]
+impl StationAdapter for PackycodeAdapter {
+    async fn get_station_info(&self, station: &RelayStation) -> Result<StationInfo> {
+        let url = format!("{}/api/status", station.api_url.trim_end_matches('/'));
+        
+        let response = HTTP_CLIENT
+            .get(&url)
+            .header("Authorization", format!("sk-{}", station.system_token))
+            .send()
+            .await?;
+
+        let data: Value = response.json().await?;
+        
+        if !data.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Err(anyhow::anyhow!("API Error: {}", 
+                data.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error")));
+        }
+
+        let default_data = json!({});
+        let data = data.get("data").unwrap_or(&default_data);
+        
+        Ok(StationInfo {
+            name: data.get("system_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("PackyCode")
+                .to_string(),
+            announcement: data.get("announcement")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            api_url: station.api_url.clone(),
+            version: data.get("version")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            metadata: Some({
+                let mut map = HashMap::new();
+                map.insert("adapter_type".to_string(), json!("packycode"));
+                map.insert("service_type".to_string(), json!(
+                    if station.api_url.contains("share.packycode.com") {
+                        "bus"  // 公交车
+                    } else {
+                        "taxi" // 滴滴车
+                    }
+                ));
+                if let Some(quota_per_unit) = data.get("quota_per_unit").and_then(|v| v.as_i64()) {
+                    map.insert("quota_per_unit".to_string(), json!(quota_per_unit));
+                }
+                map
+            }),
+            quota_per_unit: data.get("quota_per_unit").and_then(|v| v.as_i64()),
+        })
+    }
+
+    async fn get_user_info(&self, station: &RelayStation, user_id: &str) -> Result<UserInfo> {
+        let url = format!("{}/api/user/self", station.api_url.trim_end_matches('/'));
+        
+        let response = HTTP_CLIENT
+            .get(&url)
+            .header("Authorization", format!("sk-{}", station.system_token))
+            .header("X-User-Id", user_id)
+            .send()
+            .await?;
+
+        let data: Value = response.json().await?;
+        
+        if !data.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Err(anyhow::anyhow!("API Error: {}", 
+                data.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error")));
+        }
+
+        let user_data = data.get("data").ok_or_else(|| anyhow!("No user data returned"))?;
+        
+        Ok(UserInfo {
+            user_id: user_data.get("id")
+                .and_then(|v| v.as_i64())
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| user_id.to_string()),
+            username: user_data.get("username")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            email: user_data.get("email")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            balance_remaining: user_data.get("quota")
+                .and_then(|v| v.as_i64())
+                .map(|q| q as f64 / 500000.0), // 转换为美元
+            amount_used: user_data.get("used_quota")
+                .and_then(|v| v.as_i64())
+                .map(|q| q as f64 / 500000.0),
+            request_count: user_data.get("request_count")
+                .and_then(|v| v.as_i64()),
+            status: match user_data.get("status").and_then(|v| v.as_i64()) {
+                Some(1) => Some("active".to_string()),
+                Some(0) => Some("disabled".to_string()),
+                _ => Some("unknown".to_string()),
+            },
+            metadata: Some({
+                let mut map = HashMap::new();
+                map.insert("raw_data".to_string(), user_data.clone());
+                map
+            }),
+        })
+    }
+
+    async fn test_connection(&self, station: &RelayStation) -> Result<ConnectionTestResult> {
+        let start_time = Instant::now();
+        let url = format!("{}/api/status", station.api_url.trim_end_matches('/'));
+        
+        match HTTP_CLIENT
+            .get(&url)
+            .header("Authorization", format!("sk-{}", station.system_token))
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                let response_time = start_time.elapsed().as_millis() as u64;
+                
+                if response.status().is_success() {
+                    match response.json::<Value>().await {
+                        Ok(data) => {
+                            let success = data.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+                            if success {
+                                Ok(ConnectionTestResult {
+                                    success: true,
+                                    response_time: Some(response_time),
+                                    message: i18n::t("relay_adapter.connection_success"),
+                                    error: None,
+                                })
+                            } else {
+                                let error_msg = data.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+                                Ok(ConnectionTestResult {
+                                    success: false,
+                                    response_time: Some(response_time),
+                                    message: i18n::t("relay_adapter.api_error"),
+                                    error: Some(error_msg.to_string()),
+                                })
+                            }
+                        }
+                        Err(e) => Ok(ConnectionTestResult {
+                            success: false,
+                            response_time: Some(response_time),
+                            message: i18n::t("relay_adapter.parse_error"),
+                            error: Some(e.to_string()),
+                        })
+                    }
+                } else {
+                    Ok(ConnectionTestResult {
+                        success: false,
+                        response_time: Some(response_time),
+                        message: i18n::t("relay_adapter.http_error"),
+                        error: Some(format!("HTTP {}", response.status())),
+                    })
+                }
+            }
+            Err(e) => {
+                let response_time = start_time.elapsed().as_millis() as u64;
+                Ok(ConnectionTestResult {
+                    success: false,
+                    response_time: Some(response_time),
+                    message: i18n::t("relay_adapter.network_error"),
+                    error: Some(e.to_string()),
+                })
+            }
+        }
+    }
+
+    async fn get_usage_logs(&self, station: &RelayStation, user_id: &str, page: Option<usize>, size: Option<usize>) -> Result<Value> {
+        let page = page.unwrap_or(1);
+        let size = size.unwrap_or(10);
+        let url = format!("{}/api/log/self?page={}&size={}", 
+            station.api_url.trim_end_matches('/'), page, size);
+        
+        let response = HTTP_CLIENT
+            .get(&url)
+            .header("Authorization", format!("sk-{}", station.system_token))
+            .header("X-User-Id", user_id)
+            .send()
+            .await?;
+
+        let data: Value = response.json().await?;
+        
+        if !data.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+            return Err(anyhow::anyhow!("API Error: {}", 
+                data.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error")));
+        }
+
+        Ok(data.get("data").cloned().unwrap_or(json!([])))
+    }
+
+    async fn list_tokens(&self, station: &RelayStation, page: Option<usize>, size: Option<usize>) -> Result<TokenPaginationResponse> {
+        // PackyCode 使用简化的 Token 管理
+        let page = page.unwrap_or(1);
+        let size = size.unwrap_or(10);
+        
+        // 返回当前使用的 API Key 作为唯一 Token
+        let token = TokenInfo {
+            id: "1".to_string(),
+            name: "API Key".to_string(),
+            token: format!("sk-{}...", &station.system_token[..8]),
+            quota: None,
+            used_quota: None,
+            status: "active".to_string(),
+            created_at: station.created_at,
+            updated_at: station.updated_at,
+        };
+
+        Ok(TokenPaginationResponse {
+            tokens: vec![token],
+            total: 1,
+            page,
+            size,
+            has_more: false,
+        })
+    }
+
+    async fn create_token(&self, _station: &RelayStation, _name: &str, _quota: Option<i64>) -> Result<TokenInfo> {
+        Err(anyhow::anyhow!(i18n::t("relay_adapter.packycode_single_token")))
+    }
+
+    async fn update_token(&self, _station: &RelayStation, _token_id: &str, _name: Option<&str>, _quota: Option<i64>) -> Result<TokenInfo> {
+        Err(anyhow::anyhow!(i18n::t("relay_adapter.packycode_single_token")))
+    }
+
+    async fn delete_token(&self, _station: &RelayStation, _token_id: &str) -> Result<String> {
+        Err(anyhow::anyhow!(i18n::t("relay_adapter.packycode_single_token")))
+    }
+}
+
 /// NewAPI 适配器（支持 NewAPI 和 OneAPI）
 pub struct NewApiAdapter;
 
@@ -575,7 +806,7 @@ impl StationAdapter for CustomAdapter {
         // Custom 适配器跳过连接测试，直接返回成功
         Ok(ConnectionTestResult {
             success: true,
-            response_time: Some(0),
+            response_time: None,  // 不显示响应时间
             message: i18n::t("relay_adapter.custom_no_test"),
             error: None,
         })
@@ -605,6 +836,7 @@ impl StationAdapter for CustomAdapter {
 /// 适配器工厂函数
 pub fn create_adapter(adapter_type: &RelayStationAdapter) -> Box<dyn StationAdapter> {
     match adapter_type {
+        RelayStationAdapter::Packycode => Box::new(PackycodeAdapter),
         RelayStationAdapter::Newapi => Box::new(NewApiAdapter),
         RelayStationAdapter::Oneapi => Box::new(NewApiAdapter), // OneAPI 兼容 NewAPI
         RelayStationAdapter::Yourapi => Box::new(YourApiAdapter::new()),

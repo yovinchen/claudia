@@ -45,6 +45,7 @@ impl SimpleI18n {
             
             // Relay Station English translations
             ("en-US", "relay_adapter.custom_no_test") => "Custom configuration, connection test skipped".to_string(),
+            ("en-US", "relay_adapter.packycode_single_token") => "PackyCode only supports single API key".to_string(),
             ("en-US", "relay_adapter.user_info_not_available") => "User info not available for this configuration".to_string(),
             ("en-US", "relay_adapter.usage_logs_not_available") => "Usage logs not available for this configuration".to_string(),
             ("en-US", "relay_adapter.token_management_not_available") => "Token management not available for this configuration".to_string(),
@@ -65,6 +66,7 @@ impl SimpleI18n {
             
             // Relay Station Chinese translations
             ("zh-CN", "relay_adapter.custom_no_test") => "自定义配置，跳过连接测试".to_string(),
+            ("zh-CN", "relay_adapter.packycode_single_token") => "PackyCode 仅支持单个 API 密钥".to_string(),
             ("zh-CN", "relay_adapter.user_info_not_available") => "该配置不支持用户信息查询".to_string(),
             ("zh-CN", "relay_adapter.usage_logs_not_available") => "该配置不支持使用日志查询".to_string(),
             ("zh-CN", "relay_adapter.token_management_not_available") => "该配置不支持 Token 管理".to_string(),

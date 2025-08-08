@@ -2,13 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from '@/hooks/useTranslation';
+import { Toast, ToastContainer } from "@/components/ui/toast";
 import {
   RelayStation,
   CreateRelayStationRequest,
@@ -43,13 +52,21 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [selectedStation, setSelectedStation] = useState<RelayStation | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [stationToDelete, setStationToDelete] = useState<RelayStation | null>(null);
   const [connectionTests, setConnectionTests] = useState<Record<string, ConnectionTestResult>>({});
   const [testingConnections, setTestingConnections] = useState<Record<string, boolean>>({});
   const [togglingEnable, setTogglingEnable] = useState<Record<string, boolean>>({});
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const { t } = useTranslation();
+
+  // 显示Toast
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+  };
 
   // 加载中转站列表
   const loadStations = async () => {
@@ -59,7 +76,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setStations(stationList);
     } catch (error) {
       console.error('Failed to load stations:', error);
-      alert(t('relayStation.loadFailed'));
+      showToast(t('relayStation.loadFailed'), "error");
     } finally {
       setLoading(false);
     }
@@ -82,11 +99,11 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const syncConfig = async () => {
     try {
       const result = await api.relayStationSyncConfig();
-      alert(result);
+      showToast(result, "success");
       loadCurrentConfig();
     } catch (error) {
       console.error('Failed to sync config:', error);
-      alert(t('relayStation.syncFailed'));
+      showToast(t('relayStation.syncFailed'), "error");
     }
   };
 
@@ -98,35 +115,44 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setConnectionTests(prev => ({ ...prev, [stationId]: result }));
 
       if (result.success) {
-        alert(t('relayStation.connectionSuccess'));
+        showToast(t('relayStation.connectionSuccess'), "success");
       } else {
-        alert(result.message);
+        showToast(result.message, "error");
       }
     } catch (error) {
       console.error('Connection test failed:', error);
-      alert(t('relayStation.connectionFailed'));
+      showToast(t('relayStation.connectionFailed'), "error");
     } finally {
       setTestingConnections(prev => ({ ...prev, [stationId]: false }));
     }
   };
 
   // 删除中转站
-  const deleteStation = async (stationId: string) => {
-    if (!confirm(t('relayStation.deleteConfirm'))) return;
+  const deleteStation = async () => {
+    if (!stationToDelete) return;
 
     try {
-      await api.relayStationDelete(stationId);
-      alert(t('relayStation.deleteSuccess'));
+      await api.relayStationDelete(stationToDelete.id);
       loadStations();
+      setShowDeleteDialog(false);
+      setStationToDelete(null);
+      showToast(t('relayStation.deleteSuccess'), "success");
     } catch (error) {
       console.error('Failed to delete station:', error);
-      alert(t('relayStation.deleteFailed'));
+      showToast(t('relayStation.deleteFailed'), "error");
     }
+  };
+
+  // 打开删除确认对话框
+  const openDeleteDialog = (station: RelayStation) => {
+    setStationToDelete(station);
+    setShowDeleteDialog(true);
   };
 
   // 获取适配器类型显示名称
   const getAdapterDisplayName = (adapter: RelayStationAdapter): string => {
     switch (adapter) {
+      case 'packycode': return 'PackyCode';
       case 'newapi': return 'NewAPI';
       case 'oneapi': return 'OneAPI';
       case 'yourapi': return 'YourAPI';
@@ -141,12 +167,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setTogglingEnable(prev => ({ ...prev, [stationId]: true }));
       const newEnabled = !currentEnabled;
       await api.relayStationToggleEnable(stationId, newEnabled);
-      alert(newEnabled ? t('relayStation.enabledSuccess') : t('relayStation.disabledSuccess'));
+      showToast(newEnabled ? t('relayStation.enabledSuccess') : t('relayStation.disabledSuccess'), "success");
       loadStations();
       loadCurrentConfig(); // 重新加载配置状态
     } catch (error) {
       console.error('Failed to toggle enable status:', error);
-      alert(t('relayStation.toggleEnableFailed'));
+      showToast(t('relayStation.toggleEnableFailed'), "error");
     } finally {
       setTogglingEnable(prev => ({ ...prev, [stationId]: false }));
     }
@@ -212,6 +238,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               onSuccess={() => {
                 setShowCreateDialog(false);
                 loadStations();
+                showToast(t('relayStation.createSuccess'), "success");
               }}
             />
           </DialogContent>
@@ -318,7 +345,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                       )}
                       <span>
                         {connectionTests[station.id].message}
-                        {connectionTests[station.id].response_time && (
+                        {connectionTests[station.id].response_time !== undefined && connectionTests[station.id].response_time !== null && (
                           <span className="ml-2 text-muted-foreground">
                             ({connectionTests[station.id].response_time}ms)
                           </span>
@@ -331,7 +358,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => testConnection(station.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        testConnection(station.id);
+                      }}
                       disabled={testingConnections[station.id]}
                     >
                       {testingConnections[station.id] ? (
@@ -346,7 +376,8 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedStation(station);
                           setShowEditDialog(true);
                         }}
@@ -356,7 +387,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteStation(station.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteDialog(station);
+                        }}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -380,6 +414,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 setShowEditDialog(false);
                 setSelectedStation(null);
                 loadStations();
+                showToast(t('relayStation.updateSuccess'), "success");
               }}
               onCancel={() => {
                 setShowEditDialog(false);
@@ -388,6 +423,52 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* 删除确认对话框 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t('relayStation.confirmDeleteTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('relayStation.deleteConfirm')}
+              {stationToDelete && (
+                <div className="mt-2 p-2 bg-muted rounded">
+                  <strong>{stationToDelete.name}</strong>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setStationToDelete(null);
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteStation}
+            >
+              {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toast 容器 */}
+      {toast && (
+        <ToastContainer>
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={3000}
+            onDismiss={() => setToast(null)}
+          />
+        </ToastContainer>
       )}
     </div>
   );
@@ -401,42 +482,122 @@ const CreateStationDialog: React.FC<{
     name: '',
     description: '',
     api_url: '',
-    adapter: 'newapi',
-    auth_method: 'bearer_token',
+    adapter: 'packycode',  // 默认使用 PackyCode
+    auth_method: 'api_key', // PackyCode 默认使用 API Key
     system_token: '',
     user_id: '',
     enabled: false,  // 默认不启用，需要通过主界面切换
   });
   const [submitting, setSubmitting] = useState(false);
+  const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
+  const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
+  const [testingNodes, setTestingNodes] = useState(false);
+  const [nodeTestResults, setNodeTestResults] = useState<any[]>([]);
+  const [autoSelectingNode, setAutoSelectingNode] = useState(false);
 
   const { t } = useTranslation();
+
+  // 当适配器改变时更新认证方式和 URL
+  useEffect(() => {
+    if (formData.adapter === 'packycode') {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'api_key', // PackyCode 固定使用 API Key
+        api_url: packycodeService === 'taxi' 
+          ? 'https://share-api.packycode.com' 
+          : (packycodeNode === 'auto' ? 'https://api.packycode.com' : packycodeNode)
+      }));
+    } else if (formData.adapter === 'custom') {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'custom'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'bearer_token'
+      }));
+    }
+  }, [formData.adapter, packycodeService, packycodeNode]);
+
+  // 自动填充中转站名称
+  const fillStationName = (serviceType: string) => {
+    const serviceName = serviceType === 'taxi' ? t('relayStation.taxiService') : t('relayStation.busService');
+    const newName = `PackyCode ${serviceName}`;
+    
+    // 如果名称为空，或者当前名称是之前自动生成的PackyCode名称，则更新
+    if (!formData.name.trim() || 
+        formData.name.startsWith('PackyCode ') || 
+        formData.name === `PackyCode ${t('relayStation.taxiService')}` ||
+        formData.name === `PackyCode ${t('relayStation.busService')}`) {
+      setFormData(prev => ({
+        ...prev,
+        name: newName
+      }));
+    }
+  };
+
+  // 测试所有节点速度（仅公交车服务需要）
+  const testAllNodes = async () => {
+    setTestingNodes(true);
+    try {
+      // 不需要 token，只测试网络延时
+      const results = await api.testAllPackycodeNodes('dummy_token');
+      setNodeTestResults(results);
+      setFormToast({ message: t('relayStation.testCompleted'), type: "success" });
+    } catch (error) {
+      console.error('Failed to test nodes:', error);
+      setFormToast({ message: t('relayStation.testFailed'), type: "error" });
+    } finally {
+      setTestingNodes(false);
+    }
+  };
+
+  // 自动选择最快节点（仅公交车服务需要）
+  const autoSelectBestNode = async () => {
+    setAutoSelectingNode(true);
+    try {
+      // 不需要 token，只测试网络延时
+      const bestNode = await api.autoSelectBestNode('dummy_token');
+      setPackycodeNode(bestNode.url);
+      setFormToast({ 
+        message: `${t('relayStation.autoSelectedNode')}: ${bestNode.name} (${bestNode.response_time}ms)`, 
+        type: "success" 
+      });
+    } catch (error) {
+      console.error('Failed to auto-select node:', error);
+      setFormToast({ message: t('relayStation.autoSelectFailed'), type: "error" });
+    } finally {
+      setAutoSelectingNode(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert(t('relayStation.nameRequired'));
+      setFormToast({ message: t('relayStation.nameRequired'), type: "error" });
       return;
     }
 
     if (!formData.api_url.trim()) {
-      alert(t('relayStation.apiUrlRequired'));
+      setFormToast({ message: t('relayStation.apiUrlRequired'), type: "error" });
       return;
     }
 
     if (!formData.system_token.trim()) {
-      alert(t('relayStation.tokenRequired'));
+      setFormToast({ message: t('relayStation.tokenRequired'), type: "error" });
       return;
     }
 
     try {
       setSubmitting(true);
       await api.relayStationCreate(formData);
-      alert(t('relayStation.createSuccess'));
       onSuccess();
     } catch (error) {
       console.error('Failed to create station:', error);
-      alert(t('relayStation.createFailed'));
+      setFormToast({ message: t('relayStation.createFailed'), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -447,8 +608,8 @@ const CreateStationDialog: React.FC<{
       <DialogHeader>
         <DialogTitle>{t('relayStation.createTitle')}</DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="name">{t('relayStation.name')} *</Label>
             <Input
@@ -456,6 +617,7 @@ const CreateStationDialog: React.FC<{
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder={t('relayStation.namePlaceholder')}
+              className="w-full"
             />
           </div>
 
@@ -467,10 +629,11 @@ const CreateStationDialog: React.FC<{
                 setFormData(prev => ({ ...prev, adapter: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="packycode">PackyCode</SelectItem>
                 <SelectItem value="newapi">NewAPI</SelectItem>
                 <SelectItem value="oneapi">OneAPI</SelectItem>
                 <SelectItem value="yourapi">YourAPI</SelectItem>
@@ -480,6 +643,165 @@ const CreateStationDialog: React.FC<{
           </div>
         </div>
 
+        {formData.adapter === 'packycode' && (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-base font-medium">{t('relayStation.serviceType')}</Label>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={packycodeService === 'taxi' ? 'default' : 'outline'}
+                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                    packycodeService === 'taxi' 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'hover:bg-blue-50 dark:hover:bg-blue-950'
+                  }`}
+                  onClick={() => {
+                    setPackycodeService('taxi');
+                    fillStationName('taxi');
+                  }}
+                >
+                  <div className="text-2xl">🚗</div>
+                  <div className="text-center">
+                    <div className="font-semibold">{t('relayStation.taxiService')}</div>
+                    <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant={packycodeService === 'bus' ? 'default' : 'outline'}
+                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                    packycodeService === 'bus' 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'hover:bg-green-50 dark:hover:bg-green-950'
+                  }`}
+                  onClick={() => {
+                    setPackycodeService('bus');
+                    fillStationName('bus');
+                  }}
+                >
+                  <div className="text-2xl">🚌</div>
+                  <div className="text-center">
+                    <div className="font-semibold">{t('relayStation.busService')}</div>
+                    <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
+                  </div>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                {packycodeService === 'taxi' 
+                  ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
+                  : t('relayStation.busServiceNote')
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
+        {formData.adapter === 'packycode' && packycodeService === 'bus' && (
+          <div className="space-y-2">
+            <Label>{t('relayStation.nodeSelection')}</Label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={packycodeNode}
+                    onValueChange={(value: string) => {
+                      if (value === 'auto') {
+                        autoSelectBestNode();
+                      } else {
+                        setPackycodeNode(value);
+                      }
+                    }}
+                  >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('relayStation.selectNode')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">
+                      ⚡ {t('relayStation.autoSelect')}
+                    </SelectItem>
+                    <SelectItem value="https://api.packycode.com">
+                      🚌 直连1（默认公交车）
+                    </SelectItem>
+                    <SelectItem value="https://api-hk-cn2.packycode.com">
+                      🇭🇰 直连2 (HK-CN2)
+                    </SelectItem>
+                    <SelectItem value="https://api-us-cmin2.packycode.com">
+                      🇺🇸 直连3 (US-CMIN2)
+                    </SelectItem>
+                    <SelectItem value="https://api-us-4837.packycode.com">
+                      🇺🇸 直连4 (US-4837)
+                    </SelectItem>
+                    <SelectItem value="https://api-us-cn2.packycode.com">
+                      🔄 备用1 (US-CN2)
+                    </SelectItem>
+                    <SelectItem value="https://api-cf-pro.packycode.com">
+                      ☁️ 备用2 (CF-Pro)
+                    </SelectItem>
+                    <SelectItem value="https://api-test.packyme.com" disabled>
+                      ⚠️ 测试1（非紧急勿用）
+                    </SelectItem>
+                    <SelectItem value="https://api-test-custom.packycode.com" disabled>
+                      ⚠️ 测试2（非紧急勿用）
+                    </SelectItem>
+                    <SelectItem value="https://api-tmp-test.dzz.ai" disabled>
+                      ⚠️ 测试3（非紧急勿用）
+                    </SelectItem>
+                  </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={testAllNodes}
+                  disabled={testingNodes}
+                >
+                  {testingNodes ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                  ) : (
+                    <Wifi className="h-4 w-4" />
+                  )}
+                  <span className="ml-2">{t('relayStation.testSpeed')}</span>
+                </Button>
+              </div>
+              
+              {/* 显示测速结果 */}
+              {nodeTestResults.length > 0 && (
+                <div className="mt-3 p-3 bg-muted rounded-lg max-h-48 overflow-y-auto">
+                  <p className="text-sm font-medium mb-2">{t('relayStation.testResults')}:</p>
+                  <div className="space-y-1">
+                    {nodeTestResults.map((result, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1">
+                          {result.success ? (
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <XCircle className="h-3 w-3 text-red-500" />
+                          )}
+                          {result.node.name}
+                        </span>
+                        <span className={result.success ? 'text-green-600' : 'text-red-600'}>
+                          {result.success ? `${result.response_time}ms` : t('relayStation.failed')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground">
+                {autoSelectingNode 
+                  ? t('relayStation.selectingBestNode')
+                  : packycodeNode === 'auto' 
+                    ? t('relayStation.autoSelectDesc')
+                    : t('relayStation.selectedNode') + ': ' + packycodeNode}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="description">{t('relayStation.description')}</Label>
           <Textarea
@@ -488,50 +810,76 @@ const CreateStationDialog: React.FC<{
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             placeholder={t('relayStation.descriptionPlaceholder')}
             rows={2}
+            className="w-full resize-none"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="api_url">{t('relayStation.apiUrl')} *</Label>
-          <Input
-            id="api_url"
-            type="url"
-            value={formData.api_url}
-            onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-            placeholder="https://api.packycode.com"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+        {formData.adapter !== 'packycode' && (
           <div className="space-y-2">
-            <Label htmlFor="auth_method">{t('relayStation.authMethod')}</Label>
-            <Select
-              value={formData.auth_method}
-              onValueChange={(value: AuthMethod) =>
-                setFormData(prev => ({ ...prev, auth_method: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bearer_token">Bearer Token</SelectItem>
-                <SelectItem value="api_key">API Key</SelectItem>
-                <SelectItem value="custom">{t('relayStation.custom')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+            <Label htmlFor="api_url">{t('relayStation.apiUrl')} *</Label>
             <Input
-              id="system_token"
-              type="password"
-              value={formData.system_token}
-              onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
-              placeholder={t('relayStation.tokenPlaceholder')}
+              id="api_url"
+              type="url"
+              value={formData.api_url}
+              onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
+              placeholder="https://api.example.com"
+              className="w-full"
             />
           </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6">
+          {formData.adapter === 'packycode' ? (
+            // PackyCode 固定使用 API Key，不显示选择器
+            <div className="space-y-2">
+              <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+              <Input
+                id="system_token"
+                type="password"
+                value={formData.system_token}
+                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.packycodeTokenNote')}
+              </p>
+            </div>
+          ) : (
+            // 其他适配器显示认证方式选择
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="auth_method">{t('relayStation.authMethod')}</Label>
+                <Select
+                  value={formData.auth_method}
+                  onValueChange={(value: AuthMethod) =>
+                    setFormData(prev => ({ ...prev, auth_method: value }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bearer_token">Bearer Token</SelectItem>
+                    <SelectItem value="api_key">API Key</SelectItem>
+                    <SelectItem value="custom">{t('relayStation.custom')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+                <Input
+                  id="system_token"
+                  type="password"
+                  value={formData.system_token}
+                  onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                  placeholder={t('relayStation.tokenPlaceholder')}
+                  className="w-full font-mono text-sm"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {(formData.adapter === 'newapi' || formData.adapter === 'oneapi') && (
@@ -542,31 +890,55 @@ const CreateStationDialog: React.FC<{
               value={formData.user_id}
               onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
               placeholder={t('relayStation.userIdPlaceholder')}
+              className="w-full"
             />
           </div>
         )}
 
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="enabled"
-            checked={formData.enabled}
-            onCheckedChange={(checked) =>
-              setFormData(prev => ({ ...prev, enabled: checked }))
-            }
-          />
-          <Label htmlFor="enabled">{t('relayStation.enabled')}</Label>
+        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="enabled"
+              checked={formData.enabled}
+              onCheckedChange={(checked) =>
+                setFormData(prev => ({ ...prev, enabled: checked }))
+              }
+            />
+            <div>
+              <Label htmlFor="enabled" className="text-base font-medium cursor-pointer">
+                {t('relayStation.enabled')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.enabledNote')}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={() => {}}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button 
+            type="submit" 
+            disabled={submitting}
+            className="min-w-[120px]"
+          >
             {submitting && <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>}
             {t('common.create')}
           </Button>
         </div>
       </form>
+
+      {/* Form Toast */}
+      {formToast && (
+        <Toast
+          message={formToast.message}
+          type={formToast.type}
+          duration={3000}
+          onDismiss={() => setFormToast(null)}
+        />
+      )}
     </>
   );
 };
@@ -589,25 +961,111 @@ const EditStationDialog: React.FC<{
     enabled: station.enabled,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  
+  // PackyCode 特定状态
+  const [packycodeService, setPackycodeService] = useState<string>(() => {
+    // 从API URL判断服务类型
+    if (station.adapter === 'packycode' && station.api_url.includes('share-api')) {
+      return 'taxi';
+    }
+    return 'bus';
+  });
+  const [packycodeNode, setPackycodeNode] = useState<string>(() => {
+    // 如果是PackyCode，使用当前的API URL
+    if (station.adapter === 'packycode') {
+      return station.api_url;
+    }
+    return 'https://api.packycode.com';
+  });
+  const [testingNodes, setTestingNodes] = useState(false);
+  const [nodeTestResults, setNodeTestResults] = useState<any[]>([]);
+  const [autoSelectingNode, setAutoSelectingNode] = useState(false);
 
   const { t } = useTranslation();
+
+  // 当适配器改变时更新认证方式和 URL
+  useEffect(() => {
+    if (formData.adapter === 'packycode') {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'api_key', // PackyCode 固定使用 API Key
+        api_url: packycodeService === 'taxi' 
+          ? 'https://share-api.packycode.com' 
+          : (packycodeNode === 'auto' ? 'https://api.packycode.com' : packycodeNode)
+      }));
+    } else if (formData.adapter === 'custom') {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'custom'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        auth_method: 'bearer_token'
+      }));
+    }
+  }, [formData.adapter, packycodeService, packycodeNode]);
+
+  // 测试所有节点速度（仅公交车服务需要）
+  const testAllNodes = async () => {
+    setTestingNodes(true);
+    try {
+      const results = await api.testAllPackycodeNodes('dummy_token');
+      setNodeTestResults(results);
+      setFormToast({ message: t('relayStation.testCompleted'), type: "success" });
+    } catch (error) {
+      console.error('Failed to test nodes:', error);
+      setFormToast({ message: t('relayStation.testFailed'), type: "error" });
+    } finally {
+      setTestingNodes(false);
+    }
+  };
+
+  // 自动选择最快节点（仅公交车服务需要）
+  const autoSelectBestNode = async () => {
+    setAutoSelectingNode(true);
+    try {
+      const bestNode = await api.autoSelectBestNode('dummy_token');
+      setPackycodeNode(bestNode.url);
+      setFormData(prev => ({ ...prev, api_url: bestNode.url }));
+      setFormToast({ 
+        message: `${t('relayStation.autoSelectedNode')}: ${bestNode.name} (${bestNode.response_time}ms)`, 
+        type: "success" 
+      });
+    } catch (error) {
+      console.error('Failed to auto-select node:', error);
+      setFormToast({ message: t('relayStation.autoSelectFailed'), type: "error" });
+    } finally {
+      setAutoSelectingNode(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert(t('relayStation.nameRequired'));
+      setFormToast({ message: t('relayStation.nameRequired'), type: "error" });
+      return;
+    }
+
+    if (!formData.api_url.trim()) {
+      setFormToast({ message: t('relayStation.apiUrlRequired'), type: "error" });
+      return;
+    }
+
+    if (!formData.system_token.trim()) {
+      setFormToast({ message: t('relayStation.tokenRequired'), type: "error" });
       return;
     }
 
     try {
       setSubmitting(true);
       await api.relayStationUpdate(formData);
-      alert(t('relayStation.updateSuccess'));
       onSuccess();
     } catch (error) {
       console.error('Failed to update station:', error);
-      alert(t('relayStation.updateFailed'));
+      setFormToast({ message: t('relayStation.updateFailed'), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -618,31 +1076,32 @@ const EditStationDialog: React.FC<{
       <DialogHeader>
         <DialogTitle>{t('relayStation.editTitle')}</DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 表单内容与创建对话框相同，但使用 formData 和 setFormData */}
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="name">{t('relayStation.name')} *</Label>
+            <Label htmlFor="edit-name">{t('relayStation.name')} *</Label>
             <Input
-              id="name"
+              id="edit-name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder={t('relayStation.namePlaceholder')}
+              className="w-full"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adapter">{t('relayStation.adapterType')}</Label>
+            <Label htmlFor="edit-adapter">{t('relayStation.adapterType')}</Label>
             <Select
               value={formData.adapter}
               onValueChange={(value: RelayStationAdapter) =>
                 setFormData(prev => ({ ...prev, adapter: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="packycode">PackyCode</SelectItem>
                 <SelectItem value="newapi">NewAPI</SelectItem>
                 <SelectItem value="oneapi">OneAPI</SelectItem>
                 <SelectItem value="yourapi">YourAPI</SelectItem>
@@ -652,38 +1111,294 @@ const EditStationDialog: React.FC<{
           </div>
         </div>
 
+        {formData.adapter === 'packycode' && (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-base font-medium">{t('relayStation.serviceType')}</Label>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={packycodeService === 'taxi' ? 'default' : 'outline'}
+                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                    packycodeService === 'taxi' 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'hover:bg-blue-50 dark:hover:bg-blue-950'
+                  }`}
+                  onClick={() => {
+                    setPackycodeService('taxi');
+                    setFormData(prev => ({
+                      ...prev,
+                      api_url: 'https://share-api.packycode.com'
+                    }));
+                  }}
+                >
+                  <div className="text-2xl">🚗</div>
+                  <div className="text-center">
+                    <div className="font-semibold">{t('relayStation.taxiService')}</div>
+                    <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant={packycodeService === 'bus' ? 'default' : 'outline'}
+                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                    packycodeService === 'bus' 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'hover:bg-green-50 dark:hover:bg-green-950'
+                  }`}
+                  onClick={() => {
+                    setPackycodeService('bus');
+                  }}
+                >
+                  <div className="text-2xl">🚌</div>
+                  <div className="text-center">
+                    <div className="font-semibold">{t('relayStation.busService')}</div>
+                    <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
+                  </div>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                {packycodeService === 'taxi' 
+                  ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
+                  : t('relayStation.busServiceNote')
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
+        {formData.adapter === 'packycode' && packycodeService === 'bus' && (
+          <div className="space-y-2">
+            <Label>{t('relayStation.nodeSelection')}</Label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={packycodeNode}
+                    onValueChange={(value: string) => {
+                      if (value === 'auto') {
+                        autoSelectBestNode();
+                      } else {
+                        setPackycodeNode(value);
+                        setFormData(prev => ({ ...prev, api_url: value }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('relayStation.selectNode')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">
+                        ⚡ {t('relayStation.autoSelect')}
+                      </SelectItem>
+                      <SelectItem value="https://api.packycode.com">
+                        🚌 直连1（默认公交车）
+                      </SelectItem>
+                      <SelectItem value="https://api-hk-cn2.packycode.com">
+                        🇭🇰 直连2 (HK-CN2)
+                      </SelectItem>
+                      <SelectItem value="https://api-us-cmin2.packycode.com">
+                        🇺🇸 直连3 (US-CMIN2)
+                      </SelectItem>
+                      <SelectItem value="https://api-us-4837.packycode.com">
+                        🇺🇸 直连4 (US-4837)
+                      </SelectItem>
+                      <SelectItem value="https://api-us-cn2.packycode.com">
+                        🔄 备用1 (US-CN2)
+                      </SelectItem>
+                      <SelectItem value="https://api-cf-pro.packycode.com">
+                        ☁️ 备用2 (CF-Pro)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={testAllNodes}
+                  disabled={testingNodes}
+                >
+                  {testingNodes ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                  ) : (
+                    <Wifi className="h-4 w-4" />
+                  )}
+                  <span className="ml-2">{t('relayStation.testSpeed')}</span>
+                </Button>
+              </div>
+              
+              {/* 显示测速结果 */}
+              {nodeTestResults.length > 0 && (
+                <div className="mt-3 p-3 bg-muted rounded-lg max-h-48 overflow-y-auto">
+                  <p className="text-sm font-medium mb-2">{t('relayStation.testResults')}:</p>
+                  <div className="space-y-1">
+                    {nodeTestResults.map((result, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1">
+                          {result.success ? (
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <XCircle className="h-3 w-3 text-red-500" />
+                          )}
+                          {result.node.name}
+                        </span>
+                        <span className={result.success ? 'text-green-600' : 'text-red-600'}>
+                          {result.success ? `${result.response_time}ms` : t('relayStation.failed')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground">
+                {autoSelectingNode 
+                  ? t('relayStation.selectingBestNode')
+                  : t('relayStation.selectedNode') + ': ' + packycodeNode}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
-          <Label htmlFor="api_url">{t('relayStation.apiUrl')} *</Label>
-          <Input
-            id="api_url"
-            type="url"
-            value={formData.api_url}
-            onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-            placeholder="https://api.packycode.com"
+          <Label htmlFor="edit-description">{t('relayStation.description')}</Label>
+          <Textarea
+            id="edit-description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder={t('relayStation.descriptionPlaceholder')}
+            rows={2}
+            className="w-full resize-none"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
-          <Input
-            id="system_token"
-            type="password"
-            value={formData.system_token}
-            onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
-            placeholder={t('relayStation.tokenPlaceholder')}
-          />
+        {formData.adapter !== 'packycode' && (
+          <div className="space-y-2">
+            <Label htmlFor="edit-api_url">{t('relayStation.apiUrl')} *</Label>
+            <Input
+              id="edit-api_url"
+              type="url"
+              value={formData.api_url}
+              onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
+              placeholder="https://api.example.com"
+              className="w-full"
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6">
+          {formData.adapter === 'packycode' ? (
+            // PackyCode 固定使用 API Key，不显示选择器
+            <div className="space-y-2">
+              <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+              <Input
+                id="edit-system_token"
+                type="password"
+                value={formData.system_token}
+                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.packycodeTokenNote')}
+              </p>
+            </div>
+          ) : (
+            // 其他适配器显示认证方式选择
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-auth_method">{t('relayStation.authMethod')}</Label>
+                <Select
+                  value={formData.auth_method}
+                  onValueChange={(value: AuthMethod) =>
+                    setFormData(prev => ({ ...prev, auth_method: value }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bearer_token">Bearer Token</SelectItem>
+                    <SelectItem value="api_key">API Key</SelectItem>
+                    <SelectItem value="custom">{t('relayStation.custom')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+                <Input
+                  id="edit-system_token"
+                  type="password"
+                  value={formData.system_token}
+                  onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                  placeholder={t('relayStation.tokenPlaceholder')}
+                  className="w-full font-mono text-sm"
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="flex justify-end space-x-2">
+        {(formData.adapter === 'newapi' || formData.adapter === 'oneapi') && (
+          <div className="space-y-2">
+            <Label htmlFor="edit-user_id">{t('relayStation.userId')}</Label>
+            <Input
+              id="edit-user_id"
+              value={formData.user_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
+              placeholder={t('relayStation.userIdPlaceholder')}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="edit-enabled"
+              checked={formData.enabled}
+              onCheckedChange={(checked) =>
+                setFormData(prev => ({ ...prev, enabled: checked }))
+              }
+            />
+            <div>
+              <Label htmlFor="edit-enabled" className="text-base font-medium cursor-pointer">
+                {t('relayStation.enabled')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.enabledNote')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button 
+            type="submit" 
+            disabled={submitting}
+            className="min-w-[120px]"
+          >
             {submitting && <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>}
             {t('common.save')}
           </Button>
         </div>
       </form>
+
+      {/* Form Toast */}
+      {formToast && (
+        <Toast
+          message={formToast.message}
+          type={formToast.type}
+          duration={3000}
+          onDismiss={() => setFormToast(null)}
+        />
+      )}
     </>
   );
 };

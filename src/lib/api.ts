@@ -446,6 +446,7 @@ export interface ImportServerResult {
 
 /** 中转站适配器类型 */
 export type RelayStationAdapter = 
+  | 'packycode' // PackyCode 平台（默认）
   | 'newapi'    // NewAPI 兼容平台
   | 'oneapi'    // OneAPI 兼容平台
   | 'yourapi'   // YourAPI 特定平台
@@ -548,7 +549,32 @@ export interface TokenPaginationResponse {
   total: number;
   page: number;
   size: number;
-  has_more: boolean;
+}
+
+// ============= PackyCode Nodes =============
+
+/** PackyCode 节点类型 */
+export type NodeType = 
+  | 'direct'     // 直连节点
+  | 'backup'     // 备用节点
+  | 'emergency'; // 紧急节点
+
+/** PackyCode 节点信息 */
+export interface PackycodeNode {
+  name: string;                    // 节点名称
+  url: string;                     // 节点 URL
+  node_type: NodeType;            // 节点类型
+  description: string;            // 节点描述
+  response_time?: number;         // 响应时间（毫秒）
+  available?: boolean;            // 是否可用
+}
+
+/** 节点测速结果 */
+export interface NodeSpeedTestResult {
+  node: PackycodeNode;            // 节点信息
+  response_time: number;          // 响应时间
+  success: boolean;               // 是否成功
+  error?: string;                 // 错误信息
 }
 
 /**
@@ -2301,6 +2327,49 @@ export const api = {
       return await invoke<string>("relay_station_delete_token", { stationId, tokenId });
     } catch (error) {
       console.error("Failed to delete token:", error);
+      throw error;
+    }
+  },
+
+  // ============= PackyCode Nodes =============
+  
+  /**
+   * Tests all PackyCode nodes and returns speed test results
+   * @param token - API token for authentication
+   * @returns Promise resolving to array of node speed test results
+   */
+  async testAllPackycodeNodes(token: string): Promise<NodeSpeedTestResult[]> {
+    try {
+      return await invoke<NodeSpeedTestResult[]>("test_all_packycode_nodes", { token });
+    } catch (error) {
+      console.error("Failed to test PackyCode nodes:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Automatically selects the best PackyCode node based on speed
+   * @param token - API token for authentication
+   * @returns Promise resolving to the best node
+   */
+  async autoSelectBestNode(token: string): Promise<PackycodeNode> {
+    try {
+      return await invoke<PackycodeNode>("auto_select_best_node", { token });
+    } catch (error) {
+      console.error("Failed to auto-select best node:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets all available PackyCode nodes
+   * @returns Promise resolving to array of PackyCode nodes
+   */
+  async getPackycodeNodes(): Promise<PackycodeNode[]> {
+    try {
+      return await invoke<PackycodeNode[]>("get_packycode_nodes");
+    } catch (error) {
+      console.error("Failed to get PackyCode nodes:", error);
       throw error;
     }
   }

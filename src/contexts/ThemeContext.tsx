@@ -58,7 +58,7 @@ const DEFAULT_CUSTOM_COLORS: CustomThemeColors = {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  const [theme, setThemeState] = useState<ThemeMode>('gray');
   const [customColors, setCustomColorsState] = useState<CustomThemeColors>(DEFAULT_CUSTOM_COLORS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -73,6 +73,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const themeMode = savedTheme as ThemeMode;
           setThemeState(themeMode);
           applyTheme(themeMode, customColors);
+        } else {
+          // Apply default theme if no saved preference
+          applyTheme('gray', customColors);
         }
 
         // Load custom colors
