@@ -24,7 +24,7 @@ import {
   UpdateRelayStationRequest,
   RelayStationAdapter,
   AuthMethod,
-  ConnectionTestResult,
+  PackycodeUserQuota,
   api
 } from '@/lib/api';
 import {
@@ -32,10 +32,6 @@ import {
   Edit,
   Trash2,
   Globe,
-  CheckCircle,
-  XCircle,
-  Wifi,
-  WifiOff,
   Server,
   ArrowLeft,
   Settings,
@@ -54,12 +50,14 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stationToDelete, setStationToDelete] = useState<RelayStation | null>(null);
-  const [connectionTests, setConnectionTests] = useState<Record<string, ConnectionTestResult>>({});
-  const [testingConnections, setTestingConnections] = useState<Record<string, boolean>>({});
   const [togglingEnable, setTogglingEnable] = useState<Record<string, boolean>>({});
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  
+  // PackyCode 额度相关状态
+  const [quotaData, setQuotaData] = useState<Record<string, PackycodeUserQuota>>({});
+  const [loadingQuota, setLoadingQuota] = useState<Record<string, boolean>>({});
 
   const { t } = useTranslation();
 
@@ -107,23 +105,18 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     }
   };
 
-  // 测试连接
-  const testConnection = async (stationId: string) => {
-    try {
-      setTestingConnections(prev => ({ ...prev, [stationId]: true }));
-      const result = await api.relayStationTestConnection(stationId);
-      setConnectionTests(prev => ({ ...prev, [stationId]: result }));
 
-      if (result.success) {
-        showToast(t('relayStation.connectionSuccess'), "success");
-      } else {
-        showToast(result.message, "error");
-      }
+  // 查询 PackyCode 额度
+  const fetchPackycodeQuota = async (stationId: string) => {
+    try {
+      setLoadingQuota(prev => ({ ...prev, [stationId]: true }));
+      const quota = await api.getPackycodeUserQuota(stationId);
+      setQuotaData(prev => ({ ...prev, [stationId]: quota }));
     } catch (error) {
-      console.error('Connection test failed:', error);
-      showToast(t('relayStation.connectionFailed'), "error");
+      console.error('Failed to fetch PackyCode quota:', error);
+      // 不显示错误 Toast，因为可能是出租车服务或 Token 无效
     } finally {
-      setTestingConnections(prev => ({ ...prev, [stationId]: false }));
+      setLoadingQuota(prev => ({ ...prev, [stationId]: false }));
     }
   };
 
@@ -206,6 +199,15 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     loadStations();
     loadCurrentConfig();
   }, []);
+
+  // 当中转站加载完成后，自动获取所有 PackyCode 站点的额度
+  useEffect(() => {
+    stations.forEach(station => {
+      if (station.adapter === 'packycode') {
+        fetchPackycodeQuota(station.id);
+      }
+    });
+  }, [stations]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -336,43 +338,123 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     </p>
                   )}
 
-                  {connectionTests[station.id] && (
-                    <div className="flex items-center text-sm">
-                      {connectionTests[station.id].success ? (
-                        <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                  {/* PackyCode 额度显示 */}
+                  {station.adapter === 'packycode' && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                      {loadingQuota[station.id] ? (
+                        <div className="flex items-center justify-center py-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                          <span className="ml-2 text-sm text-muted-foreground">加载额度中...</span>
+                        </div>
+                      ) : quotaData[station.id] ? (
+                        <div className="space-y-3">
+                          {/* 用户信息和计划 */}
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              {quotaData[station.id].username && (
+                                <span className="text-muted-foreground">{quotaData[station.id].username}</span>
+                              )}
+                              <Badge variant="secondary" className="text-xs">
+                                {quotaData[station.id].plan_type.toUpperCase()}
+                              </Badge>
+                            </div>
+                            {quotaData[station.id].plan_expires_at && (
+                              <span className="text-muted-foreground">
+                                到期: {new Date(quotaData[station.id].plan_expires_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 账户余额 */}
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">账户余额:</span>
+                            <span className="font-semibold text-blue-600">
+                              ${quotaData[station.id].balance_usd.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* 日额度 */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">日额度:</span>
+                              <div className="flex items-center gap-2">
+                                <span className={quotaData[station.id].daily_spent_usd > quotaData[station.id].daily_budget_usd * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                  ${quotaData[station.id].daily_spent_usd.toFixed(2)}
+                                </span>
+                                <span className="text-muted-foreground">/</span>
+                                <span className="text-muted-foreground">${quotaData[station.id].daily_budget_usd.toFixed(2)}</span>
+                              </div>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all ${
+                                  quotaData[station.id].daily_spent_usd / quotaData[station.id].daily_budget_usd > 0.8 
+                                    ? 'bg-orange-500' 
+                                    : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min((quotaData[station.id].daily_spent_usd / quotaData[station.id].daily_budget_usd) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 月额度 */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">月额度:</span>
+                              <div className="flex items-center gap-2">
+                                <span className={quotaData[station.id].monthly_spent_usd > quotaData[station.id].monthly_budget_usd * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                  ${quotaData[station.id].monthly_spent_usd.toFixed(2)}
+                                </span>
+                                <span className="text-muted-foreground">/</span>
+                                <span className="text-muted-foreground">${quotaData[station.id].monthly_budget_usd.toFixed(2)}</span>
+                              </div>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all ${
+                                  quotaData[station.id].monthly_spent_usd / quotaData[station.id].monthly_budget_usd > 0.8 
+                                    ? 'bg-orange-500' 
+                                    : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min((quotaData[station.id].monthly_spent_usd / quotaData[station.id].monthly_budget_usd) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 总消费 */}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+                            <span>总消费: ${quotaData[station.id].total_spent_usd.toFixed(2)}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                fetchPackycodeQuota(station.id);
+                              }}
+                            >
+                              刷新
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
-                        <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                        <div className="text-center py-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fetchPackycodeQuota(station.id);
+                            }}
+                          >
+                            查询额度
+                          </Button>
+                        </div>
                       )}
-                      <span>
-                        {connectionTests[station.id].message}
-                        {connectionTests[station.id].response_time !== undefined && connectionTests[station.id].response_time !== null && (
-                          <span className="ml-2 text-muted-foreground">
-                            ({connectionTests[station.id].response_time}ms)
-                          </span>
-                        )}
-                      </span>
                     </div>
                   )}
 
-                  <div className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        testConnection(station.id);
-                      }}
-                      disabled={testingConnections[station.id]}
-                    >
-                      {testingConnections[station.id] ? (
-                        <WifiOff className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Wifi className="mr-2 h-4 w-4" />
-                      )}
-                      {t('relayStation.testConnection')}
-                    </Button>
-
-                    <div className="flex space-x-2">
+                  <div className="flex justify-end">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -396,7 +478,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -492,9 +573,6 @@ const CreateStationDialog: React.FC<{
   const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
   const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
-  const [testingNodes, setTestingNodes] = useState(false);
-  const [nodeTestResults, setNodeTestResults] = useState<any[]>([]);
-  const [autoSelectingNode, setAutoSelectingNode] = useState(false);
 
   const { t } = useTranslation();
 
@@ -506,7 +584,7 @@ const CreateStationDialog: React.FC<{
         auth_method: 'api_key', // PackyCode 固定使用 API Key
         api_url: packycodeService === 'taxi' 
           ? 'https://share-api.packycode.com' 
-          : (packycodeNode === 'auto' ? 'https://api.packycode.com' : packycodeNode)
+          : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
       setFormData(prev => ({
@@ -538,40 +616,6 @@ const CreateStationDialog: React.FC<{
     }
   };
 
-  // 测试所有节点速度（仅公交车服务需要）
-  const testAllNodes = async () => {
-    setTestingNodes(true);
-    try {
-      // 不需要 token，只测试网络延时
-      const results = await api.testAllPackycodeNodes('dummy_token');
-      setNodeTestResults(results);
-      setFormToast({ message: t('relayStation.testCompleted'), type: "success" });
-    } catch (error) {
-      console.error('Failed to test nodes:', error);
-      setFormToast({ message: t('relayStation.testFailed'), type: "error" });
-    } finally {
-      setTestingNodes(false);
-    }
-  };
-
-  // 自动选择最快节点（仅公交车服务需要）
-  const autoSelectBestNode = async () => {
-    setAutoSelectingNode(true);
-    try {
-      // 不需要 token，只测试网络延时
-      const bestNode = await api.autoSelectBestNode('dummy_token');
-      setPackycodeNode(bestNode.url);
-      setFormToast({ 
-        message: `${t('relayStation.autoSelectedNode')}: ${bestNode.name} (${bestNode.response_time}ms)`, 
-        type: "success" 
-      });
-    } catch (error) {
-      console.error('Failed to auto-select node:', error);
-      setFormToast({ message: t('relayStation.autoSelectFailed'), type: "error" });
-    } finally {
-      setAutoSelectingNode(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -706,21 +750,12 @@ const CreateStationDialog: React.FC<{
                 <div className="flex-1">
                   <Select
                     value={packycodeNode}
-                    onValueChange={(value: string) => {
-                      if (value === 'auto') {
-                        autoSelectBestNode();
-                      } else {
-                        setPackycodeNode(value);
-                      }
-                    }}
+                    onValueChange={(value: string) => setPackycodeNode(value)}
                   >
                   <SelectTrigger>
                     <SelectValue placeholder={t('relayStation.selectNode')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">
-                      ⚡ {t('relayStation.autoSelect')}
-                    </SelectItem>
                     <SelectItem value="https://api.packycode.com">
                       🚌 直连1（默认公交车）
                     </SelectItem>
@@ -751,52 +786,10 @@ const CreateStationDialog: React.FC<{
                   </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={testAllNodes}
-                  disabled={testingNodes}
-                >
-                  {testingNodes ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
-                  ) : (
-                    <Wifi className="h-4 w-4" />
-                  )}
-                  <span className="ml-2">{t('relayStation.testSpeed')}</span>
-                </Button>
               </div>
               
-              {/* 显示测速结果 */}
-              {nodeTestResults.length > 0 && (
-                <div className="mt-3 p-3 bg-muted rounded-lg max-h-48 overflow-y-auto">
-                  <p className="text-sm font-medium mb-2">{t('relayStation.testResults')}:</p>
-                  <div className="space-y-1">
-                    {nodeTestResults.map((result, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs">
-                        <span className="flex items-center gap-1">
-                          {result.success ? (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-red-500" />
-                          )}
-                          {result.node.name}
-                        </span>
-                        <span className={result.success ? 'text-green-600' : 'text-red-600'}>
-                          {result.success ? `${result.response_time}ms` : t('relayStation.failed')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <p className="text-xs text-muted-foreground">
-                {autoSelectingNode 
-                  ? t('relayStation.selectingBestNode')
-                  : packycodeNode === 'auto' 
-                    ? t('relayStation.autoSelectDesc')
-                    : t('relayStation.selectedNode') + ': ' + packycodeNode}
+                {t('relayStation.selectedNode') + ': ' + packycodeNode}
               </p>
             </div>
           </div>
@@ -978,9 +971,6 @@ const EditStationDialog: React.FC<{
     }
     return 'https://api.packycode.com';
   });
-  const [testingNodes, setTestingNodes] = useState(false);
-  const [nodeTestResults, setNodeTestResults] = useState<any[]>([]);
-  const [autoSelectingNode, setAutoSelectingNode] = useState(false);
 
   const { t } = useTranslation();
 
@@ -992,7 +982,7 @@ const EditStationDialog: React.FC<{
         auth_method: 'api_key', // PackyCode 固定使用 API Key
         api_url: packycodeService === 'taxi' 
           ? 'https://share-api.packycode.com' 
-          : (packycodeNode === 'auto' ? 'https://api.packycode.com' : packycodeNode)
+          : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
       setFormData(prev => ({
@@ -1007,39 +997,6 @@ const EditStationDialog: React.FC<{
     }
   }, [formData.adapter, packycodeService, packycodeNode]);
 
-  // 测试所有节点速度（仅公交车服务需要）
-  const testAllNodes = async () => {
-    setTestingNodes(true);
-    try {
-      const results = await api.testAllPackycodeNodes('dummy_token');
-      setNodeTestResults(results);
-      setFormToast({ message: t('relayStation.testCompleted'), type: "success" });
-    } catch (error) {
-      console.error('Failed to test nodes:', error);
-      setFormToast({ message: t('relayStation.testFailed'), type: "error" });
-    } finally {
-      setTestingNodes(false);
-    }
-  };
-
-  // 自动选择最快节点（仅公交车服务需要）
-  const autoSelectBestNode = async () => {
-    setAutoSelectingNode(true);
-    try {
-      const bestNode = await api.autoSelectBestNode('dummy_token');
-      setPackycodeNode(bestNode.url);
-      setFormData(prev => ({ ...prev, api_url: bestNode.url }));
-      setFormToast({ 
-        message: `${t('relayStation.autoSelectedNode')}: ${bestNode.name} (${bestNode.response_time}ms)`, 
-        type: "success" 
-      });
-    } catch (error) {
-      console.error('Failed to auto-select node:', error);
-      setFormToast({ message: t('relayStation.autoSelectFailed'), type: "error" });
-    } finally {
-      setAutoSelectingNode(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1177,21 +1134,14 @@ const EditStationDialog: React.FC<{
                   <Select
                     value={packycodeNode}
                     onValueChange={(value: string) => {
-                      if (value === 'auto') {
-                        autoSelectBestNode();
-                      } else {
-                        setPackycodeNode(value);
-                        setFormData(prev => ({ ...prev, api_url: value }));
-                      }
+                      setPackycodeNode(value);
+                      setFormData(prev => ({ ...prev, api_url: value }));
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('relayStation.selectNode')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="auto">
-                        ⚡ {t('relayStation.autoSelect')}
-                      </SelectItem>
                       <SelectItem value="https://api.packycode.com">
                         🚌 直连1（默认公交车）
                       </SelectItem>
@@ -1213,50 +1163,10 @@ const EditStationDialog: React.FC<{
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={testAllNodes}
-                  disabled={testingNodes}
-                >
-                  {testingNodes ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
-                  ) : (
-                    <Wifi className="h-4 w-4" />
-                  )}
-                  <span className="ml-2">{t('relayStation.testSpeed')}</span>
-                </Button>
               </div>
               
-              {/* 显示测速结果 */}
-              {nodeTestResults.length > 0 && (
-                <div className="mt-3 p-3 bg-muted rounded-lg max-h-48 overflow-y-auto">
-                  <p className="text-sm font-medium mb-2">{t('relayStation.testResults')}:</p>
-                  <div className="space-y-1">
-                    {nodeTestResults.map((result, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs">
-                        <span className="flex items-center gap-1">
-                          {result.success ? (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-red-500" />
-                          )}
-                          {result.node.name}
-                        </span>
-                        <span className={result.success ? 'text-green-600' : 'text-red-600'}>
-                          {result.success ? `${result.response_time}ms` : t('relayStation.failed')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <p className="text-xs text-muted-foreground">
-                {autoSelectingNode 
-                  ? t('relayStation.selectingBestNode')
-                  : t('relayStation.selectedNode') + ': ' + packycodeNode}
+                {t('relayStation.selectedNode') + ': ' + packycodeNode}
               </p>
             </div>
           </div>

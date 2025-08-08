@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use anyhow::{anyhow, Result};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -986,4 +987,139 @@ pub async fn relay_station_delete_token(
             log::error!("Failed to delete token: {}", e);
             i18n::t("relay_adapter.delete_token_failed")
         })
+}
+
+/// PackyCode 用户额度信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackycodeUserQuota {
+    pub daily_budget_usd: f64,       // 日预算（美元）
+    pub daily_spent_usd: f64,        // 日已使用（美元）
+    pub monthly_budget_usd: f64,     // 月预算（美元）
+    pub monthly_spent_usd: f64,      // 月已使用（美元）
+    pub balance_usd: f64,            // 账户余额（美元）
+    pub total_spent_usd: f64,        // 总消费（美元）
+    pub plan_type: String,           // 计划类型 (pro, basic, etc.)
+    pub plan_expires_at: String,     // 计划过期时间
+    pub username: Option<String>,    // 用户名
+    pub email: Option<String>,       // 邮箱
+}
+
+/// 获取 PackyCode 用户信息（额度等）
+#[command]
+pub async fn packycode_get_user_quota(station_id: String, db: State<'_, AgentDb>) -> Result<PackycodeUserQuota, String> {
+    // 先从数据库获取中转站信息，然后释放锁
+    let station = {
+        let conn = db.0.lock().map_err(|e| {
+            log::error!("Failed to acquire database lock: {}", e);
+            i18n::t("database.lock_failed")
+        })?;
+
+        // 获取中转站信息
+        let mut stmt = conn.prepare("SELECT * FROM relay_stations WHERE id = ?1")
+            .map_err(|e| {
+                log::error!("Failed to prepare statement: {}", e);
+                i18n::t("database.query_failed")
+            })?;
+
+        stmt.query_row([&station_id], |row| {
+            use crate::commands::relay_stations::RelayStation;
+            RelayStation::from_row(row)
+        }).map_err(|e| {
+            log::error!("Failed to get relay station: {}", e);
+            i18n::t("relay_station.not_found")
+        })?
+    }; // 这里释放数据库连接
+    
+    // 只有 PackyCode 适配器支持此功能
+    if station.adapter.as_str() != "packycode" {
+        return Err("此功能仅支持 PackyCode 中转站".to_string());
+    }
+    
+    // 根据服务类型构建不同的 URL
+    let url = if station.api_url.contains("share-api") || station.api_url.contains("share.packycode") {
+        // 滴滴车服务
+        "https://share.packycode.com/api/backend/users/info"
+    } else {
+        // 公交车服务
+        "https://www.packycode.com/api/backend/users/info"
+    };
+    
+    // 创建 HTTP 客户端
+    let client = Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+    
+    // 发送请求
+    let response = client
+        .get(url)
+        .header("Authorization", format!("Bearer {}", station.system_token))
+        .header("User-Agent", "Apifox/1.0.0 (https://apifox.com)")
+        .header("Accept", "*/*")
+        .header("Host", if url.contains("share.packycode.com") { "share.packycode.com" } else { "www.packycode.com" })
+        .header("Connection", "keep-alive")
+        .send()
+        .await
+        .map_err(|e| format!("请求失败: {}", e))?;
+    
+    // 检查响应状态
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        
+        return Err(match status.as_u16() {
+            401 => "Token 无效或已过期".to_string(),
+            403 => "权限不足".to_string(),
+            400 => format!("请求参数错误: {}", error_text),
+            _ => format!("请求失败 ({}): {}", status, error_text),
+        });
+    }
+    
+    // 解析响应
+    let response_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("解析响应失败: {}", e))?;
+    
+    // 提取额度信息
+    let quota = PackycodeUserQuota {
+        daily_budget_usd: response_data.get("daily_budget_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        daily_spent_usd: response_data.get("daily_spent_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        monthly_budget_usd: response_data.get("monthly_budget_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        monthly_spent_usd: response_data.get("monthly_spent_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        balance_usd: response_data.get("balance_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        total_spent_usd: response_data.get("total_spent_usd")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0),
+        plan_type: response_data.get("plan_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "unknown".to_string()),
+        plan_expires_at: response_data.get("plan_expires_at")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "".to_string()),
+        username: response_data.get("username")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        email: response_data.get("email")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+    };
+    
+    Ok(quota)
 }

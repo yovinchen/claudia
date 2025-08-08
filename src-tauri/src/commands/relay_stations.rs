@@ -145,7 +145,7 @@ pub struct TokenPaginationResponse {
 }
 
 impl RelayStation {
-    fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
         let adapter_str: String = row.get("adapter")?;
         let auth_method_str: String = row.get("auth_method")?;
         let adapter_config_str: Option<String> = row.get("adapter_config")?;

@@ -577,6 +577,20 @@ export interface NodeSpeedTestResult {
   error?: string;                 // 错误信息
 }
 
+/** PackyCode 用户额度信息 */
+export interface PackycodeUserQuota {
+  daily_budget_usd: number;       // 日预算（美元）
+  daily_spent_usd: number;        // 日已使用（美元）
+  monthly_budget_usd: number;     // 月预算（美元）
+  monthly_spent_usd: number;      // 月已使用（美元）
+  balance_usd: number;            // 账户余额（美元）
+  total_spent_usd: number;        // 总消费（美元）
+  plan_type: string;              // 计划类型 (pro, basic, etc.)
+  plan_expires_at: string;         // 计划过期时间
+  username?: string;              // 用户名
+  email?: string;                 // 邮箱
+}
+
 /**
  * API client for interacting with the Rust backend
  */
@@ -2370,6 +2384,20 @@ export const api = {
       return await invoke<PackycodeNode[]>("get_packycode_nodes");
     } catch (error) {
       console.error("Failed to get PackyCode nodes:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets PackyCode user quota information
+   * @param stationId - The relay station ID
+   * @returns Promise resolving to the user quota information
+   */
+  async getPackycodeUserQuota(stationId: string): Promise<PackycodeUserQuota> {
+    try {
+      return await invoke<PackycodeUserQuota>("packycode_get_user_quota", { stationId });
+    } catch (error) {
+      console.error("Failed to get PackyCode user quota:", error);
       throw error;
     }
   }

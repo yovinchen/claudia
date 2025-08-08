@@ -55,6 +55,7 @@ use commands::relay_adapters::{
     relay_station_get_info, relay_station_get_user_info,
     relay_station_test_connection, relay_station_get_usage_logs, relay_station_list_tokens,
     relay_station_create_token, relay_station_update_token, relay_station_delete_token,
+    packycode_get_user_quota,
 };
 use commands::packycode_nodes::{
     test_all_packycode_nodes, auto_select_best_node, get_packycode_nodes,
@@ -289,6 +290,7 @@ fn main() {
             relay_station_create_token,
             relay_station_update_token,
             relay_station_delete_token,
+            packycode_get_user_quota,
             
             // PackyCode Nodes
             test_all_packycode_nodes,
