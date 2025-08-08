@@ -1,0 +1,112 @@
+name: Build for Open Source
+
+on:
+  push:
+    tags:
+      - 'v*'  # 仅在创建版本标签时构建
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    permissions:
+      contents: write  # 允许创建 Release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS 通用版本
+          - platform: 'macos-latest'
+            target: 'universal-apple-darwin'
+            name: 'macOS'
+          
+          # Linux x64
+          - platform: 'ubuntu-22.04'
+            target: ''
+            name: 'Linux'
+          
+          # Windows x64
+          - platform: 'windows-latest'
+            target: ''
+            name: 'Windows'
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for better compatibility)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Setup Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ""  # 禁用更新签名
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Claudia ${{ github.ref_name }}'
+          releaseBody: |
+            ## 📦 下载说明
+            
+            ### macOS 用户
+            - 下载 `Claudia_*_universal.dmg`
+            - 首次运行：右键点击应用 → 选择"打开"
+            
+            ### Windows 用户
+            - 下载 `.msi` (推荐) 或 `.exe` 安装程序
+            
+            ### Linux 用户
+            - **Ubuntu/Debian**: 下载 `.deb`
+            - **Fedora/RHEL**: 下载 `.rpm`
+            - **其他发行版**: 下载 `.AppImage`
+            
+            ---
+            查看 [完整更新日志](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: claudia-${{ matrix.name }}-${{ github.ref_name }}
+          path: |
+            src-tauri/target/*/release/bundle/**/*.dmg
+            src-tauri/target/*/release/bundle/**/*.deb
+            src-tauri/target/*/release/bundle/**/*.rpm
+            src-tauri/target/*/release/bundle/**/*.AppImage
+            src-tauri/target/*/release/bundle/**/*.msi
+            src-tauri/target/*/release/bundle/**/*.exe
+            !src-tauri/target/*/release/bundle/**/*-setup.exe
+          retention-days: 7
