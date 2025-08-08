@@ -63,16 +63,36 @@ pub struct ProjectUsage {
     last_used: String,
 }
 
-// Claude 4 pricing constants (per million tokens)
+// Claude pricing constants (per million tokens)
+// Claude 4 系列
 const OPUS_4_INPUT_PRICE: f64 = 15.0;
 const OPUS_4_OUTPUT_PRICE: f64 = 75.0;
 const OPUS_4_CACHE_WRITE_PRICE: f64 = 18.75;
-const OPUS_4_CACHE_READ_PRICE: f64 = 1.50;
+const OPUS_4_CACHE_READ_PRICE: f64 = 1.20;  // 修正为 1.20
 
 const SONNET_4_INPUT_PRICE: f64 = 3.0;
 const SONNET_4_OUTPUT_PRICE: f64 = 15.0;
 const SONNET_4_CACHE_WRITE_PRICE: f64 = 3.75;
 const SONNET_4_CACHE_READ_PRICE: f64 = 0.30;
+
+// Claude 3.x 系列
+// Sonnet 3.7/3.5
+const SONNET_3_INPUT_PRICE: f64 = 3.0;
+const SONNET_3_OUTPUT_PRICE: f64 = 15.0;
+const SONNET_3_CACHE_WRITE_PRICE: f64 = 3.75;
+const SONNET_3_CACHE_READ_PRICE: f64 = 0.30;
+
+// Opus 3
+const OPUS_3_INPUT_PRICE: f64 = 15.0;
+const OPUS_3_OUTPUT_PRICE: f64 = 75.0;
+const OPUS_3_CACHE_WRITE_PRICE: f64 = 18.75;
+const OPUS_3_CACHE_READ_PRICE: f64 = 1.20;
+
+// Haiku 3.5
+const HAIKU_3_INPUT_PRICE: f64 = 0.80;
+const HAIKU_3_OUTPUT_PRICE: f64 = 4.0;
+const HAIKU_3_CACHE_WRITE_PRICE: f64 = 1.0;
+const HAIKU_3_CACHE_READ_PRICE: f64 = 0.08;
 
 #[derive(Debug, Deserialize)]
 struct JsonlEntry {
@@ -107,34 +127,51 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
     let cache_creation_tokens = usage.cache_creation_input_tokens.unwrap_or(0) as f64;
     let cache_read_tokens = usage.cache_read_input_tokens.unwrap_or(0) as f64;
 
-    // Calculate cost based on model
-    let (input_price, output_price, cache_write_price, cache_read_price) =
-        if model.contains("opus-4") || model.contains("claude-opus-4") {
-            (
-                OPUS_4_INPUT_PRICE,
-                OPUS_4_OUTPUT_PRICE,
-                OPUS_4_CACHE_WRITE_PRICE,
-                OPUS_4_CACHE_READ_PRICE,
-            )
-        } else if model.contains("sonnet-4") || model.contains("claude-sonnet-4") {
-            (
-                SONNET_4_INPUT_PRICE,
-                SONNET_4_OUTPUT_PRICE,
-                SONNET_4_CACHE_WRITE_PRICE,
-                SONNET_4_CACHE_READ_PRICE,
-            )
-        } else {
-            // Return 0 for unknown models to avoid incorrect cost estimations.
-            (0.0, 0.0, 0.0, 0.0)
-        };
+    // 智能模型匹配，支持多种格式
+    let model_lower = model.to_lowercase();
+    let (input_price, output_price, cache_write_price, cache_read_price) = 
+        match_model_prices(&model_lower);
 
-    // Calculate cost (prices are per million tokens)
+    // 计算成本（价格为每百万令牌）
     let cost = (input_tokens * input_price / 1_000_000.0)
         + (output_tokens * output_price / 1_000_000.0)
         + (cache_creation_tokens * cache_write_price / 1_000_000.0)
         + (cache_read_tokens * cache_read_price / 1_000_000.0);
 
     cost
+}
+
+// 独立的模型价格匹配函数，更灵活的模型识别
+fn match_model_prices(model_lower: &str) -> (f64, f64, f64, f64) {
+    // Claude 4 系列
+    if model_lower.contains("opus") && (model_lower.contains("4") || model_lower.contains("4.")) {
+        (OPUS_4_INPUT_PRICE, OPUS_4_OUTPUT_PRICE, OPUS_4_CACHE_WRITE_PRICE, OPUS_4_CACHE_READ_PRICE)
+    } else if model_lower.contains("sonnet") && (model_lower.contains("4") || model_lower.contains("4.")) {
+        (SONNET_4_INPUT_PRICE, SONNET_4_OUTPUT_PRICE, SONNET_4_CACHE_WRITE_PRICE, SONNET_4_CACHE_READ_PRICE)
+    }
+    // Claude 3.x Sonnet 系列（3.7, 3.5）
+    else if model_lower.contains("sonnet") && 
+            (model_lower.contains("3.7") || model_lower.contains("3.5") || model_lower.contains("3-5")) {
+        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+    }
+    // Claude 3 Opus
+    else if model_lower.contains("opus") && 
+            (model_lower.contains("3") || (!model_lower.contains("4") && !model_lower.contains("4."))) {
+        (OPUS_3_INPUT_PRICE, OPUS_3_OUTPUT_PRICE, OPUS_3_CACHE_WRITE_PRICE, OPUS_3_CACHE_READ_PRICE)
+    }
+    // Claude 3.5 Haiku
+    else if model_lower.contains("haiku") {
+        (HAIKU_3_INPUT_PRICE, HAIKU_3_OUTPUT_PRICE, HAIKU_3_CACHE_WRITE_PRICE, HAIKU_3_CACHE_READ_PRICE)
+    }
+    // 默认 Sonnet（通用后备）
+    else if model_lower.contains("sonnet") {
+        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+    }
+    // 未知模型
+    else {
+        log::warn!("Unknown model for cost calculation: {}", model_lower);
+        (0.0, 0.0, 0.0, 0.0)
+    }
 }
 
 fn parse_jsonl_file(
@@ -170,22 +207,54 @@ fn parse_jsonl_file(
                 // Try to parse as JsonlEntry for usage data
                 if let Ok(entry) = serde_json::from_value::<JsonlEntry>(json_value) {
                     if let Some(message) = &entry.message {
-                        // Deduplication based on message ID and request ID
-                        if let (Some(msg_id), Some(req_id)) = (&message.id, &entry.request_id) {
-                            let unique_hash = format!("{}:{}", msg_id, req_id);
-                            if processed_hashes.contains(&unique_hash) {
-                                continue; // Skip duplicate entry
-                            }
-                            processed_hashes.insert(unique_hash);
-                        }
-
                         if let Some(usage) = &message.usage {
-                            // Skip entries without meaningful token usage
-                            if usage.input_tokens.unwrap_or(0) == 0
-                                && usage.output_tokens.unwrap_or(0) == 0
-                                && usage.cache_creation_input_tokens.unwrap_or(0) == 0
-                                && usage.cache_read_input_tokens.unwrap_or(0) == 0
-                            {
+                            // 跳过所有令牌数为0的记录（根据文档规范）
+                            let has_tokens = usage.input_tokens.unwrap_or(0) > 0
+                                || usage.output_tokens.unwrap_or(0) > 0
+                                || usage.cache_creation_input_tokens.unwrap_or(0) > 0
+                                || usage.cache_read_input_tokens.unwrap_or(0) > 0;
+                            
+                            if !has_tokens {
+                                continue;
+                            }
+
+                            // 智能去重策略
+                            let has_io_tokens = usage.input_tokens.unwrap_or(0) > 0 
+                                || usage.output_tokens.unwrap_or(0) > 0;
+                            let has_cache_tokens = usage.cache_creation_input_tokens.unwrap_or(0) > 0
+                                || usage.cache_read_input_tokens.unwrap_or(0) > 0;
+
+                            let should_skip = if has_io_tokens {
+                                // 输入输出令牌：使用 session_id + message_id 严格去重
+                                if let Some(msg_id) = &message.id {
+                                    let unique_hash = format!("io:{}:{}", &session_id, msg_id);
+                                    if processed_hashes.contains(&unique_hash) {
+                                        true
+                                    } else {
+                                        processed_hashes.insert(unique_hash);
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else if has_cache_tokens {
+                                // 缓存令牌：使用 message_id + request_id 宽松去重
+                                if let (Some(msg_id), Some(req_id)) = (&message.id, &entry.request_id) {
+                                    let unique_hash = format!("cache:{}:{}", msg_id, req_id);
+                                    if processed_hashes.contains(&unique_hash) {
+                                        true
+                                    } else {
+                                        processed_hashes.insert(unique_hash);
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            };
+
+                            if should_skip {
                                 continue;
                             }
 
@@ -335,6 +404,11 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
     let mut total_cache_creation_tokens = 0u64;
     let mut total_cache_read_tokens = 0u64;
 
+    // 使用 HashSet 确保会话唯一性
+    let mut unique_sessions: HashSet<String> = HashSet::new();
+    let mut model_sessions: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut project_sessions: HashMap<String, HashSet<String>> = HashMap::new();
+
     let mut model_stats: HashMap<String, ModelUsage> = HashMap::new();
     let mut daily_stats: HashMap<String, DailyUsage> = HashMap::new();
     let mut project_stats: HashMap<String, ProjectUsage> = HashMap::new();
@@ -347,7 +421,10 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         total_cache_creation_tokens += entry.cache_creation_tokens;
         total_cache_read_tokens += entry.cache_read_tokens;
 
-        // Update model stats
+        // 收集唯一会话
+        unique_sessions.insert(entry.session_id.clone());
+
+        // Update model stats with unique sessions tracking
         let model_stat = model_stats
             .entry(entry.model.clone())
             .or_insert(ModelUsage {
@@ -366,7 +443,12 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         model_stat.cache_creation_tokens += entry.cache_creation_tokens;
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
-        model_stat.session_count += 1;
+        
+        // 按模型统计唯一会话
+        model_sessions
+            .entry(entry.model.clone())
+            .or_insert_with(HashSet::new)
+            .insert(entry.session_id.clone());
 
         // Update daily stats
         let date = entry
@@ -390,7 +472,7 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             daily_stat.models_used.push(entry.model.clone());
         }
 
-        // Update project stats
+        // Update project stats with unique sessions tracking
         let project_stat =
             project_stats
                 .entry(entry.project_path.clone())
@@ -412,9 +494,28 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             + entry.output_tokens
             + entry.cache_creation_tokens
             + entry.cache_read_tokens;
-        project_stat.session_count += 1;
+        
+        // 按项目统计唯一会话
+        project_sessions
+            .entry(entry.project_path.clone())
+            .or_insert_with(HashSet::new)
+            .insert(entry.session_id.clone());
+        
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
+        }
+    }
+
+    // 更新会话计数为唯一会话数
+    for (model, sessions) in model_sessions {
+        if let Some(stat) = model_stats.get_mut(&model) {
+            stat.session_count = sessions.len() as u64;
+        }
+    }
+
+    for (project, sessions) in project_sessions {
+        if let Some(stat) = project_stats.get_mut(&project) {
+            stat.session_count = sessions.len() as u64;
         }
     }
 
@@ -422,7 +523,7 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         + total_output_tokens
         + total_cache_creation_tokens
         + total_cache_read_tokens;
-    let total_sessions = filtered_entries.len() as u64;
+    let total_sessions = unique_sessions.len() as u64;
 
     // Convert hashmaps to sorted vectors
     let mut by_model: Vec<ModelUsage> = model_stats.into_values().collect();
@@ -505,6 +606,11 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
     let mut total_cache_creation_tokens = 0u64;
     let mut total_cache_read_tokens = 0u64;
 
+    // 使用 HashSet 确保会话唯一性
+    let mut unique_sessions: HashSet<String> = HashSet::new();
+    let mut model_sessions: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut project_sessions: HashMap<String, HashSet<String>> = HashMap::new();
+
     let mut model_stats: HashMap<String, ModelUsage> = HashMap::new();
     let mut daily_stats: HashMap<String, DailyUsage> = HashMap::new();
     let mut project_stats: HashMap<String, ProjectUsage> = HashMap::new();
@@ -516,6 +622,9 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         total_output_tokens += entry.output_tokens;
         total_cache_creation_tokens += entry.cache_creation_tokens;
         total_cache_read_tokens += entry.cache_read_tokens;
+
+        // 收集唯一会话
+        unique_sessions.insert(entry.session_id.clone());
 
         // Update model stats
         let model_stat = model_stats
@@ -536,7 +645,12 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         model_stat.cache_creation_tokens += entry.cache_creation_tokens;
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
-        model_stat.session_count += 1;
+        
+        // 按模型统计唯一会话
+        model_sessions
+            .entry(entry.model.clone())
+            .or_insert_with(HashSet::new)
+            .insert(entry.session_id.clone());
 
         // Update daily stats
         let date = entry
@@ -560,7 +674,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             daily_stat.models_used.push(entry.model.clone());
         }
 
-        // Update project stats
+        // Update project stats with unique sessions tracking
         let project_stat =
             project_stats
                 .entry(entry.project_path.clone())
@@ -582,9 +696,28 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             + entry.output_tokens
             + entry.cache_creation_tokens
             + entry.cache_read_tokens;
-        project_stat.session_count += 1;
+        
+        // 按项目统计唯一会话
+        project_sessions
+            .entry(entry.project_path.clone())
+            .or_insert_with(HashSet::new)
+            .insert(entry.session_id.clone());
+        
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
+        }
+    }
+
+    // 更新会话计数为唯一会话数
+    for (model, sessions) in model_sessions {
+        if let Some(stat) = model_stats.get_mut(&model) {
+            stat.session_count = sessions.len() as u64;
+        }
+    }
+
+    for (project, sessions) in project_sessions {
+        if let Some(stat) = project_stats.get_mut(&project) {
+            stat.session_count = sessions.len() as u64;
         }
     }
 
@@ -592,7 +725,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         + total_output_tokens
         + total_cache_creation_tokens
         + total_cache_read_tokens;
-    let total_sessions = filtered_entries.len() as u64;
+    let total_sessions = unique_sessions.len() as u64;
 
     // Convert hashmaps to sorted vectors
     let mut by_model: Vec<ModelUsage> = model_stats.into_values().collect();
