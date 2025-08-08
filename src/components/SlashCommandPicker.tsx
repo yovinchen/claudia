@@ -245,9 +245,9 @@ export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
     if (cmd.scope === "user") {
       key = cmd.namespace ? `${t('slashCommands.userCommands')}: ${cmd.namespace}` : t('slashCommands.userCommands');
     } else if (cmd.scope === "project") {
-      key = cmd.namespace ? `Project Commands: ${cmd.namespace}` : "Project Commands";
+      key = cmd.namespace ? `${t('slashCommands.projectCommands')}: ${cmd.namespace}` : t('slashCommands.projectCommands');
     } else {
-      key = cmd.namespace || "Commands";
+      key = cmd.namespace || t('slashCommands.commands');
     }
     
     if (!acc[key]) {
@@ -477,7 +477,7 @@ export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
                           <div key={groupKey}>
                             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-1 flex items-center gap-2">
                               {groupKey.startsWith(t('slashCommands.userCommands')) && <User className="h-3 w-3" />}
-                              {groupKey.startsWith("Project Commands") && <Building2 className="h-3 w-3" />}
+                              {groupKey.startsWith(t('slashCommands.projectCommands')) && <Building2 className="h-3 w-3" />}
                               {groupKey}
                             </h3>
                             

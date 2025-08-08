@@ -213,6 +213,8 @@
     "project": "Project",
     "user": "User",
     "userCommands": "User Commands",
+    "projectCommands": "Project Commands",
+    "commands": "Commands",
     "manageProjectCommands": "Manage project-specific slash commands for",
     "noCommandsFound": "No commands found",
     "noProjectCommandsYet": "No project commands created yet",
@@ -661,6 +663,12 @@
     "deeperAnalysis": "Deeper analysis",
     "extensiveReasoning": "Extensive reasoning",
     "maximumAnalysis": "Maximum analysis",
+    "thinking": "Thinking",
+    "auto": "Auto",
+    "think": "Think",
+    "thinkHard": "Think Hard",
+    "thinkHarder": "Think Harder",
+    "ultrathink": "Ultrathink",
     "typeYourPromptHere": "Type your prompt here...",
     "dropImagesHere": "Drop images here...",
     "askClaudeAnything": "Ask Claude anything...",
@@ -759,7 +767,8 @@
   },
   "input": {
     "pressEnterToSend": "Press Enter to send, Shift+Enter for new line",
-    "withFileAndCommandSupport": ", @ to mention files, / for commands, drag & drop or paste images"
+    "withFileAndCommandSupport": ", @ to mention files, / for commands, drag & drop or paste images",
+    "composeYourPrompt": "Compose your prompt"
   },
   "relayStation": {
     "title": "Relay Stations",

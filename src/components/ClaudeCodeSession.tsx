@@ -8,6 +8,7 @@ import {
   ChevronDown,
   GitBranch,
   Settings,
+  Settings2,
   ChevronUp,
   X,
   Hash,
@@ -1280,26 +1281,44 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           
           <div className="flex items-center gap-2">
             {projectPath && onProjectSettings && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onProjectSettings(projectPath)}
-                disabled={isLoading}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Hooks
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onProjectSettings(projectPath)}
+                      disabled={isLoading}
+                      className="h-8 w-8"
+                    >
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('agents.hooks')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {projectPath && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSlashCommandsSettings(true)}
-                disabled={isLoading}
-              >
-                <Command className="h-4 w-4 mr-2" />
-                Commands
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowSlashCommandsSettings(true)}
+                      disabled={isLoading}
+                      className="h-8 w-8"
+                    >
+                      <Command className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('app.commands')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <div className="flex items-center gap-2">
               <TooltipProvider>
@@ -1698,7 +1717,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <Dialog open={showSlashCommandsSettings} onOpenChange={setShowSlashCommandsSettings}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Slash Commands</DialogTitle>
+              <DialogTitle>{t('slashCommands.slashCommands')}</DialogTitle>
               <DialogDescription>
                 {t('slashCommands.manageProjectCommands')} {projectPath}
               </DialogDescription>

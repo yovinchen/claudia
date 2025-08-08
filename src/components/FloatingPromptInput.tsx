@@ -101,21 +101,6 @@ type Model = {
   icon: React.ReactNode;
 };
 
-const MODELS: Model[] = [
-  {
-    id: "sonnet",
-    name: "Claude 4 Sonnet",
-    description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
-  },
-  {
-    id: "opus",
-    name: "Claude 4.1 Opus",
-    description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
-  }
-];
-
 /**
  * FloatingPromptInput component - Fixed position prompt input with model picker
  * 
@@ -141,38 +126,54 @@ const FloatingPromptInputInner = (
 ) => {
   const { t } = useTranslation();
 
+  // Define MODELS inside component to access translations
+  const MODELS: Model[] = [
+    {
+      id: "sonnet",
+      name: t('agents.sonnetName'),
+      description: t('agents.sonnetDescription'),
+      icon: <Zap className="h-4 w-4" />
+    },
+    {
+      id: "opus",
+      name: t('agents.opusName'),
+      description: t('agents.opusDescription'),
+      icon: <Sparkles className="h-4 w-4" />
+    }
+  ];
+
   // Define THINKING_MODES inside component to access translations
   const THINKING_MODES: ThinkingModeConfig[] = [
     {
       id: "auto",
-      name: "Auto",
+      name: t('messages.auto'),
       description: t('messages.letClaudeDecide'),
       level: 0
     },
     {
       id: "think",
-      name: "Think",
+      name: t('messages.think'),
       description: t('messages.basicReasoning'),
       level: 1,
       phrase: "think"
     },
     {
       id: "think_hard",
-      name: "Think Hard",
+      name: t('messages.thinkHard'),
       description: t('messages.deeperAnalysis'),
       level: 2,
       phrase: "think hard"
     },
     {
       id: "think_harder",
-      name: "Think Harder",
+      name: t('messages.thinkHarder'),
       description: t('messages.extensiveReasoning'),
       level: 3,
       phrase: "think harder"
     },
     {
       id: "ultrathink",
-      name: "Ultrathink",
+      name: t('messages.ultrathink'),
       description: t('messages.maximumAnalysis'),
       level: 4,
       phrase: "ultrathink"
@@ -738,7 +739,7 @@ const FloatingPromptInputInner = (
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Compose your prompt</h3>
+                <h3 className="text-sm font-medium">{t('input.composeYourPrompt')}</h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -788,7 +789,7 @@ const FloatingPromptInputInner = (
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Thinking:</span>
+                    <span className="text-xs text-muted-foreground">{t('messages.thinking')}:</span>
                     <Popover
                       trigger={
                         <TooltipProvider>
@@ -807,7 +808,7 @@ const FloatingPromptInputInner = (
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
+                              <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || t('messages.auto')}</p>
                               <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
                             </TooltipContent>
                           </Tooltip>
@@ -957,7 +958,7 @@ const FloatingPromptInputInner = (
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
+                        <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || t('messages.auto')}</p>
                         <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
                       </TooltipContent>
                     </Tooltip>

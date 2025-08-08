@@ -202,6 +202,8 @@
     "project": "项目",
     "user": "用户",
     "userCommands": "用户命令",
+    "projectCommands": "项目命令",
+    "commands": "命令",
     "manageProjectCommands": "管理项目特定的斜杠命令",
     "noCommandsFound": "未找到命令",
     "noProjectCommandsYet": "尚未创建项目命令",
@@ -593,7 +595,18 @@
     "claudeCodeNotFound": "未找到 Claude Code",
     "selectClaudeInstallation": "选择 Claude 安装",
     "installClaudeCode": "安装 Claude Code",
-    "session": "会话"
+    "session": "会话",
+    "letClaudeDecide": "让 Claude 决定",
+    "basicReasoning": "基础推理",
+    "deeperAnalysis": "深度分析",
+    "extensiveReasoning": "广泛推理",
+    "maximumAnalysis": "最大化分析",
+    "thinking": "思考",
+    "auto": "自动",
+    "think": "思考",
+    "thinkHard": "深度思考",
+    "thinkHarder": "更深度思考",
+    "ultrathink": "超级思考"
   },
   "checkpoint": {
     "title": "检查点",
@@ -681,7 +694,8 @@
   },
   "input": {
     "pressEnterToSend": "按 Enter 发送，Shift+Enter 换行",
-    "withFileAndCommandSupport": "，@ 提及文件，/ 调用命令，拖拽或粘贴图片"
+    "withFileAndCommandSupport": "，@ 提及文件，/ 调用命令，拖拽或粘贴图片",
+    "composeYourPrompt": "编写您的提示"
   },
   "relayStation": {
     "title": "中转站",

@@ -293,7 +293,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   const groupedCommands = filteredCommands.reduce((acc, cmd) => {
     const key = cmd.namespace 
       ? `${cmd.namespace} (${cmd.scope})` 
-      : `${cmd.scope === 'project' ? 'Project' : 'User'} Commands`;
+      : cmd.scope === 'project' ? t('slashCommands.projectCommands') : t('slashCommands.userCommands');
     if (!acc[key]) {
       acc[key] = [];
     }
@@ -531,7 +531,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                     <SelectItem value="user">
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4" />
-                        User (Global)
+                        {t('slashCommands.user')} ({t('slashCommands.globalSearch')})
                       </div>
                     </SelectItem>
                   )}
@@ -539,7 +539,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                     <SelectItem value="project" disabled={!projectPath}>
                       <div className="flex items-center gap-2">
                         <FolderOpen className="h-4 w-4" />
-                        Project
+                        {t('slashCommands.project')}
                       </div>
                     </SelectItem>
                   )}
