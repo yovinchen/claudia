@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -51,6 +52,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
   onSlashCommandsSettings,
   setCopyPopoverOpen
 }) => {
+  const { t } = useTranslation();
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -70,7 +72,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
           
           <div className="flex items-center gap-2">
             <Terminal className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Claude Code Session</span>
+            <span className="font-semibold">{t('app.claudeCodeSession')}</span>
           </div>
 
           {projectPath && (
@@ -125,7 +127,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
                     className="w-full justify-start"
                     onClick={onCopyAsJsonl}
                   >
-                    Copy as JSONL
+                    {t('app.copyAsJsonl')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -133,7 +135,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
                     className="w-full justify-start"
                     onClick={onCopyAsMarkdown}
                   >
-                    Copy as Markdown
+                    {t('app.copyAsMarkdown')}
                   </Button>
                 </div>
               }

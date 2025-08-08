@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { api, type ProcessInfo, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { formatISOTimestamp } from "@/lib/date-utils";
 
 interface RunningClaudeSessionsProps {
@@ -25,6 +26,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   onSessionClick,
   className,
 }) => {
+  const { t } = useTranslation();
   const [runningSessions, setRunningSessions] = useState<ProcessInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,11 +146,11 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                         </p>
                         
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>Started: {formatISOTimestamp(session.started_at)}</span>
-                          <span>Model: {session.model}</span>
+                          <span>{t('app.started')}: {formatISOTimestamp(session.started_at)}</span>
+                          <span>{t('app.model')}: {session.model}</span>
                           {session.task && (
                             <span className="truncate max-w-[200px]" title={session.task}>
-                              Task: {session.task}
+                              {t('app.task')}: {session.task}
                             </span>
                           )}
                         </div>

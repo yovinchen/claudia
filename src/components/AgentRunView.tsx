@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover } from "@/components/ui/popover";
+import { useTranslation } from "react-i18next";
 import { api, type AgentRunWithMetrics } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
@@ -48,6 +49,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   onBack,
   className,
 }) => {
+  const { t } = useTranslation();
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -288,7 +290,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                   className="flex items-center gap-2"
                 >
                   <Copy className="h-4 w-4" />
-                  Copy Output
+                  {t('app.copyOutput')}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               }
@@ -300,7 +302,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                     className="w-full justify-start"
                     onClick={handleCopyAsJsonl}
                   >
-                    Copy as JSONL
+                    {t('app.copyAsJsonl')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -308,7 +310,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                     className="w-full justify-start"
                     onClick={handleCopyAsMarkdown}
                   >
-                    Copy as Markdown
+                    {t('app.copyAsMarkdown')}
                   </Button>
                 </div>
               }
@@ -327,7 +329,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 <h3 className="text-sm font-medium">Task:</h3>
                 <p className="text-sm text-muted-foreground flex-1">{run.task}</p>
                 <Badge variant="outline" className="text-xs">
-                  {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                  {run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
                 </Badge>
               </div>
               

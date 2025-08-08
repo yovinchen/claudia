@@ -271,7 +271,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         )}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Opus</div>
+                        <div className="text-sm font-semibold">Claude 4.1 Opus</div>
                         <div className="text-xs opacity-80">{t('agents.opusDescription')}</div>
                       </div>
                     </div>

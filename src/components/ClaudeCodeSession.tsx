@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
+import { useTranslation } from "react-i18next";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -76,6 +77,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   className,
   onStreamingChange,
 }) => {
+  const { t } = useTranslation();
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -1127,7 +1129,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const messagesList = (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto relative pb-40"
+      className="flex-1 overflow-y-auto relative pb-24"
       style={{
         contain: 'strict',
       }}
@@ -1247,7 +1249,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
+    <div className={cn("flex flex-col h-full bg-background relative", className)}>
       <div className="w-full h-full flex flex-col">
         {/* Header */}
         <motion.div
@@ -1268,7 +1270,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <h1 className="text-xl font-bold">Claude Code Session</h1>
+                <h1 className="text-xl font-bold">{t('app.claudeCodeSession')}</h1>
                 <p className="text-sm text-muted-foreground">
                   {projectPath ? `${projectPath}` : "No project selected"}
                 </p>
@@ -1300,13 +1302,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </Button>
             )}
             <div className="flex items-center gap-2">
-              {showSettings && (
-                <CheckpointSettings
-                  sessionId={effectiveSession?.id || ''}
-                  projectId={effectiveSession?.project_id || ''}
-                  projectPath={projectPath}
-                />
-              )}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1320,7 +1315,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Checkpoint Settings</p>
+                    <p>{t('checkpoint.checkpointSettingsTitle')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1352,7 +1347,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       className="flex items-center gap-2"
                     >
                       <Copy className="h-4 w-4" />
-                      Copy Output
+                      {t('app.copyOutput')}
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   }
@@ -1364,7 +1359,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         onClick={handleCopyAsMarkdown}
                         className="w-full justify-start"
                       >
-                        Copy as Markdown
+                        {t('app.copyAsMarkdown')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -1372,7 +1367,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         onClick={handleCopyAsJsonl}
                         className="w-full justify-start"
                       >
-                        Copy as JSONL
+                        {t('app.copyAsJsonl')}
                       </Button>
                     </div>
                   }
@@ -1554,7 +1549,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           )}
 
           <div className={cn(
-            "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
+            "absolute bottom-0 left-0 right-0 transition-all duration-300 z-50",
             showTimeline && "sm:right-96"
           )}>
             <FloatingPromptInput
@@ -1603,7 +1598,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <div className="h-full flex flex-col">
                 {/* Timeline Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold">Session Timeline</h3>
+                  <h3 className="text-lg font-semibold">{t('app.sessionTimeline')}</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1682,6 +1677,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       {showSettings && effectiveSession && (
         <Dialog open={showSettings} onOpenChange={setShowSettings}>
           <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{t('checkpoint.checkpointSettingsTitle')}</DialogTitle>
+              <DialogDescription>
+                {t('app.checkpointingWarning')}
+              </DialogDescription>
+            </DialogHeader>
             <CheckpointSettings
               sessionId={effectiveSession.id}
               projectId={effectiveSession.project_id}
@@ -1699,7 +1700,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <DialogHeader>
               <DialogTitle>Slash Commands</DialogTitle>
               <DialogDescription>
-                Manage project-specific slash commands for {projectPath}
+                {t('slashCommands.manageProjectCommands')} {projectPath}
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">

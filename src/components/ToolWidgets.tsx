@@ -49,6 +49,7 @@ import {
   Hash,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
@@ -400,6 +401,7 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
  * Widget for Read tool result - shows file content with line numbers
  */
 export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> = ({ content, filePath }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
@@ -510,7 +512,7 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
         <div className="flex items-center gap-2">
           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs font-mono text-muted-foreground">
-            {filePath || "File content"}
+            {filePath || t('app.fileContent')}
           </span>
           {isLargeFile && (
             <span className="text-xs text-muted-foreground">
@@ -572,6 +574,7 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
  * Widget for Glob tool
  */
 export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ pattern, result }) => {
+  const { t } = useTranslation();
   // Extract result content if available
   let resultContent = '';
   let isError = false;
@@ -597,7 +600,7 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
         <Search className="h-4 w-4 text-primary" />
-        <span className="text-sm">Searching for pattern:</span>
+        <span className="text-sm">{t('app.searchingForPattern')}:</span>
         <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
           {pattern}
         </code>
@@ -874,6 +877,7 @@ export const GrepWidget: React.FC<{
   exclude?: string;
   result?: any;
 }> = ({ pattern, include, path, exclude, result }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   
   // Extract result content if available
@@ -927,7 +931,7 @@ export const GrepWidget: React.FC<{
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
         <Search className="h-4 w-4 text-emerald-500" />
-        <span className="text-sm font-medium">Searching with grep</span>
+        <span className="text-sm font-medium">{t('app.searchingWithGrep')}</span>
         {!result && (
           <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
@@ -1804,6 +1808,7 @@ export const SystemInitializedWidget: React.FC<{
   cwd?: string;
   tools?: string[];
 }> = ({ sessionId, model, cwd, tools = [] }) => {
+  const { t } = useTranslation();
   const [mcpExpanded, setMcpExpanded] = useState(false);
   
   // Separate regular tools from MCP tools
@@ -1880,14 +1885,14 @@ export const SystemInitializedWidget: React.FC<{
         <div className="flex items-start gap-3">
           <Settings className="h-5 w-5 text-blue-500 mt-0.5" />
           <div className="flex-1 space-y-4">
-            <h4 className="font-semibold text-sm">System Initialized</h4>
+            <h4 className="font-semibold text-sm">{t('app.systemInitialized')}</h4>
             
             {/* Session Info */}
             <div className="space-y-2">
               {sessionId && (
                 <div className="flex items-center gap-2 text-xs">
                   <Fingerprint className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Session ID:</span>
+                  <span className="text-muted-foreground">{t('app.sessionId')}:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
                     {sessionId}
                   </code>
@@ -1897,7 +1902,7 @@ export const SystemInitializedWidget: React.FC<{
               {model && (
                 <div className="flex items-center gap-2 text-xs">
                   <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Model:</span>
+                  <span className="text-muted-foreground">{t('app.model')}:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
                     {model}
                   </code>
@@ -1907,7 +1912,7 @@ export const SystemInitializedWidget: React.FC<{
               {cwd && (
                 <div className="flex items-center gap-2 text-xs">
                   <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Working Directory:</span>
+                  <span className="text-muted-foreground">{t('app.workingDirectory')}:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
                     {cwd}
                   </code>
@@ -1921,7 +1926,7 @@ export const SystemInitializedWidget: React.FC<{
                 <div className="flex items-center gap-2">
                   <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground">
-                    Available Tools ({regularTools.length})
+                    {t('app.availableTools')} ({regularTools.length})
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -1950,7 +1955,7 @@ export const SystemInitializedWidget: React.FC<{
                   className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Package className="h-3.5 w-3.5" />
-                  <span>MCP Services ({mcpTools.length})</span>
+                  <span>{t('app.mcpServices')} ({mcpTools.length})</span>
                   <ChevronDown className={cn(
                     "h-3 w-3 transition-transform",
                     mcpExpanded && "rotate-180"

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Maximize2, 
@@ -57,6 +58,7 @@ export function AgentRunOutputViewer({
   tabId,
   className 
 }: AgentRunOutputViewerProps) {
+  const { t } = useTranslation();
   const { updateTabTitle, updateTabStatus } = useTabState();
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -330,7 +332,7 @@ export function AgentRunOutputViewer({
     if (!run) return;
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
-    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}\n`;
     markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
     if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
     if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
@@ -566,7 +568,7 @@ export function AgentRunOutputViewer({
                   </p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                     <Badge variant="outline" className="text-xs">
-                      {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                      {run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -611,7 +613,7 @@ export function AgentRunOutputViewer({
                         className="w-full justify-start"
                         onClick={handleCopyAsJsonl}
                       >
-                        Copy as JSONL
+                        {t('app.copyAsJsonl')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -619,7 +621,7 @@ export function AgentRunOutputViewer({
                         className="w-full justify-start"
                         onClick={handleCopyAsMarkdown}
                       >
-                        Copy as Markdown
+                        {t('app.copyAsMarkdown')}
                       </Button>
                     </div>
                   }
@@ -723,7 +725,7 @@ export function AgentRunOutputViewer({
                     size="sm"
                   >
                     <Copy className="h-4 w-4 mr-2" />
-                    Copy Output
+                    {t('app.copyOutput')}
                     <ChevronDown className="h-3 w-3 ml-2" />
                   </Button>
                 }
@@ -735,7 +737,7 @@ export function AgentRunOutputViewer({
                       className="w-full justify-start"
                       onClick={handleCopyAsJsonl}
                     >
-                      Copy as JSONL
+                      {t('app.copyAsJsonl')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -743,7 +745,7 @@ export function AgentRunOutputViewer({
                       className="w-full justify-start"
                       onClick={handleCopyAsMarkdown}
                     >
-                      Copy as Markdown
+                      {t('app.copyAsMarkdown')}
                     </Button>
                   </div>
                 }

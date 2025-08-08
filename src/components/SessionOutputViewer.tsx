@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
 import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { useTranslation } from 'react-i18next';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -38,6 +39,7 @@ export interface ClaudeStreamMessage {
 }
 
 export function SessionOutputViewer({ session, onClose, className }: SessionOutputViewerProps) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -410,7 +412,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       variant="outline"
                       size="sm"
                       onClick={() => setIsFullscreen(!isFullscreen)}
-                      title="Fullscreen"
+                      title={t('agents.fullscreen')}
                     >
                       {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </Button>
@@ -422,7 +424,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                           className="flex items-center gap-2"
                         >
                           <Copy className="h-4 w-4" />
-                          Copy Output
+                          {t('app.copyOutput')}
                           <ChevronDown className="h-3 w-3" />
                         </Button>
                       }
@@ -434,7 +436,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                             className="w-full justify-start"
                             onClick={handleCopyAsJsonl}
                           >
-                            Copy as JSONL
+                            {t('app.copyAsJsonl')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -442,7 +444,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                             className="w-full justify-start"
                             onClick={handleCopyAsMarkdown}
                           >
-                            Copy as Markdown
+                            {t('app.copyAsMarkdown')}
                           </Button>
                         </div>
                       }
@@ -567,7 +569,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       className="flex items-center gap-2"
                     >
                       <Copy className="h-4 w-4" />
-                      Copy Output
+                      {t('app.copyOutput')}
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   }
@@ -579,7 +581,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                         className="w-full justify-start"
                         onClick={handleCopyAsJsonl}
                       >
-                        Copy as JSONL
+                        {t('app.copyAsJsonl')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -587,7 +589,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                         className="w-full justify-start"
                         onClick={handleCopyAsMarkdown}
                       >
-                        Copy as Markdown
+                        {t('app.copyAsMarkdown')}
                       </Button>
                     </div>
                   }

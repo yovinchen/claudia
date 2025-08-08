@@ -20,7 +20,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useTranslation } from "@/hooks/useTranslation";
+import { useTranslation } from "react-i18next";
 
 interface FloatingPromptInputProps {
   /**
@@ -110,7 +110,7 @@ const MODELS: Model[] = [
   },
   {
     id: "opus",
-    name: "Claude 4 Opus",
+    name: "Claude 4.1 Opus",
     description: "More capable, better for complex tasks",
     icon: <Sparkles className="h-4 w-4" />
   }
@@ -775,7 +775,7 @@ const FloatingPromptInputInner = (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Model:</span>
+                    <span className="text-xs text-muted-foreground">{t('app.model')}:</span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -871,7 +871,7 @@ const FloatingPromptInputInner = (
       {/* Fixed Position Input Bar */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border",
+          "absolute bottom-0 left-0 right-0 z-40 bg-background/98 backdrop-blur-sm border-t border-border/40",
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}
@@ -890,8 +890,8 @@ const FloatingPromptInputInner = (
             />
           )}
 
-          <div className="p-4">
-            <div className="flex items-end gap-3">
+          <div className="p-3">
+            <div className="flex items-center gap-2">
               {/* Model Picker */}
               <Popover
                 trigger={
@@ -899,7 +899,7 @@ const FloatingPromptInputInner = (
                     variant="outline"
                     size="default"
                     disabled={disabled}
-                    className="gap-2 min-w-[180px] justify-start"
+                    className="gap-2 min-w-[160px] h-10 justify-start"
                   >
                     {selectedModelData.icon}
                     <span className="flex-1 text-left">{selectedModelData.name}</span>
@@ -948,7 +948,7 @@ const FloatingPromptInputInner = (
                           variant="outline"
                           size="default"
                           disabled={disabled}
-                          className="gap-2"
+                          className="gap-2 h-10"
                         >
                           <Brain className="h-4 w-4" />
                           <ThinkingModeIndicator 
@@ -1009,7 +1009,7 @@ const FloatingPromptInputInner = (
                   placeholder={dragActive ? t('messages.dropImagesHere') : t('messages.askClaudeAnything')}
                   disabled={disabled}
                   className={cn(
-                    "min-h-[44px] max-h-[120px] resize-none pr-10",
+                    "min-h-[40px] max-h-[120px] resize-none pr-10 py-2",
                     dragActive && "border-primary"
                   )}
                   rows={1}
@@ -1056,7 +1056,7 @@ const FloatingPromptInputInner = (
                 disabled={isLoading ? false : (!prompt.trim() || disabled)}
                 variant={isLoading ? "destructive" : "default"}
                 size="default"
-                className="min-w-[60px]"
+                className="min-w-[60px] h-10"
               >
                 {isLoading ? (
                   <>

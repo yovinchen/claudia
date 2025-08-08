@@ -4,6 +4,7 @@ import { Play, Clock, Hash, Bot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import type { AgentRunWithMetrics } from "@/lib/api";
@@ -41,6 +42,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   onRunClick,
   className,
 }) => {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const { createAgentTab } = useTabState();
   
@@ -91,7 +93,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
     return (
       <div className={cn("text-center py-8 text-muted-foreground", className)}>
         <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No execution history yet</p>
+        <p className="text-sm">{t('agents.noExecutionHistory')}</p>
       </div>
     );
   }
