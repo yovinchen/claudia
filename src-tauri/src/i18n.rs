@@ -56,6 +56,13 @@ impl SimpleI18n {
             ("en-US", "relay_adapter.network_error") => "Network connection failed".to_string(),
             ("en-US", "relay_station.enabled_success") => "Relay station enabled successfully".to_string(),
             ("en-US", "relay_station.disabled_success") => "Relay station disabled successfully".to_string(),
+            ("en-US", "relay_station.name_required") => "Station name is required".to_string(),
+            ("en-US", "relay_station.api_url_required") => "API URL is required".to_string(),
+            ("en-US", "relay_station.invalid_url") => "Invalid URL format".to_string(),
+            ("en-US", "relay_station.https_required") => "API URL must use HTTPS protocol for security".to_string(),
+            ("en-US", "relay_station.token_required") => "API token is required".to_string(),
+            ("en-US", "relay_station.token_too_short") => "API token is too short (minimum 10 characters)".to_string(),
+            ("en-US", "relay_station.token_invalid_chars") => "API token contains invalid characters".to_string(),
             
             // 中文翻译
             ("zh-CN", "error-failed-to-create") => "创建失败".to_string(),
@@ -77,6 +84,13 @@ impl SimpleI18n {
             ("zh-CN", "relay_adapter.network_error") => "网络连接失败".to_string(),
             ("zh-CN", "relay_station.enabled_success") => "中转站启用成功".to_string(),
             ("zh-CN", "relay_station.disabled_success") => "中转站禁用成功".to_string(),
+            ("zh-CN", "relay_station.name_required") => "中转站名称不能为空".to_string(),
+            ("zh-CN", "relay_station.api_url_required") => "API地址不能为空".to_string(),
+            ("zh-CN", "relay_station.invalid_url") => "无效的URL格式".to_string(),
+            ("zh-CN", "relay_station.https_required") => "出于安全考虑，API地址必须使用HTTPS协议".to_string(),
+            ("zh-CN", "relay_station.token_required") => "API令牌不能为空".to_string(),
+            ("zh-CN", "relay_station.token_too_short") => "API令牌太短（至少需要10个字符）".to_string(),
+            ("zh-CN", "relay_station.token_invalid_chars") => "API令牌包含无效字符".to_string(),
             
             // 默认情况
             _ => key.to_string(),

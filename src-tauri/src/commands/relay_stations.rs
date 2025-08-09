@@ -586,12 +586,16 @@ fn validate_relay_station_request(name: &str, api_url: &str, system_token: &str)
     }
 
     // 验证 URL 格式
-    if let Err(_) = url::Url::parse(api_url) {
-        return Err(i18n::t("relay_station.invalid_url"));
-    }
-
-    // 验证是否为 HTTPS
-    if !api_url.starts_with("https://") {
+    let parsed_url = url::Url::parse(api_url)
+        .map_err(|_| i18n::t("relay_station.invalid_url"))?;
+    
+    // 允许本地开发环境使用 HTTP
+    let is_localhost = parsed_url.host_str()
+        .map(|host| host == "localhost" || host == "127.0.0.1" || host == "::1" || host.starts_with("192.168.") || host.starts_with("10."))
+        .unwrap_or(false);
+    
+    // 非本地环境必须使用 HTTPS
+    if !is_localhost && !api_url.starts_with("https://") {
         return Err(i18n::t("relay_station.https_required"));
     }
 
