@@ -74,9 +74,14 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
         statsData = await api.getUsageStats();
         sessionData = await api.getSessionStats();
       } else {
+        const days = selectedDateRange === "7d" ? 7 : 30;
+        
+        // 使用缓存版本的API，传入天数参数
+        statsData = await api.getUsageStats(days);
+        
+        // 对于session数据，继续使用日期范围方式
         const endDate = new Date();
         const startDate = new Date();
-        const days = selectedDateRange === "7d" ? 7 : 30;
         startDate.setDate(startDate.getDate() - days);
         
         const formatDateForApi = (date: Date) => {
@@ -86,10 +91,6 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             return `${year}${month}${day}`;
         }
 
-        statsData = await api.getUsageByDateRange(
-          startDate.toISOString(),
-          endDate.toISOString()
-        );
         sessionData = await api.getSessionStats(
             formatDateForApi(startDate),
             formatDateForApi(endDate),
@@ -774,10 +775,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             <BarChart
                               data={stats.by_project.slice(0, 6).map((project) => ({
                                 name: project.project_path.split('/').slice(-1)[0],
-                                input: project.input_tokens / 1000,
-                                output: project.output_tokens / 1000,
-                                cacheWrite: project.cache_creation_tokens / 1000,
-                                cacheRead: project.cache_read_tokens / 1000
+                                totalTokens: project.total_tokens / 1000,
+                                cost: project.total_cost
                               }))}
                               margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                             >
@@ -795,6 +794,13 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                 tickFormatter={(value) => `${value}K`}
                                 className="text-muted-foreground"
                               />
+                              <YAxis 
+                                yAxisId="right"
+                                orientation="right"
+                                tick={{ fontSize: 10 }}
+                                tickFormatter={(value) => `$${value.toFixed(2)}`}
+                                className="text-muted-foreground"
+                              />
                               <RechartsTooltip
                                 contentStyle={{ 
                                   backgroundColor: 'hsl(var(--popover))',
@@ -804,24 +810,27 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
                                   backdropFilter: 'blur(8px)'
                                 }}
-                                formatter={(value: number) => `${formatTokens(value * 1000)} tokens`}
+                                formatter={(value: number, name: string) => {
+                                  if (name === 'totalTokens') {
+                                    return `${formatTokens(value * 1000)} tokens`;
+                                  } else if (name === 'cost') {
+                                    return `$${value.toFixed(2)}`;
+                                  }
+                                  return value;
+                                }}
                               />
                               <Legend 
                                 wrapperStyle={{ fontSize: 11 }}
                                 formatter={(value) => {
                                   const nameMap: Record<string, string> = {
-                                    'input': t('usage.inputTokens'),
-                                    'output': t('usage.outputTokens'),
-                                    'cacheWrite': t('usage.cacheWrite'),
-                                    'cacheRead': t('usage.cacheRead')
+                                    'totalTokens': t('usage.totalTokens'),
+                                    'cost': t('usage.cost')
                                   };
                                   return nameMap[value] || value;
                                 }}
                               />
-                              <Bar dataKey="input" stackId="a" fill="#3b82f6" />
-                              <Bar dataKey="output" stackId="a" fill="#ec4899" />
-                              <Bar dataKey="cacheWrite" stackId="a" fill="#60a5fa" />
-                              <Bar dataKey="cacheRead" stackId="a" fill="#a78bfa" />
+                              <Bar dataKey="totalTokens" fill="#3b82f6" />
+                              <Bar dataKey="cost" fill="#ec4899" yAxisId="right" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>

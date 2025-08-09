@@ -1198,14 +1198,22 @@ export const api = {
 
   /**
    * Gets overall usage statistics
+   * @param days - Optional number of days to look back
    * @returns Promise resolving to usage statistics
    */
-  async getUsageStats(): Promise<UsageStats> {
+  async getUsageStats(days?: number): Promise<UsageStats> {
     try {
-      return await invoke<UsageStats>("get_usage_stats");
+      // 使用缓存版本的API，它会自动更新缓存
+      return await invoke<UsageStats>("usage_get_stats_cached", { days });
     } catch (error) {
-      console.error("Failed to get usage stats:", error);
-      throw error;
+      console.error("Failed to get cached usage stats, falling back to direct scan:", error);
+      // 如果缓存版本失败，回退到原版本
+      try {
+        return await invoke<UsageStats>("get_usage_stats", { days });
+      } catch (fallbackError) {
+        console.error("Fallback to original API also failed:", fallbackError);
+        throw error;
+      }
     }
   },
 
@@ -1258,6 +1266,19 @@ export const api = {
       return await invoke<UsageEntry[]>("get_usage_details", { limit });
     } catch (error) {
       console.error("Failed to get usage details:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clears the usage cache and forces recalculation
+   * @returns Promise resolving to success message
+   */
+  async clearUsageCache(): Promise<string> {
+    try {
+      return await invoke<string>("usage_clear_cache");
+    } catch (error) {
+      console.error("Failed to clear usage cache:", error);
       throw error;
     }
   },

@@ -8,97 +8,98 @@ use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UsageEntry {
-    timestamp: String,
-    model: String,
-    input_tokens: u64,
-    output_tokens: u64,
-    cache_creation_tokens: u64,
-    cache_read_tokens: u64,
-    cost: f64,
-    session_id: String,
-    project_path: String,
+    pub timestamp: String,
+    pub model: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_creation_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cost: f64,
+    pub session_id: String,
+    pub project_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UsageStats {
-    total_cost: f64,
-    total_tokens: u64,
-    total_input_tokens: u64,
-    total_output_tokens: u64,
-    total_cache_creation_tokens: u64,
-    total_cache_read_tokens: u64,
-    total_sessions: u64,
-    by_model: Vec<ModelUsage>,
-    by_date: Vec<DailyUsage>,
-    by_project: Vec<ProjectUsage>,
+    pub total_cost: f64,
+    pub total_tokens: u64,
+    pub total_input_tokens: u64,
+    pub total_output_tokens: u64,
+    pub total_cache_creation_tokens: u64,
+    pub total_cache_read_tokens: u64,
+    pub total_sessions: u64,
+    pub by_model: Vec<ModelUsage>,
+    pub by_date: Vec<DailyUsage>,
+    pub by_project: Vec<ProjectUsage>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ModelUsage {
-    model: String,
-    total_cost: f64,
-    total_tokens: u64,
-    input_tokens: u64,
-    output_tokens: u64,
-    cache_creation_tokens: u64,
-    cache_read_tokens: u64,
-    session_count: u64,
+    pub model: String,
+    pub total_cost: f64,
+    pub total_tokens: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_creation_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub session_count: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DailyUsage {
-    date: String,
-    total_cost: f64,
-    total_tokens: u64,
+    pub date: String,
+    pub total_cost: f64,
+    pub total_tokens: u64,
     // New detailed per-day breakdowns
-    input_tokens: u64,
-    output_tokens: u64,
-    cache_creation_tokens: u64,
-    cache_read_tokens: u64,
-    request_count: u64,
-    models_used: Vec<String>,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_creation_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub request_count: u64,
+    pub models_used: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectUsage {
-    project_path: String,
-    project_name: String,
-    total_cost: f64,
-    total_tokens: u64,
-    session_count: u64,
-    last_used: String,
+    pub project_path: String,
+    pub project_name: String,
+    pub total_cost: f64,
+    pub total_tokens: u64,
+    pub session_count: u64,
+    pub last_used: String,
 }
 
 // Claude pricing constants (per million tokens)
-// Claude 4 系列
-const OPUS_4_INPUT_PRICE: f64 = 15.0;
-const OPUS_4_OUTPUT_PRICE: f64 = 75.0;
-const OPUS_4_CACHE_WRITE_PRICE: f64 = 18.75;
-const OPUS_4_CACHE_READ_PRICE: f64 = 1.20;  // 修正为 1.20
+// 最新价格表 (2025-01)
+// Claude 4.x 系列
+const OPUS_4_1_INPUT_PRICE: f64 = 15.0;      // Opus 4.1
+const OPUS_4_1_OUTPUT_PRICE: f64 = 75.0;
+const OPUS_4_1_CACHE_WRITE_PRICE: f64 = 18.75;
+const OPUS_4_1_CACHE_READ_PRICE: f64 = 1.50;  // 更新为 1.50
 
-const SONNET_4_INPUT_PRICE: f64 = 3.0;
+const SONNET_4_INPUT_PRICE: f64 = 3.0;       // Sonnet 4
 const SONNET_4_OUTPUT_PRICE: f64 = 15.0;
 const SONNET_4_CACHE_WRITE_PRICE: f64 = 3.75;
 const SONNET_4_CACHE_READ_PRICE: f64 = 0.30;
 
-// Claude 3.x 系列
-// Sonnet 3.7/3.5
+// Claude 3.x 系列 (旧版本，价格可能不同)
+// Sonnet 3.7/3.5 - 假设与 Sonnet 4 相同
 const SONNET_3_INPUT_PRICE: f64 = 3.0;
 const SONNET_3_OUTPUT_PRICE: f64 = 15.0;
 const SONNET_3_CACHE_WRITE_PRICE: f64 = 3.75;
 const SONNET_3_CACHE_READ_PRICE: f64 = 0.30;
 
-// Opus 3
+// Opus 3 - 假设与 Opus 4.1 相同
 const OPUS_3_INPUT_PRICE: f64 = 15.0;
 const OPUS_3_OUTPUT_PRICE: f64 = 75.0;
 const OPUS_3_CACHE_WRITE_PRICE: f64 = 18.75;
-const OPUS_3_CACHE_READ_PRICE: f64 = 1.20;
+const OPUS_3_CACHE_READ_PRICE: f64 = 1.50;
 
-// Haiku 3.5
-const HAIKU_3_INPUT_PRICE: f64 = 0.80;
-const HAIKU_3_OUTPUT_PRICE: f64 = 4.0;
-const HAIKU_3_CACHE_WRITE_PRICE: f64 = 1.0;
-const HAIKU_3_CACHE_READ_PRICE: f64 = 0.08;
+// Haiku 3.5 - 最具性价比
+const HAIKU_3_5_INPUT_PRICE: f64 = 0.80;
+const HAIKU_3_5_OUTPUT_PRICE: f64 = 4.0;
+const HAIKU_3_5_CACHE_WRITE_PRICE: f64 = 1.0;
+const HAIKU_3_5_CACHE_READ_PRICE: f64 = 0.08;
 
 #[derive(Debug, Deserialize)]
 struct JsonlEntry {
@@ -147,40 +148,47 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
     cost
 }
 
-// 独立的模型价格匹配函数，更灵活的模型识别
+// 独立的模型价格匹配函数，更精确的模型识别
 fn match_model_prices(model_lower: &str) -> (f64, f64, f64, f64) {
-    // Claude 4 系列
-    if model_lower.contains("opus") && (model_lower.contains("4") || model_lower.contains("4.")) {
-        (OPUS_4_INPUT_PRICE, OPUS_4_OUTPUT_PRICE, OPUS_4_CACHE_WRITE_PRICE, OPUS_4_CACHE_READ_PRICE)
-    } else if model_lower.contains("sonnet") && (model_lower.contains("4") || model_lower.contains("4.")) {
+    // Claude Opus 4.1 (最新最强)
+    if model_lower.contains("opus") && (model_lower.contains("4-1") || model_lower.contains("4.1")) {
+        (OPUS_4_1_INPUT_PRICE, OPUS_4_1_OUTPUT_PRICE, OPUS_4_1_CACHE_WRITE_PRICE, OPUS_4_1_CACHE_READ_PRICE)
+    }
+    // Claude Sonnet 4 
+    else if model_lower.contains("sonnet") && (model_lower.contains("-4-") || model_lower.contains("sonnet-4")) {
         (SONNET_4_INPUT_PRICE, SONNET_4_OUTPUT_PRICE, SONNET_4_CACHE_WRITE_PRICE, SONNET_4_CACHE_READ_PRICE)
+    }
+    // Claude Haiku 3.5
+    else if model_lower.contains("haiku") {
+        (HAIKU_3_5_INPUT_PRICE, HAIKU_3_5_OUTPUT_PRICE, HAIKU_3_5_CACHE_WRITE_PRICE, HAIKU_3_5_CACHE_READ_PRICE)
     }
     // Claude 3.x Sonnet 系列（3.7, 3.5）
     else if model_lower.contains("sonnet") && 
-            (model_lower.contains("3.7") || model_lower.contains("3.5") || model_lower.contains("3-5")) {
+            (model_lower.contains("3-7") || model_lower.contains("3.7") || 
+             model_lower.contains("3-5") || model_lower.contains("3.5")) {
         (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
     }
-    // Claude 3 Opus
-    else if model_lower.contains("opus") && 
-            (model_lower.contains("3") || (!model_lower.contains("4") && !model_lower.contains("4."))) {
+    // Claude 3 Opus (旧版)
+    else if model_lower.contains("opus") && model_lower.contains("3") {
         (OPUS_3_INPUT_PRICE, OPUS_3_OUTPUT_PRICE, OPUS_3_CACHE_WRITE_PRICE, OPUS_3_CACHE_READ_PRICE)
     }
-    // Claude 3.5 Haiku
-    else if model_lower.contains("haiku") {
-        (HAIKU_3_INPUT_PRICE, HAIKU_3_OUTPUT_PRICE, HAIKU_3_CACHE_WRITE_PRICE, HAIKU_3_CACHE_READ_PRICE)
-    }
-    // 默认 Sonnet（通用后备）
+    // 默认 Sonnet（未明确版本号时）
     else if model_lower.contains("sonnet") {
         (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+    }
+    // 默认 Opus（未明确版本号时，假设是最新版）
+    else if model_lower.contains("opus") {
+        (OPUS_4_1_INPUT_PRICE, OPUS_4_1_OUTPUT_PRICE, OPUS_4_1_CACHE_WRITE_PRICE, OPUS_4_1_CACHE_READ_PRICE)
     }
     // 未知模型
     else {
         log::warn!("Unknown model for cost calculation: {}", model_lower);
-        (0.0, 0.0, 0.0, 0.0)
+        // 默认使用 Sonnet 3 的价格（保守估计）
+        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
     }
 }
 
-fn parse_jsonl_file(
+pub fn parse_jsonl_file(
     path: &PathBuf,
     encoded_project_name: &str,
     processed_hashes: &mut HashSet<String>,
@@ -264,13 +272,25 @@ fn parse_jsonl_file(
                                 continue;
                             }
 
-                            let cost = entry.cost_usd.unwrap_or_else(|| {
-                                if let Some(model_str) = &message.model {
-                                    calculate_cost(model_str, usage)
-                                } else {
-                                    0.0
+                            // 始终重新计算成本，不信任JSONL中的costUSD字段
+                            // 因为可能存在价格变化或计算错误
+                            let cost = if let Some(model_str) = &message.model {
+                                calculate_cost(model_str, usage)
+                            } else {
+                                0.0
+                            };
+                            
+                            // 如果JSONL中有成本，可以记录差异用于调试
+                            if let Some(jsonl_cost) = entry.cost_usd {
+                                if (jsonl_cost - cost).abs() > 0.0001 {
+                                    log::debug!(
+                                        "Cost difference for model {}: JSONL={:.4}, Calculated={:.4}",
+                                        message.model.as_ref().unwrap_or(&"unknown".to_string()),
+                                        jsonl_cost,
+                                        cost
+                                    );
                                 }
-                            });
+                            }
 
                             // Use actual project path if found, otherwise use encoded name
                             let project_path = actual_project_path
@@ -324,7 +344,7 @@ fn get_earliest_timestamp(path: &PathBuf) -> Option<String> {
     None
 }
 
-fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
+pub fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
     let mut all_entries = Vec::new();
     let mut processed_hashes = HashSet::new();
     let projects_dir = claude_path.join("projects");
