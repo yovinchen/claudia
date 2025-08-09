@@ -62,11 +62,17 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.7.1",
-    "@types/node": "^22.15.30",
+    "@types/node": "^24.2.1",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@types/sharp": "^0.32.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.33.0",
+    "monaco-editor": "^0.52.2",
+    "monaco-editor-webpack-plugin": "^7.1.0",
+    "monaco-themes": "^0.4.6",
     "sharp": "^0.34.2",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"

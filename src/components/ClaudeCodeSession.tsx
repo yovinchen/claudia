@@ -35,7 +35,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import { FileExplorerPanel } from "./FileExplorerPanel";
 import { GitPanel } from "./GitPanel";
-import { FileEditor } from "./FileEditor";
+import { FileEditorEnhanced } from "./FileEditorEnhanced";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
@@ -1504,9 +1504,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               className="h-full"
             />
           ) : editingFile ? (
-            // File Editor layout
+            // File Editor layout with enhanced features
             <div className="h-full flex flex-col relative">
-              <FileEditor
+              <FileEditorEnhanced
                 filePath={editingFile}
                 onClose={() => setEditingFile(null)}
                 className="flex-1"
