@@ -44,7 +44,7 @@ use commands::usage_index::{
     usage_get_summary, usage_import_diffs, usage_scan_index, usage_scan_progress, UsageIndexState,
 };
 use commands::usage_cache::{
-    usage_scan_update, usage_get_stats_cached, usage_clear_cache, UsageCacheState,
+    usage_scan_update, usage_get_stats_cached, usage_clear_cache, usage_force_scan, usage_check_updates, UsageCacheState,
 };
 use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
@@ -261,6 +261,8 @@ fn main() {
             usage_scan_update,
             usage_get_stats_cached,
             usage_clear_cache,
+            usage_force_scan,
+            usage_check_updates,
             
             // MCP (Model Context Protocol)
             mcp_add,

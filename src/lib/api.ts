@@ -1284,6 +1284,32 @@ export const api = {
   },
 
   /**
+   * Force scan for usage data updates
+   * @returns Promise resolving to scan result
+   */
+  async forceUsageScan(): Promise<any> {
+    try {
+      return await invoke("usage_force_scan");
+    } catch (error) {
+      console.error("Failed to force usage scan:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if there are usage data updates available
+   * @returns Promise resolving to boolean indicating if updates are available
+   */
+  async checkUsageUpdates(): Promise<boolean> {
+    try {
+      return await invoke<boolean>("usage_check_updates");
+    } catch (error) {
+      console.error("Failed to check usage updates:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Creates a checkpoint for the current session state
    */
   async createCheckpoint(

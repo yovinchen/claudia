@@ -17,6 +17,7 @@ use super::usage::{
 pub struct UsageCacheState {
     pub conn: Arc<Mutex<Option<Connection>>>,
     pub last_scan_time: Arc<Mutex<Option<i64>>>,
+    pub is_scanning: Arc<Mutex<bool>>,  // 防止并发扫描
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,6 +120,37 @@ fn generate_unique_hash(entry: &UsageEntry, has_io_tokens: bool, has_cache_token
 
 #[command]
 pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<ScanResult, String> {
+    // 检查是否正在扫描
+    {
+        let mut is_scanning = state.is_scanning.lock().map_err(|e| e.to_string())?;
+        if *is_scanning {
+            return Ok(ScanResult {
+                files_scanned: 0,
+                entries_added: 0,
+                entries_skipped: 0,
+                scan_time_ms: 0,
+            });
+        }
+        *is_scanning = true;
+    }
+    
+    // 确保在函数退出时重置扫描状态
+    struct ScanGuard<'a> {
+        is_scanning: &'a Arc<Mutex<bool>>,
+    }
+    
+    impl<'a> Drop for ScanGuard<'a> {
+        fn drop(&mut self) {
+            if let Ok(mut is_scanning) = self.is_scanning.lock() {
+                *is_scanning = false;
+            }
+        }
+    }
+    
+    let _guard = ScanGuard {
+        is_scanning: &state.is_scanning,
+    };
+    
     let start_time = Utc::now().timestamp_millis();
     
     // Initialize or get connection
@@ -288,8 +320,17 @@ pub async fn usage_get_stats_cached(
     days: Option<u32>,
     state: State<'_, UsageCacheState>,
 ) -> Result<UsageStats, String> {
-    // First ensure cache is up to date
-    usage_scan_update(state.clone()).await?;
+    // 优化：只在数据库未初始化时才扫描
+    let needs_init = {
+        let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
+        conn_guard.is_none()
+    };
+    
+    if needs_init {
+        // 首次调用，需要初始化和扫描
+        usage_scan_update(state.clone()).await?;
+    }
+    // 移除自动扫描逻辑，让系统只在手动触发时扫描
     
     let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
     let conn = conn_guard.as_ref().ok_or("Database not initialized")?;
@@ -568,4 +609,76 @@ pub async fn usage_clear_cache(state: State<'_, UsageCacheState>) -> Result<Stri
     }
     
     Ok("No cache to clear.".to_string())
+}
+
+// 快速检查文件是否变化（不解析内容）
+pub async fn check_files_changed(state: &State<'_, UsageCacheState>) -> Result<bool, String> {
+    let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
+    let conn = conn_guard.as_ref().ok_or("Database not initialized")?;
+    
+    let claude_path = dirs::home_dir()
+        .ok_or("Failed to get home directory")?
+        .join(".claude");
+    let projects_dir = claude_path.join("projects");
+    
+    // 获取已知文件的修改时间和大小
+    let mut stmt = conn
+        .prepare("SELECT file_path, file_size, mtime_ms FROM scanned_files")
+        .map_err(|e| e.to_string())?;
+    
+    let mut known_files = std::collections::HashMap::new();
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
+        ))
+    }).map_err(|e| e.to_string())?;
+    
+    for row in rows {
+        if let Ok((path, data)) = row {
+            known_files.insert(path, data);
+        }
+    }
+    
+    // 快速检查是否有文件变化
+    if let Ok(projects) = fs::read_dir(&projects_dir) {
+        for project in projects.flatten() {
+            if project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                let project_path = project.path();
+                
+                for entry in walkdir::WalkDir::new(&project_path)
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+                {
+                    let path = entry.path();
+                    let path_str = path.to_string_lossy().to_string();
+                    let current_size = get_file_size(path);
+                    let current_mtime = get_file_mtime_ms(path);
+                    
+                    if let Some((stored_size, stored_mtime)) = known_files.get(&path_str) {
+                        if current_size != *stored_size || current_mtime != *stored_mtime {
+                            return Ok(true); // 发现变化
+                        }
+                    } else {
+                        return Ok(true); // 发现新文件
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(false) // 没有变化
+}
+
+#[command]
+pub async fn usage_force_scan(state: State<'_, UsageCacheState>) -> Result<ScanResult, String> {
+    // 手动触发完整扫描
+    usage_scan_update(state).await
+}
+
+#[command]
+pub async fn usage_check_updates(state: State<'_, UsageCacheState>) -> Result<bool, String> {
+    // 检查是否有文件更新
+    check_files_changed(&state).await
 }

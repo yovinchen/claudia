@@ -4,25 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { api, type UsageStats, type ProjectUsage } from "@/lib/api";
+import { api, type UsageStats } from "@/lib/api";
 import { 
   ArrowLeft, 
   TrendingUp, 
-  Calendar, 
   Filter,
   Loader2,
   DollarSign,
   Activity,
   FileText,
-  Briefcase
+  Briefcase,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -52,9 +50,10 @@ interface UsageDashboardProps {
 export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UsageStats | null>(null);
-  const [sessionStats, setSessionStats] = useState<ProjectUsage[] | null>(null);
+  // const [sessionStats, setSessionStats] = useState<ProjectUsage[] | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<"all" | "24h" | "7d" | "30d">("all");
   const [activeTab, setActiveTab] = useState("overview");
   const [hourlyStats, setHourlyStats] = useState<any[]>([]);
@@ -63,44 +62,39 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     loadUsageStats();
   }, [selectedDateRange]);
 
+  const handleManualRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      // 强制扫描更新
+      await api.forceUsageScan();
+      // 重新加载数据
+      await loadUsageStats();
+    } catch (err) {
+      console.error("Failed to refresh usage stats:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const loadUsageStats = async () => {
     try {
       setLoading(true);
       setError(null);
 
       let statsData: UsageStats;
-      let sessionData: ProjectUsage[];
       
       if (selectedDateRange === "all") {
         statsData = await api.getUsageStats();
-        sessionData = await api.getSessionStats();
+        // sessionData = await api.getSessionStats();
       } else {
         const days = selectedDateRange === "24h" ? 1 : selectedDateRange === "7d" ? 7 : 30;
         
         // 使用缓存版本的API，传入天数参数
         statsData = await api.getUsageStats(days);
-        
-        // 对于session数据，继续使用日期范围方式
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        
-        const formatDateForApi = (date: Date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}${month}${day}`;
-        }
-
-        sessionData = await api.getSessionStats(
-            formatDateForApi(startDate),
-            formatDateForApi(endDate),
-            'desc'
-        );
       }
       
       setStats(statsData);
-      setSessionStats(sessionData);
+      // setSessionStats(sessionData);
       
       // Generate 24-hour hourly stats when in 24h view
       // For 24h view, we need to aggregate the last 24 hours of data
@@ -154,7 +148,6 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     // If no data, create empty hours
     if (last24HoursTotals.total_cost === 0) {
       for (let i = 0; i < 24; i++) {
-        const hourIndex = (currentHour - i + 24) % 24;
         const timeAgo = i === 0 ? 'Now' : i === 1 ? '1h ago' : `${i}h ago`;
         hours.unshift({
           hour: timeAgo,
@@ -300,6 +293,16 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
           
           {/* Date Range Filter */}
           <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="h-8 w-8"
+              title={t('usage.refreshData')}
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            </Button>
             <Filter className="h-4 w-4 text-muted-foreground" />
             <div className="flex space-x-1">
               {(["all", "30d", "7d", "24h"] as const).map((range) => (
