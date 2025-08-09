@@ -262,3 +262,30 @@ pub async fn watch_directory(
     
     Ok(())
 }
+
+/// 获取文件树（简化版，供文件浏览器使用）
+#[tauri::command]
+pub async fn get_file_tree(project_path: String) -> Result<Vec<FileNode>, String> {
+    let path = Path::new(&project_path);
+    if !path.exists() {
+        return Err(format!("Path does not exist: {}", path.display()));
+    }
+
+    let ignore_patterns = vec![
+        String::from("node_modules"),
+        String::from(".git"),
+        String::from("target"),
+        String::from("dist"),
+        String::from("build"),
+        String::from(".idea"),
+        String::from(".vscode"),
+        String::from("__pycache__"),
+        String::from(".DS_Store"),
+    ];
+
+    let root_node = read_directory_recursive(path, 0, 3, &ignore_patterns)
+        .map_err(|e| e.to_string())?;
+
+    // Return children of root node if it has any
+    Ok(root_node.children.unwrap_or_default())
+}

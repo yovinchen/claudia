@@ -33,8 +33,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
-import { FileExplorerPanel } from "./FileExplorerPanel";
-import { GitPanel } from "./GitPanel";
+import { FileExplorerPanelEnhanced } from "./FileExplorerPanelEnhanced";
+import { GitPanelEnhanced } from "./GitPanelEnhanced";
 import { FileEditorEnhanced } from "./FileEditorEnhanced";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -116,8 +116,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // New state for file explorer and git panel
   const [showFileExplorer, setShowFileExplorer] = useState(false);
   const [showGitPanel, setShowGitPanel] = useState(false);
-  const [fileExplorerWidth] = useState(280);
-  const [gitPanelWidth] = useState(320);
   
   // File editor state
   const [editingFile, setEditingFile] = useState<string | null>(null);
@@ -1458,7 +1456,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           showTimeline && "sm:mr-96"
         )}>
           {/* File Explorer Panel */}
-          <FileExplorerPanel
+          <FileExplorerPanelEnhanced
             projectPath={projectPath}
             isVisible={showFileExplorer}
             onFileSelect={(path) => {
@@ -1470,7 +1468,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               setEditingFile(path);
             }}
             onToggle={() => setShowFileExplorer(!showFileExplorer)}
-            width={fileExplorerWidth}
           />
           
           {/* Main Content with Input */}
@@ -1481,28 +1478,43 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           )}>
           {showPreview ? (
             // Split pane layout when preview is active
-            <SplitPane
-              left={
-                <div className="h-full flex flex-col">
-                  {projectPathInput}
-                  {messagesList}
-                </div>
-              }
-              right={
-                <WebviewPreview
-                  initialUrl={previewUrl}
-                  onClose={handleClosePreview}
-                  isMaximized={isPreviewMaximized}
-                  onToggleMaximize={handleTogglePreviewMaximize}
-                  onUrlChange={handlePreviewUrlChange}
-                />
-              }
-              initialSplit={splitPosition}
-              onSplitChange={setSplitPosition}
-              minLeftWidth={400}
-              minRightWidth={400}
-              className="h-full"
-            />
+            <div className="h-full">
+              <SplitPane
+                left={
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
+                      {projectPathInput}
+                      {messagesList}
+                    </div>
+                    {/* Floating Input for preview mode */}
+                    <div className="max-w-5xl mx-auto w-full relative">
+                      <FloatingPromptInput
+                        ref={floatingPromptRef}
+                        onSend={handleSendPrompt}
+                        onCancel={handleCancelExecution}
+                        isLoading={isLoading}
+                        disabled={!projectPath}
+                        projectPath={projectPath}
+                      />
+                    </div>
+                  </div>
+                }
+                right={
+                  <WebviewPreview
+                    initialUrl={previewUrl}
+                    onClose={handleClosePreview}
+                    isMaximized={isPreviewMaximized}
+                    onToggleMaximize={handleTogglePreviewMaximize}
+                    onUrlChange={handlePreviewUrlChange}
+                  />
+                }
+                initialSplit={splitPosition}
+                onSplitChange={setSplitPosition}
+                minLeftWidth={400}
+                minRightWidth={400}
+                className="h-full"
+              />
+            </div>
           ) : editingFile ? (
             // File Editor layout with enhanced features
             <div className="h-full flex flex-col relative">
@@ -1513,8 +1525,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               />
             </div>
           ) : (
-            // Original layout when no preview
+            // Original layout when no preview or editor
             <div className="h-full flex flex-col relative">
+              {/* Main content area with messages */}
               <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
                 {projectPathInput}
                 {messagesList}
@@ -1531,22 +1544,20 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 )}
               </div>
               
-              {/* Floating Prompt Input - Bound to Main Content */}
-              <ErrorBoundary>
-                {/* Queued Prompts Display */}
-                <AnimatePresence>
-                  {queuedPrompts.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 20 }}
-                      className={cn(
-                        "absolute bottom-24 left-0 right-0 z-30 transition-all duration-300",
-                        showTimeline && "sm:right-96"
-                      )}
-                    >
-                      <div className="mx-4">
-                        <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
+              {/* Floating elements container - same width as main content */}
+              <div className="max-w-5xl mx-auto w-full relative">
+                <ErrorBoundary>
+                  {/* Queued Prompts Display */}
+                  <AnimatePresence>
+                    {queuedPrompts.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="absolute bottom-24 left-0 right-0 z-30"
+                      >
+                        <div className="mx-4">
+                          <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="text-xs font-medium text-muted-foreground mb-1">
                             Queued Prompts ({queuedPrompts.length})
@@ -1587,17 +1598,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                  </AnimatePresence>
 
-                {/* Navigation Arrows */}
-                {displayableMessages.length > 5 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ delay: 0.5 }}
-                    className="absolute bottom-32 right-6 z-50"
-                  >
+                  {/* Navigation Arrows */}
+                  {displayableMessages.length > 5 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ delay: 0.5 }}
+                      className="absolute bottom-32 right-6 z-50"
+                    >
                     <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
                       <Button
                         variant="ghost"
@@ -1650,7 +1661,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   </motion.div>
                 )}
 
-                <div className="absolute bottom-0 left-0 right-0 z-50">
+                {/* Floating Prompt Input - Now properly aligned with main content */}
+                <div className="relative">
                   <FloatingPromptInput
                     ref={floatingPromptRef}
                     onSend={handleSendPrompt}
@@ -1682,17 +1694,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </div>
                   </div>
                 )}
-              </ErrorBoundary>
+                </ErrorBoundary>
+              </div>
             </div>
           )}
           </div>
           
           {/* Git Panel */}
-          <GitPanel
+          <GitPanelEnhanced
             projectPath={projectPath}
             isVisible={showGitPanel}
             onToggle={() => setShowGitPanel(!showGitPanel)}
-            width={gitPanelWidth}
           />
         </div>
 

@@ -62,10 +62,10 @@ use commands::packycode_nodes::{
 };
 use commands::filesystem::{
     read_directory_tree, search_files_by_name, get_file_info, watch_directory,
-    read_file, write_file,
+    read_file, write_file, get_file_tree,
 };
 use commands::git::{
-    get_git_status, get_git_history, get_git_branches, get_git_diff,
+    get_git_status, get_git_history, get_git_branches, get_git_diff, get_git_commits,
 };
 use process::ProcessRegistryState;
 use std::sync::Mutex;
@@ -311,12 +311,14 @@ fn main() {
             watch_directory,
             read_file,
             write_file,
+            get_file_tree,
             
             // Git
             get_git_status,
             get_git_history,
             get_git_branches,
             get_git_diff,
+            get_git_commits,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

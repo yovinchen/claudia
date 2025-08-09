@@ -424,3 +424,10 @@ pub async fn get_git_diff(
 
     Ok(String::from_utf8_lossy(&diff_output.stdout).to_string())
 }
+
+/// 获取 Git 提交列表（简化版）
+#[tauri::command]
+pub async fn get_git_commits(project_path: String, limit: usize) -> Result<Vec<GitCommit>, String> {
+    // 使用已有的 get_git_history 函数，直接传递 limit 参数
+    get_git_history(project_path, Some(limit), None).await
+}
