@@ -18,6 +18,23 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/useTranslation";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from "recharts";
 
 interface UsageDashboardProps {
   /**
@@ -293,6 +310,182 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   </div>
                 </Card>
 
+                {/* 使用趋势图表 - 整合了Token使用趋势 */}
+                {stats.by_date.length > 1 && (
+                  <Card className="p-6">
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.dailyUsageOverTime')}</h3>
+                    <div className="w-full h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={stats.by_date.slice().reverse().map((day) => ({
+                            date: new Date(day.date.replace(/-/g, '/')).toLocaleDateString(undefined, { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            }),
+                            cost: day.total_cost,
+                            inputTokens: (day.input_tokens || 0) / 1000, // 转换为K
+                            outputTokens: (day.output_tokens || 0) / 1000,
+                            cacheWriteTokens: (day.cache_creation_tokens || 0) / 1000,
+                            cacheReadTokens: (day.cache_read_tokens || 0) / 1000,
+                            requests: day.request_count || 0,
+                          }))}
+                          margin={{ top: 5, right: 60, left: 20, bottom: 40 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/20" />
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 10 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                            className="text-muted-foreground"
+                          />
+                          <YAxis 
+                            yAxisId="left"
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(value) => `${value}K`}
+                            label={{ value: 'Tokens (K)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                            className="text-muted-foreground"
+                          />
+                          <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(value) => `$${value.toFixed(2)}`}
+                            label={{ value: 'Cost (USD)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+                            className="text-muted-foreground"
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--popover))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px',
+                              padding: '12px',
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+                              backdropFilter: 'blur(8px)'
+                            }}
+                            labelStyle={{ 
+                              fontSize: 12, 
+                              fontWeight: 600, 
+                              marginBottom: '8px',
+                              color: 'hsl(var(--popover-foreground))'
+                            }}
+                            itemStyle={{ 
+                              fontSize: 11, 
+                              padding: '2px 0'
+                            }}
+                            formatter={(value: any, name: string) => {
+                              // 定义线条颜色映射
+                              const colorMap: Record<string, string> = {
+                                'inputTokens': '#3b82f6',
+                                'outputTokens': '#ec4899',
+                                'cacheWriteTokens': '#60a5fa',
+                                'cacheReadTokens': '#a78bfa',
+                                'cost': '#22c55e',
+                                'requests': '#f59e0b'
+                              };
+                              
+                              // 获取翻译名称
+                              const nameMap: Record<string, string> = {
+                                'inputTokens': t('usage.inputTokens'),
+                                'outputTokens': t('usage.outputTokens'),
+                                'cacheWriteTokens': t('usage.cacheWrite'),
+                                'cacheReadTokens': t('usage.cacheRead'),
+                                'cost': t('usage.cost'),
+                                'requests': t('usage.requests')
+                              };
+                              
+                              // 格式化值
+                              let formattedValue = value;
+                              if (name === 'cost') {
+                                formattedValue = formatCurrency(value);
+                              } else if (name.includes('Tokens')) {
+                                formattedValue = `${formatTokens(value * 1000)} tokens`;
+                              } else if (name === 'requests') {
+                                formattedValue = `${value} ${t('usage.times')}`;
+                              }
+                              
+                              // 返回带颜色的格式化内容
+                              return [
+                                <span style={{ color: colorMap[name] || 'inherit' }}>
+                                  {formattedValue}
+                                </span>,
+                                nameMap[name] || name
+                              ];
+                            }}
+                          />
+                          <Legend 
+                            wrapperStyle={{ fontSize: 11 }}
+                            iconType="line"
+                            formatter={(value) => {
+                              const nameMap: Record<string, string> = {
+                                'inputTokens': t('usage.inputTokens'),
+                                'outputTokens': t('usage.outputTokens'),
+                                'cacheWriteTokens': t('usage.cacheWrite'),
+                                'cacheReadTokens': t('usage.cacheRead'),
+                                'cost': t('usage.cost'),
+                                'requests': t('usage.requests')
+                              };
+                              return nameMap[value] || value;
+                            }}
+                          />
+                          
+                          {/* Token 线条 - 左轴 */}
+                          <Line 
+                            yAxisId="left"
+                            type="monotone" 
+                            dataKey="inputTokens" 
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 4 }}
+                          />
+                          <Line 
+                            yAxisId="left"
+                            type="monotone" 
+                            dataKey="outputTokens" 
+                            stroke="#ec4899"
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 4 }}
+                          />
+                          <Line 
+                            yAxisId="left"
+                            type="monotone" 
+                            dataKey="cacheWriteTokens" 
+                            stroke="#60a5fa"
+                            strokeWidth={1.5}
+                            strokeDasharray="5 5"
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 4 }}
+                          />
+                          <Line 
+                            yAxisId="left"
+                            type="monotone" 
+                            dataKey="cacheReadTokens" 
+                            stroke="#a78bfa"
+                            strokeWidth={1.5}
+                            strokeDasharray="5 5"
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 4 }}
+                          />
+                          
+                          {/* 费用线条 - 右轴 */}
+                          <Line 
+                            yAxisId="right"
+                            type="monotone" 
+                            dataKey="cost" 
+                            stroke="#22c55e"
+                            strokeWidth={2.5}
+                            dot={{ r: 3 }}
+                            activeDot={{ r: 5 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+                )}
+
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="p-6">
@@ -341,81 +534,405 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
 
               {/* Models Tab */}
               <TabsContent value="models">
-                <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">{t('usage.usageByModel')}</h3>
-                  <div className="space-y-4">
-                    {stats.by_model.map((model) => (
-                      <div key={model.model} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Badge 
-                              variant="outline" 
-                              className={cn("text-xs", getModelColor(model.model))}
-                            >
-                              {getModelDisplayName(model.model)}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {model.session_count} {t('usage.sessions')}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* 饼图 */}
+                  <Card className="p-6">
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.usageByModel')}</h3>
+                    <div className="w-full h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={stats.by_model.map((model) => ({
+                              name: getModelDisplayName(model.model),
+                              value: model.total_cost,
+                              sessions: model.session_count,
+                              tokens: model.total_tokens
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {stats.by_model.map((_, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={['#d97757', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'][index % 5]} 
+                              />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--popover))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px',
+                              padding: '12px',
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+                              backdropFilter: 'blur(8px)'
+                            }}
+                            labelStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                              fontWeight: 600
+                            }}
+                            itemStyle={{
+                              color: 'hsl(var(--popover-foreground))'
+                            }}
+                            formatter={(value: number, name: string, props: any) => {
+                              if (name === 'value') {
+                                return [
+                                  formatCurrency(value),
+                                  `${props.payload.sessions} sessions, ${formatTokens(props.payload.tokens)} tokens`
+                                ];
+                              }
+                              return [value, name];
+                            }}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={36}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+
+                  {/* 详细列表 */}
+                  <Card className="p-6">
+                    <h3 className="text-sm font-semibold mb-4">详细统计</h3>
+                    <div className="space-y-4">
+                      {stats.by_model.map((model) => (
+                        <div key={model.model} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <Badge 
+                                variant="outline" 
+                                className={cn("text-xs", getModelColor(model.model))}
+                              >
+                                {getModelDisplayName(model.model)}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {model.session_count} {t('usage.sessions')}
+                              </span>
+                            </div>
+                            <span className="text-sm font-semibold">
+                              {formatCurrency(model.total_cost)}
                             </span>
                           </div>
-                          <span className="text-sm font-semibold">
-                            {formatCurrency(model.total_cost)}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <div>
-                            <span className="text-muted-foreground">{t('usage.input')}: </span>
-                            <span className="font-medium">{formatTokens(model.input_tokens)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">{t('usage.output')}: </span>
-                            <span className="font-medium">{formatTokens(model.output_tokens)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Cache W: </span>
-                            <span className="font-medium">{formatTokens(model.cache_creation_tokens)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Cache R: </span>
-                            <span className="font-medium">{formatTokens(model.cache_read_tokens)}</span>
+                          <div className="grid grid-cols-4 gap-2 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">{t('usage.input')}: </span>
+                              <span className="font-medium">{formatTokens(model.input_tokens)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t('usage.output')}: </span>
+                              <span className="font-medium">{formatTokens(model.output_tokens)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Cache W: </span>
+                              <span className="font-medium">{formatTokens(model.cache_creation_tokens)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Cache R: </span>
+                              <span className="font-medium">{formatTokens(model.cache_read_tokens)}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
               </TabsContent>
 
               {/* Projects Tab */}
               <TabsContent value="projects">
-                <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">{t('usage.usageByProject')}</h3>
-                  <div className="space-y-3">
-                    {stats.by_project.map((project) => (
-                      <div key={project.project_path} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <div className="flex flex-col truncate">
-                          <span className="text-sm font-medium truncate" title={project.project_path}>
-                            {project.project_path}
-                          </span>
-                          <div className="flex items-center space-x-3 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {project.session_count} {t('usage.sessions')}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatTokens(project.total_tokens)} {t('usage.tokens')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold">{formatCurrency(project.total_cost)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(project.total_cost / project.session_count)}/{t('usage.session')}
+                <div className="space-y-4">
+                  {/* 顶部统计卡片 */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('usage.totalProjects')}</p>
+                          <p className="text-2xl font-bold mt-1">
+                            {stats.by_project.length}
                           </p>
                         </div>
+                        <Briefcase className="h-8 w-8 text-muted-foreground/20" />
                       </div>
-                    ))}
+                    </Card>
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('usage.avgProjectCost')}</p>
+                          <p className="text-2xl font-bold mt-1">
+                            {formatCurrency(
+                              stats.by_project.length > 0 
+                                ? stats.by_project.reduce((sum, p) => sum + p.total_cost, 0) / stats.by_project.length
+                                : 0
+                            )}
+                          </p>
+                        </div>
+                        <DollarSign className="h-8 w-8 text-muted-foreground/20" />
+                      </div>
+                    </Card>
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('usage.topProjectCost')}</p>
+                          <p className="text-2xl font-bold mt-1">
+                            {stats.by_project.length > 0 
+                              ? formatCurrency(Math.max(...stats.by_project.map(p => p.total_cost)))
+                              : '$0.00'}
+                          </p>
+                        </div>
+                        <TrendingUp className="h-8 w-8 text-muted-foreground/20" />
+                      </div>
+                    </Card>
                   </div>
-                </Card>
+
+                  {/* 图表区域 */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* 成本分布饼图 */}
+                    <Card className="p-6">
+                      <h3 className="text-sm font-semibold mb-4">{t('usage.projectCostDistribution')}</h3>
+                      {stats.by_project.length > 0 ? (
+                        <div className="w-full h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={stats.by_project.slice(0, 8).map((project) => ({
+                                  name: project.project_path.split('/').slice(-2).join('/'),
+                                  value: project.total_cost,
+                                  sessions: project.session_count,
+                                  tokens: project.total_tokens,
+                                  fullPath: project.project_path
+                                }))}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {stats.by_project.slice(0, 8).map((_, index) => (
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f43f5e', '#84cc16'][index % 8]} 
+                                  />
+                                ))}
+                              </Pie>
+                              <RechartsTooltip
+                                contentStyle={{ 
+                                  backgroundColor: 'hsl(var(--popover))',
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px',
+                                  padding: '12px',
+                                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+                                  backdropFilter: 'blur(8px)'
+                                }}
+                                labelStyle={{
+                                  color: 'hsl(var(--popover-foreground))',
+                                  fontWeight: 600
+                                }}
+                                itemStyle={{
+                                  color: 'hsl(var(--popover-foreground))'
+                                }}
+                                formatter={(value: number, name: string, props: any) => {
+                                  if (name === 'value') {
+                                    return [
+                                      formatCurrency(value),
+                                      `${props.payload.sessions} ${t('usage.sessions')}, ${formatTokens(props.payload.tokens)} tokens`
+                                    ];
+                                  }
+                                  return [value, name];
+                                }}
+                              />
+                              <Legend 
+                                verticalAlign="bottom" 
+                                height={36}
+                                wrapperStyle={{ fontSize: 10 }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-80 text-muted-foreground">
+                          {t('usage.noProjectData')}
+                        </div>
+                      )}
+                    </Card>
+
+                    {/* Token使用柱状图 */}
+                    <Card className="p-6">
+                      <h3 className="text-sm font-semibold mb-4">{t('usage.projectTokenUsage')}</h3>
+                      {stats.by_project.length > 0 ? (
+                        <div className="w-full h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={stats.by_project.slice(0, 6).map((project) => ({
+                                name: project.project_path.split('/').slice(-1)[0],
+                                input: project.input_tokens / 1000,
+                                output: project.output_tokens / 1000,
+                                cacheWrite: project.cache_creation_tokens / 1000,
+                                cacheRead: project.cache_read_tokens / 1000
+                              }))}
+                              margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" className="stroke-border/20" />
+                              <XAxis 
+                                dataKey="name"
+                                tick={{ fontSize: 10 }}
+                                angle={-45}
+                                textAnchor="end"
+                                height={80}
+                                className="text-muted-foreground"
+                              />
+                              <YAxis 
+                                tick={{ fontSize: 10 }}
+                                tickFormatter={(value) => `${value}K`}
+                                className="text-muted-foreground"
+                              />
+                              <RechartsTooltip
+                                contentStyle={{ 
+                                  backgroundColor: 'hsl(var(--popover))',
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px',
+                                  padding: '12px',
+                                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+                                  backdropFilter: 'blur(8px)'
+                                }}
+                                formatter={(value: number) => `${formatTokens(value * 1000)} tokens`}
+                              />
+                              <Legend 
+                                wrapperStyle={{ fontSize: 11 }}
+                                formatter={(value) => {
+                                  const nameMap: Record<string, string> = {
+                                    'input': t('usage.inputTokens'),
+                                    'output': t('usage.outputTokens'),
+                                    'cacheWrite': t('usage.cacheWrite'),
+                                    'cacheRead': t('usage.cacheRead')
+                                  };
+                                  return nameMap[value] || value;
+                                }}
+                              />
+                              <Bar dataKey="input" stackId="a" fill="#3b82f6" />
+                              <Bar dataKey="output" stackId="a" fill="#ec4899" />
+                              <Bar dataKey="cacheWrite" stackId="a" fill="#60a5fa" />
+                              <Bar dataKey="cacheRead" stackId="a" fill="#a78bfa" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-80 text-muted-foreground">
+                          {t('usage.noProjectData')}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+
+                  {/* 成本排行条形图 */}
+                  <Card className="p-6">
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.projectCostRanking')}</h3>
+                    {stats.by_project.length > 0 && (
+                      <div className="w-full h-96 mb-6">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={stats.by_project.slice(0, 10).map((project) => ({
+                              name: project.project_path.split('/').slice(-2).join('/'),
+                              fullPath: project.project_path,
+                              cost: project.total_cost,
+                              sessions: project.session_count,
+                              tokens: project.total_tokens
+                            }))}
+                            layout="horizontal"
+                            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/20" />
+                            <XAxis 
+                              type="number"
+                              tick={{ fontSize: 10 }}
+                              tickFormatter={(value) => formatCurrency(value)}
+                              className="text-muted-foreground"
+                            />
+                            <YAxis 
+                              type="category"
+                              dataKey="name"
+                              tick={{ fontSize: 10 }}
+                              width={90}
+                              className="text-muted-foreground"
+                            />
+                            <RechartsTooltip
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--popover))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px',
+                                padding: '12px',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+                                backdropFilter: 'blur(8px)',
+                                fontSize: 11
+                              }}
+                              labelStyle={{
+                                color: 'hsl(var(--popover-foreground))',
+                                fontWeight: 600
+                              }}
+                              itemStyle={{
+                                color: 'hsl(var(--popover-foreground))'
+                              }}
+                              formatter={(value: number, name: string, props: any) => {
+                                if (name === 'cost') {
+                                  return [
+                                    formatCurrency(value),
+                                    `${props.payload.sessions} ${t('usage.sessions')}, ${formatTokens(props.payload.tokens)} tokens`
+                                  ];
+                                }
+                                return [value, name];
+                              }}
+                              labelFormatter={(label) => `${t('usage.project')}: ${label}`}
+                            />
+                            <Bar 
+                              dataKey="cost" 
+                              fill="#3b82f6"
+                              radius={[0, 4, 4, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* 详细列表 */}
+                  <Card className="p-6">
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.projectDetails')}</h3>
+                    <div className="space-y-3">
+                      {stats.by_project.map((project) => (
+                        <div key={project.project_path} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                          <div className="flex flex-col truncate">
+                            <span className="text-sm font-medium truncate" title={project.project_path}>
+                              {project.project_path}
+                            </span>
+                            <div className="flex items-center space-x-3 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                {project.session_count} {t('usage.sessions')}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTokens(project.total_tokens)} {t('usage.tokens')}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">{formatCurrency(project.total_cost)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(project.total_cost / project.session_count)}/{t('usage.session')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
               </TabsContent>
 
               {/* Sessions Tab */}
@@ -456,73 +973,84 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                     <span>{t('usage.dailyUsage')}</span>
                   </h3>
                   {stats.by_date.length > 0 ? (() => {
-                    const maxCost = Math.max(...stats.by_date.map(d => d.total_cost), 0);
-                    const halfMaxCost = maxCost / 2;
+                    // 准备图表数据
+                    const chartData = stats.by_date.slice().reverse().map((day) => {
+                      const date = new Date(day.date.replace(/-/g, '/'));
+                      return {
+                        date: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                        fullDate: date.toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric'
+                        }),
+                        cost: day.total_cost,
+                        tokens: day.total_tokens,
+                        models: day.models_used.length
+                      };
+                    });
+
+                    // 自定义Tooltip
+                    const CustomTooltip = ({ active, payload }: any) => {
+                      if (active && payload && payload[0]) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+                            <p className="text-sm font-semibold">{data.fullDate}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {t('usage.cost')}: {formatCurrency(data.cost)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatTokens(data.tokens)} {t('usage.tokens')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {data.models} {t('usage.models')}{data.models !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    };
 
                     return (
-                      <div className="relative pl-8 pr-4">
-                        {/* Y-axis labels */}
-                        <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-muted-foreground">
-                          <span>{formatCurrency(maxCost)}</span>
-                          <span>{formatCurrency(halfMaxCost)}</span>
-                          <span>{formatCurrency(0)}</span>
-                        </div>
-                        
-                        {/* Chart container */}
-                        <div className="flex items-end space-x-2 h-64 border-l border-b border-border pl-4">
-                          {stats.by_date.slice().reverse().map((day) => {
-                            const heightPercent = maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0;
-                            const date = new Date(day.date.replace(/-/g, '/'));
-                            const formattedDate = date.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric'
-                            });
-                            
-                            return (
-                              <div key={day.date} className="flex-1 h-full flex flex-col items-center justify-end group relative">
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                                  <div className="bg-background border border-border rounded-lg shadow-lg p-3 whitespace-nowrap">
-                                    <p className="text-sm font-semibold">{formattedDate}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {t('usage.cost')}: {formatCurrency(day.total_cost)}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {formatTokens(day.total_tokens)} {t('usage.tokens')}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {day.models_used.length} {t('usage.models')}{day.models_used.length !== 1 ? 's' : ''}
-                                    </p>
-                                  </div>
-                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                    <div className="border-4 border-transparent border-t-border"></div>
-                                  </div>
-                                </div>
-                                
-                                {/* Bar */}
-                                <div 
-                                  className="w-full bg-[#d97757] hover:opacity-80 transition-opacity rounded-t cursor-pointer"
-                                  style={{ height: `${heightPercent}%` }}
-                                />
-                                
-                                {/* X-axis label – absolutely positioned below the bar so it doesn't affect bar height */}
-                                <div
-                                  className="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-xs text-muted-foreground -rotate-45 origin-top-left whitespace-nowrap pointer-events-none"
-                                >
-                                  {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        
-                        {/* X-axis label */}
-                        <div className="mt-8 text-center text-xs text-muted-foreground">
-                          {t('usage.dailyUsageOverTime')}
-                        </div>
+                      <div className="w-full h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={chartData}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
+                          >
+                            <defs>
+                              <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#d97757" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#d97757" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                            <XAxis 
+                              dataKey="date" 
+                              tick={{ fontSize: 11 }}
+                              angle={-45}
+                              textAnchor="end"
+                              height={60}
+                              className="text-muted-foreground"
+                            />
+                            <YAxis 
+                              tick={{ fontSize: 11 }}
+                              tickFormatter={(value) => formatCurrency(value)}
+                              className="text-muted-foreground"
+                            />
+                            <RechartsTooltip content={<CustomTooltip />} />
+                            <Area
+                              type="monotone"
+                              dataKey="cost"
+                              stroke="#d97757"
+                              strokeWidth={2}
+                              fill="url(#colorCost)"
+                              animationDuration={1000}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
                       </div>
-                    )
+                    );
                   })() : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       {t('usage.noUsageData')}

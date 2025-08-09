@@ -211,6 +211,12 @@ export interface DailyUsage {
   date: string;
   total_cost: number;
   total_tokens: number;
+  // Detailed per-day breakdowns (backend added)
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  request_count: number;
   models_used: string[];
 }
 

@@ -50,6 +50,12 @@ pub struct DailyUsage {
     date: String,
     total_cost: f64,
     total_tokens: u64,
+    // New detailed per-day breakdowns
+    input_tokens: u64,
+    output_tokens: u64,
+    cache_creation_tokens: u64,
+    cache_read_tokens: u64,
+    request_count: u64,
     models_used: Vec<String>,
 }
 
@@ -382,12 +388,15 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
 
     // Filter by days if specified
     let filtered_entries = if let Some(days) = days {
-        let cutoff = Local::now().naive_local().date() - chrono::Duration::days(days as i64);
+        // Convert 'now' to local date for consistent comparison
+        let cutoff = Local::now().with_timezone(&Local).date_naive() - chrono::Duration::days(days as i64);
         all_entries
             .into_iter()
             .filter(|e| {
                 if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                    dt.naive_local().date() >= cutoff
+                    // Convert each entry timestamp to local time, then compare dates
+                    let local_date = dt.with_timezone(&Local).date_naive();
+                    local_date >= cutoff
                 } else {
                     false
                 }
@@ -450,24 +459,39 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             .or_insert_with(HashSet::new)
             .insert(entry.session_id.clone());
 
-        // Update daily stats
-        let date = entry
-            .timestamp
-            .split('T')
-            .next()
-            .unwrap_or(&entry.timestamp)
-            .to_string();
+        // Update daily stats (use local timezone date)
+        let date = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+            dt.with_timezone(&Local).date_naive().to_string()
+        } else {
+            // Fallback to raw prefix if parse fails
+            entry
+                .timestamp
+                .split('T')
+                .next()
+                .unwrap_or(&entry.timestamp)
+                .to_string()
+        };
         let daily_stat = daily_stats.entry(date.clone()).or_insert(DailyUsage {
             date,
             total_cost: 0.0,
             total_tokens: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_creation_tokens: 0,
+            cache_read_tokens: 0,
+            request_count: 0,
             models_used: vec![],
         });
         daily_stat.total_cost += entry.cost;
-        daily_stat.total_tokens += entry.input_tokens
-            + entry.output_tokens
-            + entry.cache_creation_tokens
-            + entry.cache_read_tokens;
+        daily_stat.input_tokens += entry.input_tokens;
+        daily_stat.output_tokens += entry.output_tokens;
+        daily_stat.cache_creation_tokens += entry.cache_creation_tokens;
+        daily_stat.cache_read_tokens += entry.cache_read_tokens;
+        daily_stat.total_tokens = daily_stat.input_tokens
+            + daily_stat.output_tokens
+            + daily_stat.cache_creation_tokens
+            + daily_stat.cache_read_tokens;
+        daily_stat.request_count += 1;
         if !daily_stat.models_used.contains(&entry.model) {
             daily_stat.models_used.push(entry.model.clone());
         }
@@ -559,15 +583,15 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
 
     // Parse dates
     let start = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").or_else(|_| {
-        // Try parsing ISO datetime format
+        // Try parsing ISO datetime format (convert to local date)
         DateTime::parse_from_rfc3339(&start_date)
-            .map(|dt| dt.naive_local().date())
+            .map(|dt| dt.with_timezone(&Local).date_naive())
             .map_err(|e| format!("Invalid start date: {}", e))
     })?;
     let end = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").or_else(|_| {
-        // Try parsing ISO datetime format
+        // Try parsing ISO datetime format (convert to local date)
         DateTime::parse_from_rfc3339(&end_date)
-            .map(|dt| dt.naive_local().date())
+            .map(|dt| dt.with_timezone(&Local).date_naive())
             .map_err(|e| format!("Invalid end date: {}", e))
     })?;
 
@@ -576,7 +600,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         .into_iter()
         .filter(|e| {
             if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                let date = dt.naive_local().date();
+                let date = dt.with_timezone(&Local).date_naive();
                 date >= start && date <= end
             } else {
                 false
@@ -652,24 +676,38 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             .or_insert_with(HashSet::new)
             .insert(entry.session_id.clone());
 
-        // Update daily stats
-        let date = entry
-            .timestamp
-            .split('T')
-            .next()
-            .unwrap_or(&entry.timestamp)
-            .to_string();
+        // Update daily stats (use local timezone date)
+        let date = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+            dt.with_timezone(&Local).date_naive().to_string()
+        } else {
+            entry
+                .timestamp
+                .split('T')
+                .next()
+                .unwrap_or(&entry.timestamp)
+                .to_string()
+        };
         let daily_stat = daily_stats.entry(date.clone()).or_insert(DailyUsage {
             date,
             total_cost: 0.0,
             total_tokens: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_creation_tokens: 0,
+            cache_read_tokens: 0,
+            request_count: 0,
             models_used: vec![],
         });
         daily_stat.total_cost += entry.cost;
-        daily_stat.total_tokens += entry.input_tokens
-            + entry.output_tokens
-            + entry.cache_creation_tokens
-            + entry.cache_read_tokens;
+        daily_stat.input_tokens += entry.input_tokens;
+        daily_stat.output_tokens += entry.output_tokens;
+        daily_stat.cache_creation_tokens += entry.cache_creation_tokens;
+        daily_stat.cache_read_tokens += entry.cache_read_tokens;
+        daily_stat.total_tokens = daily_stat.input_tokens
+            + daily_stat.output_tokens
+            + daily_stat.cache_creation_tokens
+            + daily_stat.cache_read_tokens;
+        daily_stat.request_count += 1;
         if !daily_stat.models_used.contains(&entry.model) {
             daily_stat.models_used.push(entry.model.clone());
         }
@@ -767,9 +805,16 @@ pub fn get_usage_details(
         all_entries.retain(|e| e.project_path == project);
     }
 
-    // Filter by date if specified
+    // Filter by date if specified (compare against local date string YYYY-MM-DD)
     if let Some(date) = date {
-        all_entries.retain(|e| e.timestamp.starts_with(&date));
+        all_entries.retain(|e| {
+            if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
+                let local_date_str = dt.with_timezone(&Local).date_naive().to_string();
+                local_date_str == date
+            } else {
+                false
+            }
+        });
     }
 
     Ok(all_entries)
@@ -794,7 +839,7 @@ pub fn get_session_stats(
         .into_iter()
         .filter(|e| {
             if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                let date = dt.date_naive();
+                let date = dt.with_timezone(&Local).date_naive();
                 let is_after_since = since_date.map_or(true, |s| date >= s);
                 let is_before_until = until_date.map_or(true, |u| date <= u);
                 is_after_since && is_before_until

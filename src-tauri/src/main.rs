@@ -40,6 +40,9 @@ use commands::mcp::{
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
+use commands::usage_index::{
+    usage_get_summary, usage_import_diffs, usage_scan_index, usage_scan_progress, UsageIndexState,
+};
 use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
     storage_insert_row, storage_execute_sql, storage_reset_database,
@@ -160,6 +163,9 @@ fn main() {
             // Initialize Claude process state
             app.manage(ClaudeProcessState::default());
 
+            // Initialize Usage Index state
+            app.manage(UsageIndexState::default());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -240,6 +246,12 @@ fn main() {
             get_usage_by_date_range,
             get_usage_details,
             get_session_stats,
+
+            // File Usage Index (SQLite)
+            usage_scan_index,
+            usage_scan_progress,
+            usage_get_summary,
+            usage_import_diffs,
             
             // MCP (Model Context Protocol)
             mcp_add,
