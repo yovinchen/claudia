@@ -279,18 +279,6 @@ pub fn parse_jsonl_file(
                             } else {
                                 0.0
                             };
-                            
-                            // 如果JSONL中有成本，可以记录差异用于调试
-                            if let Some(jsonl_cost) = entry.cost_usd {
-                                if (jsonl_cost - cost).abs() > 0.0001 {
-                                    log::debug!(
-                                        "Cost difference for model {}: JSONL={:.4}, Calculated={:.4}",
-                                        message.model.as_ref().unwrap_or(&"unknown".to_string()),
-                                        jsonl_cost,
-                                        cost
-                                    );
-                                }
-                            }
 
                             // Use actual project path if found, otherwise use encoded name
                             let project_path = actual_project_path
