@@ -39,6 +39,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useTranslation } from "@/hooks/useTranslation";
+
 
 interface GitFileStatus {
   path: string;
@@ -140,19 +142,21 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  
+
   const panelRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // 处理拖拽调整宽度
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const windowWidth = window.innerWidth;
       const newWidth = windowWidth - e.clientX;
-      
+
       if (newWidth >= 200 && newWidth <= 600) {
         setWidth(newWidth);
       }
@@ -184,11 +188,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
+
       const status = await invoke<GitStatus>("get_git_status", {
         path: projectPath,  // 修改参数名为 path
       });
-      
+
       setGitStatus(status);
     } catch (err) {
       console.error("Failed to load git status:", err);
@@ -207,7 +211,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         projectPath: projectPath,  // 使用驼峰命名
         limit: 20,
       });
-      
+
       setCommits(commitList);
     } catch (err) {
       console.error("Failed to load commits:", err);
@@ -300,11 +304,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
           if (!currentNode.children) {
             currentNode.children = [];
           }
-          
+
           let dirNode = currentNode.children.find(
             child => child.type === 'directory' && child.name === part
           );
-          
+
           if (!dirNode) {
             dirNode = {
               name: part,
@@ -314,7 +318,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
             };
             currentNode.children.push(dirNode);
           }
-          
+
           currentNode = dirNode;
         }
       }
@@ -327,7 +331,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         if (a.type === 'file' && b.type === 'directory') return 1;
         return a.name.localeCompare(b.name);
       });
-      
+
       nodes.forEach(node => {
         if (node.children) {
           sortNodes(node.children);
@@ -345,7 +349,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   // 展开所有节点（从指定节点开始）
   const expandAll = useCallback((startPath?: string) => {
     const nodesToExpand = new Set<string>();
-    
+
     const collectNodes = (nodes: FileTreeNode[], parentPath: string = '') => {
       nodes.forEach(node => {
         if (node.type === 'directory') {
@@ -357,7 +361,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         }
       });
     };
-    
+
     if (startPath) {
       // 找到指定节点并展开其子节点
       const findAndExpand = (nodes: FileTreeNode[]): boolean => {
@@ -375,7 +379,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         }
         return false;
       };
-      
+
       // 先构建完整的树
       const allTrees = [];
       if (gitStatus) {
@@ -384,7 +388,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         if (gitStatus.untracked.length > 0) allTrees.push(...buildFileTree(gitStatus.untracked));
         if (gitStatus.conflicted.length > 0) allTrees.push(...buildFileTree(gitStatus.conflicted));
       }
-      
+
       findAndExpand(allTrees);
     } else {
       // 展开所有节点
@@ -397,7 +401,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         collectNodes(allTrees);
       }
     }
-    
+
     setExpandedNodes(nodesToExpand);
   }, [gitStatus]);
 
@@ -405,7 +409,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const collapseAll = useCallback((startPath?: string) => {
     if (startPath) {
       const nodesToRemove = new Set<string>();
-      
+
       const collectNodes = (nodes: FileTreeNode[]): boolean => {
         for (const node of nodes) {
           if (node.path === startPath && node.type === 'directory') {
@@ -426,7 +430,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         }
         return false;
       };
-      
+
       // 构建完整的树
       const allTrees = [];
       if (gitStatus) {
@@ -435,9 +439,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         if (gitStatus.untracked.length > 0) allTrees.push(...buildFileTree(gitStatus.untracked));
         if (gitStatus.conflicted.length > 0) allTrees.push(...buildFileTree(gitStatus.conflicted));
       }
-      
+
       collectNodes(allTrees);
-      
+
       setExpandedNodes(prev => {
         const next = new Set(prev);
         nodesToRemove.forEach(path => next.delete(path));
@@ -485,7 +489,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
           {isDirectory && !hasChildren && (
             <div className="w-4 h-4" /> // 空文件夹的占位符
           )}
-          
+
           {isDirectory ? (
             isExpanded ? (
               <FolderOpen className="h-4 w-4 text-blue-500 flex-shrink-0" />
@@ -498,7 +502,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
               <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
             </>
           )}
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -535,16 +539,16 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground sticky top-0 bg-background z-10">
           {getFileStatusIcon(statusType)}
           <span>
-            {statusType === 'modified' && '已修改'}
-            {statusType === 'staged' && '已暂存'}
-            {statusType === 'untracked' && '未跟踪'}
-            {statusType === 'conflicted' && '冲突'}
+            {statusType === 'modified' && t('app.modified')}
+            {statusType === 'staged' && t('app.staged')}
+            {statusType === 'untracked' && t('app.untracked')}
+            {statusType === 'conflicted' && t('app.conflicted')}
           </span>
           <Badge variant="secondary" className="ml-auto">
             {files.length}
           </Badge>
         </div>
-        
+
         <div className="space-y-0.5">
           {fileTree.map((node) => renderFileTreeNode(node, 0, statusType))}
         </div>
@@ -558,7 +562,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
       return (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <GitCommit className="h-8 w-8 mb-2" />
-          <p className="text-sm">暂无提交记录</p>
+          <p className="text-sm">{t('app.noCommitsFound')}</p>
         </div>
       );
     }
@@ -588,7 +592,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                   </code>
                   {commit.files_changed > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      {commit.files_changed} files
+                      {commit.files_changed} {t('app.filesChanged')}
                     </span>
                   )}
                 </div>
@@ -640,7 +644,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
           <div className="flex items-center justify-between p-3 border-b">
             <div className="flex items-center gap-2">
               <GitBranch className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium text-sm">Git</h3>
+              <h3 className="font-medium text-sm">{t('app.gitPanel')}</h3>
               {gitStatus && (
                 <Badge variant="outline" className="text-xs">
                   {gitStatus.branch}
@@ -662,11 +666,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{selectedPath ? '展开当前文件夹' : '展开所有文件夹'}</p>
+                    <p>{selectedPath ? t('app.expandCurrentFolder') : t('app.expandAllFolders')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -680,14 +684,14 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{selectedPath ? '收起当前文件夹' : '收起所有文件夹'}</p>
+                    <p>{selectedPath ? t('app.collapseCurrentFolder') : t('app.collapseAllFolders')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               {changeStats && changeStats.total > 0 && (
                 <Badge variant="destructive" className="text-xs">
-                  {changeStats.total} 变更
+                  {changeStats.total} {t('app.gitChanges')}
                 </Badge>
               )}
               <Button
@@ -721,13 +725,13 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                 {gitStatus.ahead > 0 && (
                   <div className="flex items-center gap-1">
                     <GitPullRequest className="h-3 w-3 text-green-500" />
-                    <span>{gitStatus.ahead} ahead</span>
+                    <span>{gitStatus.ahead} {t('app.ahead')}</span>
                   </div>
                 )}
                 {gitStatus.behind > 0 && (
                   <div className="flex items-center gap-1">
                     <GitMerge className="h-3 w-3 text-blue-500" />
-                    <span>{gitStatus.behind} behind</span>
+                    <span>{gitStatus.behind} {t('app.behind')}</span>
                   </div>
                 )}
               </div>
@@ -739,7 +743,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
             <TabsList className="w-full rounded-none border-b">
               <TabsTrigger value="changes" className="flex-1 gap-2">
                 <FileDiff className="h-4 w-4" />
-                变更
+                {t('app.gitChanges')}
                 {changeStats && changeStats.total > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {changeStats.total}
@@ -748,7 +752,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
               </TabsTrigger>
               <TabsTrigger value="history" className="flex-1 gap-2">
                 <GitCommit className="h-4 w-4" />
-                历史
+                {t('app.gitHistory')}
               </TabsTrigger>
             </TabsList>
 
@@ -773,11 +777,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                           {renderFileList(gitStatus.modified, 'modified')}
                           {renderFileList(gitStatus.untracked, 'untracked')}
                           {renderFileList(gitStatus.conflicted, 'conflicted')}
-                          
+
                           {changeStats?.total === 0 && (
                             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                               <Check className="h-8 w-8 mb-2 text-green-500" />
-                              <p className="text-sm">工作区干净</p>
+                              <p className="text-sm">{t('app.workingTreeClean')}</p>
                             </div>
                           )}
                         </>
