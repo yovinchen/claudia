@@ -449,7 +449,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   }, [gitStatus]);
 
 
-  // 渲染文件树节点
+  // 渲染文件树节点（优化深层目录显示）
   const renderFileTreeNode = (node: FileTreeNode, depth = 0, statusType: 'modified' | 'staged' | 'untracked' | 'conflicted') => {
     const isExpanded = node.type === 'directory' && expandedNodes.has(node.path);
     const isDirectory = node.type === 'directory';
@@ -463,7 +463,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
             "flex items-center gap-1 px-2 py-1 hover:bg-accent rounded-sm cursor-pointer group",
             isSelected && "bg-accent"
           )}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          style={{ paddingLeft: `${Math.min(depth * 16 + 8, 200)}px` }} // 限制最大缩进
           onClick={() => {
             setSelectedPath(node.path);
             if (isDirectory) {
@@ -481,6 +481,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                 <ChevronRight className="h-3 w-3" />
               )}
             </div>
+          )}
+          {isDirectory && !hasChildren && (
+            <div className="w-4 h-4" /> // 空文件夹的占位符
           )}
           
           {isDirectory ? (

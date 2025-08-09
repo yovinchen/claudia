@@ -151,12 +151,13 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo[]>([]);
   const [showDiagnostics, setShowDiagnostics] = useState(true);
-  const [theme, setTheme] = useState<'vs-dark-plus' | 'vs-dark' | 'vs' | 'hc-black'>('vs-dark-plus');
+  const [theme, setTheme] = useState<'vs-dark' | 'vs' | 'hc-black'>('vs-dark');
   const [fontSize, setFontSize] = useState(14);
   const [minimap, setMinimap] = useState(true);
   const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
   const [autoSave, setAutoSave] = useState(false);
   
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -295,6 +296,14 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    
+    // 监听光标位置变化
+    editor.onDidChangeCursorPosition((e) => {
+      setCursorPosition({
+        line: e.position.lineNumber,
+        column: e.position.column
+      });
+    });
     
     // 初始化 Monaco 配置
     initializeMonaco();
@@ -467,6 +476,79 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
             </Tooltip>
           </TooltipProvider>
           
+          {/* 功能信息按钮 */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Info className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-md p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold mb-1">🎨 语法高亮支持</h4>
+                    <p className="text-xs text-muted-foreground">
+                      JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, Dart, Scala, R, MATLAB, SQL, HTML, CSS, JSON, XML, YAML, Markdown 等 40+ 语言
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-1">🔧 代码格式化</h4>
+                    <p className="text-xs text-muted-foreground">
+                      快捷键: Ctrl/Cmd + Shift + F<br/>
+                      支持: JS/TS (Prettier), Python (Black), Java, C/C++, Go (gofmt), Rust (rustfmt), HTML/CSS/JSON
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-1">💡 智能提示</h4>
+                    <p className="text-xs text-muted-foreground">
+                      • 代码补全 (IntelliSense)<br/>
+                      • 参数提示<br/>
+                      • 悬浮文档<br/>
+                      • 快速修复建议<br/>
+                      • 重构建议
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-1">🔍 错误检查</h4>
+                    <p className="text-xs text-muted-foreground">
+                      实时语法检查、类型检查 (TypeScript/Flow)、Linting (ESLint/TSLint)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-1">⚙️ 编辑器功能</h4>
+                    <p className="text-xs text-muted-foreground">
+                      • 行号显示<br/>
+                      • 代码折叠<br/>
+                      • 括号匹配高亮<br/>
+                      • 多光标编辑<br/>
+                      • 列选择 (Alt + 鼠标)<br/>
+                      • 小地图导航<br/>
+                      • Sticky Scroll (固定显示上下文)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-1">⌨️ 快捷键</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Ctrl/Cmd + S: 保存<br/>
+                      Ctrl/Cmd + Shift + F: 格式化<br/>
+                      Ctrl/Cmd + F: 查找<br/>
+                      Ctrl/Cmd + H: 替换<br/>
+                      Ctrl/Cmd + /: 注释<br/>
+                      F11: 全屏<br/>
+                      Alt + Shift + F: 格式化选中代码
+                    </p>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           {/* 设置菜单 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -475,9 +557,6 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setTheme('vs-dark-plus')}>
-                主题: VS Dark+
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme('vs-dark')}>
                 主题: VS Dark
               </DropdownMenuItem>
@@ -624,8 +703,10 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
             options={{
               fontSize: fontSize,
               minimap: { enabled: minimap },
-              lineNumbers: "on",
-              rulers: [80, 120],
+              lineNumbers: "on",  // 显示行号
+              lineNumbersMinChars: 5,  // 行号最小宽度，增加到 5 以确保显示
+              renderLineHighlight: "all",  // 高亮当前行
+              glyphMargin: true,  // 显示字形边距（用于断点等）
               wordWrap: wordWrap,
               scrollBeyondLastLine: false,
               automaticLayout: true,
@@ -660,6 +741,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
         <div className="flex items-center gap-4">
           <span>{language.toUpperCase()}</span>
           <span>UTF-8</span>
+          <span>行 {cursorPosition.line}, 列 {cursorPosition.column}</span>
           <span>LF</span>
         </div>
         <div className="flex items-center gap-4">

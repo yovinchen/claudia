@@ -102,11 +102,14 @@ const getFileIcon = (filename: string) => {
   return iconMap[ext || ""] || <File className="h-4 w-4 text-muted-foreground" />;
 };
 
-// 组织文件到文件夹结构
+// 组织文件到文件夹结构（改进版，支持更深层级）
 const organizeFilesByFolder = (files: FileNode[]): Map<string, FileNode[]> => {
   const folderMap = new Map<string, FileNode[]>();
   
-  const processNode = (node: FileNode, parentPath: string = "") => {
+  const processNode = (node: FileNode, parentPath: string = "", depth: number = 0) => {
+    // 限制最大深度为 10 层
+    if (depth > 10) return;
+    
     const currentPath = parentPath || "根目录";
     
     if (node.file_type === "file") {
@@ -116,17 +119,18 @@ const organizeFilesByFolder = (files: FileNode[]): Map<string, FileNode[]> => {
       folderMap.get(currentPath)!.push(node);
     } else {
       const folderPath = parentPath ? `${parentPath}/${node.name}` : node.name;
+      // 创建文件夹条目，即使它没有直接包含文件
       if (!folderMap.has(folderPath)) {
         folderMap.set(folderPath, []);
       }
       
-      if (node.children) {
-        node.children.forEach(child => processNode(child, folderPath));
+      if (node.children && node.children.length > 0) {
+        node.children.forEach(child => processNode(child, folderPath, depth + 1));
       }
     }
   };
   
-  files.forEach(node => processNode(node));
+  files.forEach(node => processNode(node, "", 0));
   return folderMap;
 };
 
@@ -318,11 +322,8 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
       setFileTree(tree);
       setFilteredTree(tree);
       
-      // 默认展开第一层目录
-      const firstLevelDirs = tree
-        .filter(node => node.file_type === 'directory')
-        .map(node => node.path);
-      setExpandedNodes(new Set(firstLevelDirs));
+      // 不默认展开任何目录，让用户手动展开或使用展开按钮
+      setExpandedNodes(new Set());
     } catch (err) {
       console.error("Failed to load file tree:", err);
       setError(err instanceof Error ? err.message : "Failed to load file tree");
@@ -492,11 +493,12 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
     }
   }, [onFileSelect, toggleExpand, lastClickTime, lastClickPath, handleOpenFile]);
 
-  // 渲染文件节点
+  // 渲染文件节点（优化深层目录显示）
   const renderFileNode = (node: FileNode, depth = 0) => {
     const isExpanded = expandedNodes.has(node.path);
     const isSelected = selectedPath === node.path;
     const isDirectory = node.file_type === 'directory';
+    const hasChildren = node.children && node.children.length > 0;
     
     // 计算显示的路径（处理长路径）
     const displayName = node.name.length > 30 
@@ -513,10 +515,10 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                 isSelected && "bg-accent",
                 "select-none"
               )}
-              style={{ paddingLeft: `${depth * 16 + 8}px` }}
+              style={{ paddingLeft: `${Math.min(depth * 16 + 8, 200)}px` }} // 限制最大缩进
               onClick={() => handleFileClick(node)}
             >
-              {isDirectory && (
+              {isDirectory && hasChildren && (
                 <div className="w-4 h-4 flex items-center justify-center">
                   {isExpanded ? (
                     <ChevronDown className="h-3 w-3" />
@@ -524,6 +526,9 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                     <ChevronRight className="h-3 w-3" />
                   )}
                 </div>
+              )}
+              {isDirectory && !hasChildren && (
+                <div className="w-4 h-4" /> // 空文件夹的占位符
               )}
               
               {isDirectory ? (

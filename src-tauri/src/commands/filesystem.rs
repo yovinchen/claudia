@@ -283,7 +283,8 @@ pub async fn get_file_tree(project_path: String) -> Result<Vec<FileNode>, String
         String::from(".DS_Store"),
     ];
 
-    let root_node = read_directory_recursive(path, 0, 3, &ignore_patterns)
+    // 增加最大深度为 10，以支持更深的文件夹结构
+    let root_node = read_directory_recursive(path, 0, 10, &ignore_patterns)
         .map_err(|e| e.to_string())?;
 
     // Return children of root node if it has any
