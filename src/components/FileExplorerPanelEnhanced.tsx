@@ -153,7 +153,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
   const [flattenedNodes, setFlattenedNodes] = useState<FileNode[]>([]);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [lastClickPath, setLastClickPath] = useState<string | null>(null);
-  const [width, setWidth] = useState(320);
+  const [width, setWidth] = useState(window.innerWidth * 0.15); // 15% of viewport width
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<"tree" | "folder">("tree");
   
@@ -161,13 +161,26 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
+  // 响应窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      // 保持15%的比例
+      setWidth(window.innerWidth * 0.15);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 处理拖拽调整宽度
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       
       const newWidth = e.clientX;
-      if (newWidth >= 200 && newWidth <= 600) {
+      const minWidth = window.innerWidth * 0.1; // Min 10%
+      const maxWidth = window.innerWidth * 0.25; // Max 25%
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
         setWidth(newWidth);
       }
     };

@@ -1472,22 +1472,26 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           
           {/* Main Content with Input */}
           <div className={cn(
-            "flex-1 transition-all duration-300 relative flex flex-col",
-            showFileExplorer && "pl-[280px]",
-            showGitPanel && "pr-[320px]"
-          )}>
+            "flex-1 transition-all duration-300 relative flex flex-col"
+          )}
+          style={{
+            marginLeft: showFileExplorer ? '15vw' : 'auto',
+            marginRight: showGitPanel ? '15vw' : 'auto',
+            width: (!showFileExplorer && !showGitPanel) ? '90%' : 'calc(100% - ' + ((showFileExplorer ? 15 : 0) + (showGitPanel ? 15 : 0)) + 'vw)',
+            maxWidth: (!showFileExplorer && !showGitPanel) ? '100%' : 'none'
+          }}>
           {showPreview ? (
             // Split pane layout when preview is active
             <div className="h-full">
               <SplitPane
                 left={
                   <div className="h-full flex flex-col">
-                    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
+                    <div className="flex-1 flex flex-col mx-auto w-full px-4">
                       {projectPathInput}
                       {messagesList}
                     </div>
                     {/* Floating Input for preview mode */}
-                    <div className="max-w-5xl mx-auto w-full relative">
+                    <div className="mx-auto w-full relative px-4">
                       <FloatingPromptInput
                         ref={floatingPromptRef}
                         onSend={handleSendPrompt}
@@ -1528,7 +1532,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             // Original layout when no preview or editor
             <div className="h-full flex flex-col relative">
               {/* Main content area with messages */}
-              <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
+              <div className="flex-1 flex flex-col mx-auto w-full px-4">
                 {projectPathInput}
                 {messagesList}
                 
@@ -1545,7 +1549,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </div>
               
               {/* Floating elements container - same width as main content */}
-              <div className="max-w-5xl mx-auto w-full relative">
+              <div className="mx-auto w-full relative px-4">
                 <ErrorBoundary>
                   {/* Queued Prompts Display */}
                   <AnimatePresence>

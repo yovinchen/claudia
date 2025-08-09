@@ -139,7 +139,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("changes");
-  const [width, setWidth] = useState(320);
+  const [width, setWidth] = useState(window.innerWidth * 0.15); // 15% of viewport width
   const [isResizing, setIsResizing] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -153,6 +153,17 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
 
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 响应窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      // 保持15%的比例
+      setWidth(window.innerWidth * 0.15);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 处理拖拽调整宽度
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -160,8 +171,10 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
 
       const windowWidth = window.innerWidth;
       const newWidth = windowWidth - e.clientX;
+      const minWidth = window.innerWidth * 0.1; // Min 10%
+      const maxWidth = window.innerWidth * 0.25; // Max 25%
 
-      if (newWidth >= 200 && newWidth <= 600) {
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
         setWidth(newWidth);
       }
     };
