@@ -40,6 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTranslation } from "@/hooks/useTranslation";
+import DiffViewer from "./DiffViewer";
 
 
 interface GitFileStatus {
@@ -142,6 +143,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [showDiffViewer, setShowDiffViewer] = useState(false);
+  const [diffFilePath, setDiffFilePath] = useState<string>("");
+  const [diffStaged, setDiffStaged] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
@@ -247,8 +251,13 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
     };
   }, [isVisible, projectPath, activeTab, loadGitStatus, loadCommits]);
 
-  // 处理文件点击
-  const handleFileClick = (filePath: string) => {
+  // 处理文件点击 - 打开 DiffViewer
+  const handleFileClick = (filePath: string, staged: boolean = false) => {
+    setDiffFilePath(filePath);
+    setDiffStaged(staged);
+    setShowDiffViewer(true);
+    
+    // 如果有文件选择回调，也调用它
     if (onFileSelect) {
       const fullPath = `${projectPath}/${filePath}`;
       onFileSelect(fullPath);
@@ -473,7 +482,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
             if (isDirectory) {
               toggleExpand(node.path);
             } else {
-              handleFileClick(node.path);
+              handleFileClick(node.path, statusType === 'staged');
             }
           }}
         >
@@ -614,7 +623,8 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   } : null;
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {isVisible && (
         <motion.div
           ref={panelRef}
@@ -803,6 +813,16 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
         </motion.div>
       )}
     </AnimatePresence>
+    
+    {/* Diff Viewer Modal */}
+    <DiffViewer
+      projectPath={projectPath}
+      filePath={diffFilePath}
+      staged={diffStaged}
+      isVisible={showDiffViewer}
+      onClose={() => setShowDiffViewer(false)}
+    />
+    </>
   );
 };
 
