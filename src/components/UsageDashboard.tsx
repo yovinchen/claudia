@@ -330,7 +330,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             cacheReadTokens: (day.cache_read_tokens || 0) / 1000,
                             requests: day.request_count || 0,
                           }))}
-                          margin={{ top: 5, right: 60, left: 20, bottom: 40 }}
+                          margin={{ top: 5, right: 80, left: 20, bottom: 40 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" className="stroke-border/20" />
                           <XAxis 
@@ -354,6 +354,14 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `$${value.toFixed(2)}`}
                             label={{ value: 'Cost (USD)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+                            className="text-muted-foreground"
+                          />
+                          <YAxis 
+                            yAxisId="requests"
+                            orientation="right"
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(value) => `${value}`}
+                            label={{ value: 'Requests', angle: 90, position: 'insideRight', dx: 40, style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <RechartsTooltip 
@@ -480,6 +488,17 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             strokeWidth={2.5}
                             dot={{ r: 3 }}
                             activeDot={{ r: 5 }}
+                          />
+                          
+                          {/* 请求数线条 - 请求轴 */}
+                          <Line 
+                            yAxisId="requests"
+                            type="monotone" 
+                            dataKey="requests" 
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            dot={{ r: 2.5 }}
+                            activeDot={{ r: 4.5 }}
                           />
                         </LineChart>
                       </ResponsiveContainer>
