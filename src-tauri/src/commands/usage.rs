@@ -110,6 +110,7 @@ struct JsonlEntry {
     #[serde(rename = "requestId")]
     request_id: Option<String>,
     #[serde(rename = "costUSD")]
+    #[allow(dead_code)]
     cost_usd: Option<f64>,
 }
 
