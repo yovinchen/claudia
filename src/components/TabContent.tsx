@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Lazy load heavy components
-const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
+const ClaudeCodeSession = lazy(() => import('./ClaudeCodeSession'));
 const AgentRunOutputViewer = lazy(() => import('@/components/AgentRunOutputViewer'));
 const AgentExecution = lazy(() => import('@/components/AgentExecution').then(m => ({ default: m.AgentExecution })));
 const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ default: m.CreateAgent })));

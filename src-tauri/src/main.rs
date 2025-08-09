@@ -60,6 +60,13 @@ use commands::relay_adapters::{
 use commands::packycode_nodes::{
     test_all_packycode_nodes, auto_select_best_node, get_packycode_nodes,
 };
+use commands::filesystem::{
+    read_directory_tree, search_files_by_name, get_file_info, watch_directory,
+    read_file, write_file,
+};
+use commands::git::{
+    get_git_status, get_git_history, get_git_branches, get_git_diff,
+};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -296,6 +303,20 @@ fn main() {
             test_all_packycode_nodes,
             auto_select_best_node,
             get_packycode_nodes,
+            
+            // File System
+            read_directory_tree,
+            search_files_by_name,
+            get_file_info,
+            watch_directory,
+            read_file,
+            write_file,
+            
+            // Git
+            get_git_status,
+            get_git_history,
+            get_git_branches,
+            get_git_diff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -33,6 +33,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
+import { FileExplorerPanel } from "./FileExplorerPanel";
+import { GitPanel } from "./GitPanel";
+import { FileEditor } from "./FileEditor";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
@@ -109,6 +112,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
+  
+  // New state for file explorer and git panel
+  const [showFileExplorer, setShowFileExplorer] = useState(false);
+  const [showGitPanel, setShowGitPanel] = useState(false);
+  const [fileExplorerWidth] = useState(280);
+  const [gitPanelWidth] = useState(320);
+  
+  // File editor state
+  const [editingFile, setEditingFile] = useState<string | null>(null);
   
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -438,7 +450,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     // If already loading, queue the prompt
     if (isLoading) {
       const newPrompt = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         prompt,
         model
       };
@@ -1022,7 +1034,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsLoading(true);
       setError(null);
       
-      const newSessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newSessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       await api.forkFromCheckpoint(
         forkCheckpointId,
         effectiveSession.id,
@@ -1280,6 +1292,48 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
+            {/* File Explorer Toggle */}
+            {projectPath && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowFileExplorer(!showFileExplorer)}
+                      className={cn("h-8 w-8", showFileExplorer && "text-primary")}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>File Explorer</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
+            {/* Git Panel Toggle */}
+            {projectPath && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowGitPanel(!showGitPanel)}
+                      className={cn("h-8 w-8", showGitPanel && "text-primary")}
+                    >
+                      <GitBranch className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Git Panel</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
             {projectPath && onProjectSettings && (
               <TooltipProvider>
                 <Tooltip>
@@ -1352,7 +1406,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Timeline Navigator</p>
+                      <p>{t('app.timeline')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1398,11 +1452,33 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
         </motion.div>
 
-        {/* Main Content Area */}
+        {/* Main Content Area with panels */}
         <div className={cn(
-          "flex-1 overflow-hidden transition-all duration-300",
+          "flex-1 overflow-hidden transition-all duration-300 flex",
           showTimeline && "sm:mr-96"
         )}>
+          {/* File Explorer Panel */}
+          <FileExplorerPanel
+            projectPath={projectPath}
+            isVisible={showFileExplorer}
+            onFileSelect={(path) => {
+              // Add file path to prompt input (double click)
+              floatingPromptRef.current?.addImage(path);
+            }}
+            onFileOpen={(path) => {
+              // Open file in editor (single click)
+              setEditingFile(path);
+            }}
+            onToggle={() => setShowFileExplorer(!showFileExplorer)}
+            width={fileExplorerWidth}
+          />
+          
+          {/* Main Content with Input */}
+          <div className={cn(
+            "flex-1 transition-all duration-300 relative flex flex-col",
+            showFileExplorer && "pl-[280px]",
+            showGitPanel && "pr-[320px]"
+          )}>
           {showPreview ? (
             // Split pane layout when preview is active
             <SplitPane
@@ -1427,182 +1503,198 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               minRightWidth={400}
               className="h-full"
             />
+          ) : editingFile ? (
+            // File Editor layout
+            <div className="h-full flex flex-col relative">
+              <FileEditor
+                filePath={editingFile}
+                onClose={() => setEditingFile(null)}
+                className="flex-1"
+              />
+            </div>
           ) : (
             // Original layout when no preview
-            <div className="h-full flex flex-col max-w-5xl mx-auto">
-              {projectPathInput}
-              {messagesList}
-              
-              {isLoading && messages.length === 0 && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="flex items-center gap-3">
-                    <div className="rotating-symbol text-primary" />
-                    <span className="text-sm text-muted-foreground">
-                      {session ? "Loading session history..." : "Initializing Claude Code..."}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Floating Prompt Input - Always visible */}
-        <ErrorBoundary>
-          {/* Queued Prompts Display */}
-          <AnimatePresence>
-            {queuedPrompts.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-4"
-              >
-                <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">
-                      Queued Prompts ({queuedPrompts.length})
+            <div className="h-full flex flex-col relative">
+              <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
+                {projectPathInput}
+                {messagesList}
+                
+                {isLoading && messages.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center gap-3">
+                      <div className="rotating-symbol text-primary" />
+                      <span className="text-sm text-muted-foreground">
+                        {session ? "Loading session history..." : "Initializing Claude Code..."}
+                      </span>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </Button>
                   </div>
-                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
-                    <motion.div
-                      key={queuedPrompt.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
-                          <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
-                            {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
-                          </span>
-                        </div>
-                        <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Navigation Arrows - positioned above prompt bar with spacing */}
-          {displayableMessages.length > 5 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ delay: 0.5 }}
-              className="fixed bottom-32 right-6 z-50"
-            >
-              <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the first item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to top of the container
-                      parentRef.current?.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                      });
-                      
-                      // After smooth scroll completes, trigger a small scroll to ensure rendering
-                      setTimeout(() => {
-                        if (parentRef.current) {
-                          // Scroll down 1px then back to 0 to trigger virtualizer update
-                          parentRef.current.scrollTop = 1;
-                          requestAnimationFrame(() => {
-                            if (parentRef.current) {
-                              parentRef.current.scrollTop = 0;
-                            }
-                          });
-                        }
-                      }, 500); // Wait for smooth scroll to complete
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to top"
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-4 bg-border" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the last item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to bottom of the container
-                      const scrollElement = parentRef.current;
-                      if (scrollElement) {
-                        scrollElement.scrollTo({
-                          top: scrollElement.scrollHeight,
-                          behavior: 'smooth'
-                        });
-                      }
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to bottom"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                )}
               </div>
-            </motion.div>
-          )}
+              
+              {/* Floating Prompt Input - Bound to Main Content */}
+              <ErrorBoundary>
+                {/* Queued Prompts Display */}
+                <AnimatePresence>
+                  {queuedPrompts.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      className={cn(
+                        "absolute bottom-24 left-0 right-0 z-30 transition-all duration-300",
+                        showTimeline && "sm:right-96"
+                      )}
+                    >
+                      <div className="mx-4">
+                        <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Queued Prompts ({queuedPrompts.length})
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
+                            {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                        {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
+                          <motion.div
+                            key={queuedPrompt.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+                                <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+                                  {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
+                                </span>
+                              </div>
+                              <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 flex-shrink-0"
+                              onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </motion.div>
+                        ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-          <div className={cn(
-            "absolute bottom-0 left-0 right-0 transition-all duration-300 z-50",
-            showTimeline && "sm:right-96"
-          )}>
-            <FloatingPromptInput
-              ref={floatingPromptRef}
-              onSend={handleSendPrompt}
-              onCancel={handleCancelExecution}
-              isLoading={isLoading}
-              disabled={!projectPath}
-              projectPath={projectPath}
-            />
-          </div>
-
-          {/* Token Counter - positioned under the Send button */}
-          {totalTokens > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-              <div className="max-w-5xl mx-auto">
-                <div className="flex justify-end px-4 pb-2">
+                {/* Navigation Arrows */}
+                {displayableMessages.length > 5 && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="bg-background/95 backdrop-blur-md border rounded-full px-3 py-1 shadow-lg pointer-events-auto"
+                    transition={{ delay: 0.5 }}
+                    className="absolute bottom-32 right-6 z-50"
                   >
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <Hash className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-mono">{totalTokens.toLocaleString()}</span>
-                      <span className="text-muted-foreground">tokens</span>
+                    <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (displayableMessages.length > 0) {
+                            parentRef.current?.scrollTo({
+                              top: 0,
+                              behavior: 'smooth'
+                            });
+                            
+                            setTimeout(() => {
+                              if (parentRef.current) {
+                                parentRef.current.scrollTop = 1;
+                                requestAnimationFrame(() => {
+                                  if (parentRef.current) {
+                                    parentRef.current.scrollTop = 0;
+                                  }
+                                });
+                              }
+                            }, 500);
+                          }
+                        }}
+                        className="px-3 py-2 hover:bg-accent rounded-none"
+                        title="Scroll to top"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <div className="w-px h-4 bg-border" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (displayableMessages.length > 0) {
+                            const scrollElement = parentRef.current;
+                            if (scrollElement) {
+                              scrollElement.scrollTo({
+                                top: scrollElement.scrollHeight,
+                                behavior: 'smooth'
+                              });
+                            }
+                          }
+                        }}
+                        className="px-3 py-2 hover:bg-accent rounded-none"
+                        title="Scroll to bottom"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
                     </div>
                   </motion.div>
+                )}
+
+                <div className="absolute bottom-0 left-0 right-0 z-50">
+                  <FloatingPromptInput
+                    ref={floatingPromptRef}
+                    onSend={handleSendPrompt}
+                    onCancel={handleCancelExecution}
+                    isLoading={isLoading}
+                    disabled={!projectPath}
+                    projectPath={projectPath}
+                  />
                 </div>
-              </div>
+
+                {/* Token Counter */}
+                {totalTokens > 0 && (
+                  <div className="absolute bottom-0 right-0 z-30 pointer-events-none">
+                    <div className="w-full">
+                      <div className="flex justify-end px-4 pb-2">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="bg-background/95 backdrop-blur-md border rounded-full px-3 py-1 shadow-lg pointer-events-auto"
+                        >
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Hash className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-mono">{totalTokens.toLocaleString()}</span>
+                            <span className="text-muted-foreground">tokens</span>
+                          </div>
+                        </motion.div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </ErrorBoundary>
             </div>
           )}
-        </ErrorBoundary>
+          </div>
+          
+          {/* Git Panel */}
+          <GitPanel
+            projectPath={projectPath}
+            isVisible={showGitPanel}
+            onToggle={() => setShowGitPanel(!showGitPanel)}
+            width={gitPanelWidth}
+          />
+        </div>
 
         {/* Timeline */}
         <AnimatePresence>
@@ -1665,7 +1757,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 placeholder="e.g., Alternative approach"
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && !isLoading) {
                     handleConfirmFork();
                   }
@@ -1731,3 +1823,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     </div>
   );
 };
+
+// Add default export for lazy loading
+export default ClaudeCodeSession;
