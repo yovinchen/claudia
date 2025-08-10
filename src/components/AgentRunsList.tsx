@@ -42,9 +42,10 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   onRunClick,
   className,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const { createAgentTab } = useTabState();
+  const currentLocale = i18n.language;
   
   // Calculate pagination
   const totalPages = Math.ceil(runs.length / ITEMS_PER_PAGE);
@@ -65,9 +66,16 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   const formatDuration = (ms?: number) => {
     if (!ms) return "N/A";
     const seconds = Math.floor(ms / 1000);
-    if (seconds < 60) return `${seconds}s`;
+    const isZhCN = currentLocale.startsWith('zh');
+    
+    if (seconds < 60) {
+      return isZhCN ? `${seconds}秒` : `${seconds}s`;
+    }
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
+    if (isZhCN) {
+      return `${minutes}分${remainingSeconds}秒`;
+    }
     return `${minutes}m ${remainingSeconds}s`;
   };
   
@@ -77,6 +85,16 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
       return `${(tokens / 1000).toFixed(1)}k`;
     }
     return tokens.toString();
+  };
+  
+  const getStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      completed: t('agents.statusCompleted', 'Completed'),
+      running: t('agents.statusRunning', 'Running'),
+      failed: t('agents.statusFailed', 'Failed'),
+      pending: t('agents.statusPending', 'Pending')
+    };
+    return statusLabels[status] || status;
   };
   
   const handleRunClick = (run: AgentRunWithMetrics) => {
@@ -135,7 +153,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
                         {run.status === "running" && (
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs text-green-600 font-medium">Running</span>
+                            <span className="text-xs text-green-600 font-medium">{getStatusLabel('running')}</span>
                           </div>
                         )}
                       </div>
@@ -147,7 +165,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          <span>{formatISOTimestamp(run.created_at)}</span>
+                          <span>{formatISOTimestamp(run.created_at, currentLocale)}</span>
                         </div>
                         
                         {run.metrics?.duration_ms && (
@@ -173,10 +191,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
                         }
                         className="text-xs"
                       >
-                        {run.status === "completed" ? "Completed" :
-                         run.status === "running" ? "Running" :
-                         run.status === "failed" ? "Failed" :
-                         "Pending"}
+                        {getStatusLabel(run.status || 'pending')}
                       </Badge>
                     </div>
                   </div>

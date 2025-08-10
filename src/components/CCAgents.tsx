@@ -65,7 +65,7 @@ export type AgentIconName = keyof typeof AGENT_ICONS;
  * <CCAgents onBack={() => setView('home')} />
  */
 export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRunWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);
@@ -413,7 +413,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                   {agent.name}
                                 </h3>
                                 <p className="text-xs text-muted-foreground">
-                                  {t('agents.created')}: {new Date(agent.created_at).toLocaleDateString()}
+                                  {t('agents.created')}: {new Date(agent.created_at).toLocaleDateString(i18n.language)}
                                 </p>
                               </CardContent>
                               <CardFooter className="p-4 pt-0 flex justify-center gap-1 flex-wrap">
