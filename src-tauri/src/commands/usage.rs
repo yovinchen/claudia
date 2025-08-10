@@ -286,8 +286,17 @@ pub fn parse_jsonl_file(
                                 .clone()
                                 .unwrap_or_else(|| encoded_project_name.to_string());
 
+                            // 转换时间戳为本地时间格式
+                            let local_timestamp = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+                                // 转换为本地时区并格式化为 ISO 格式
+                                dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S%.3f").to_string()
+                            } else {
+                                // 如果解析失败，保留原始时间戳
+                                entry.timestamp.clone()
+                            };
+
                             entries.push(UsageEntry {
-                                timestamp: entry.timestamp,
+                                timestamp: local_timestamp,
                                 model: message
                                     .model
                                     .clone()
@@ -398,17 +407,23 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
     // Filter by days if specified
     let filtered_entries = if let Some(days) = days {
         // Convert 'now' to local date for consistent comparison
-        let cutoff = Local::now().with_timezone(&Local).date_naive() - chrono::Duration::days(days as i64);
+        let cutoff = Local::now().date_naive() - chrono::Duration::days(days as i64);
         all_entries
             .into_iter()
             .filter(|e| {
-                if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                    // Convert each entry timestamp to local time, then compare dates
-                    let local_date = dt.with_timezone(&Local).date_naive();
-                    local_date >= cutoff
+                // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+                let date = if e.timestamp.contains(' ') {
+                    // 新格式：直接解析日期部分
+                    e.timestamp.split(' ').next()
+                        .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
+                } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
+                    // 旧格式：RFC3339 格式
+                    Some(dt.with_timezone(&Local).date_naive())
                 } else {
-                    false
-                }
+                    None
+                };
+
+                date.map_or(false, |d| d >= cutoff)
             })
             .collect()
     } else {
@@ -469,7 +484,12 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             .insert(entry.session_id.clone());
 
         // Update daily stats (use local timezone date)
-        let date = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+        // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+        let date = if entry.timestamp.contains(' ') {
+            // 新格式：直接提取日期部分
+            entry.timestamp.split(' ').next().unwrap_or(&entry.timestamp).to_string()
+        } else if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+            // 旧格式：RFC3339 格式
             dt.with_timezone(&Local).date_naive().to_string()
         } else {
             // Fallback to raw prefix if parse fails
@@ -608,12 +628,19 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
     let filtered_entries: Vec<_> = all_entries
         .into_iter()
         .filter(|e| {
-            if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                let date = dt.with_timezone(&Local).date_naive();
-                date >= start && date <= end
+            // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+            let date = if e.timestamp.contains(' ') {
+                // 新格式：直接解析日期部分
+                e.timestamp.split(' ').next()
+                    .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
+            } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
+                // 旧格式：RFC3339 格式
+                Some(dt.with_timezone(&Local).date_naive())
             } else {
-                false
-            }
+                None
+            };
+
+            date.map_or(false, |d| d >= start && d <= end)
         })
         .collect();
 
@@ -686,9 +713,15 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             .insert(entry.session_id.clone());
 
         // Update daily stats (use local timezone date)
-        let date = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+        // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+        let date = if entry.timestamp.contains(' ') {
+            // 新格式：直接提取日期部分
+            entry.timestamp.split(' ').next().unwrap_or(&entry.timestamp).to_string()
+        } else if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+            // 旧格式：RFC3339 格式
             dt.with_timezone(&Local).date_naive().to_string()
         } else {
+            // Fallback to raw prefix if parse fails
             entry
                 .timestamp
                 .split('T')
@@ -817,12 +850,18 @@ pub fn get_usage_details(
     // Filter by date if specified (compare against local date string YYYY-MM-DD)
     if let Some(date) = date {
         all_entries.retain(|e| {
-            if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                let local_date_str = dt.with_timezone(&Local).date_naive().to_string();
-                local_date_str == date
+            // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+            let entry_date = if e.timestamp.contains(' ') {
+                // 新格式：直接提取日期部分
+                e.timestamp.split(' ').next().map(|s| s.to_string())
+            } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
+                // 旧格式：RFC3339 格式
+                Some(dt.with_timezone(&Local).date_naive().to_string())
             } else {
-                false
-            }
+                None
+            };
+
+            entry_date.map_or(false, |d| d == date)
         });
     }
 
@@ -847,10 +886,21 @@ pub fn get_session_stats(
     let filtered_entries: Vec<_> = all_entries
         .into_iter()
         .filter(|e| {
-            if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
-                let date = dt.with_timezone(&Local).date_naive();
-                let is_after_since = since_date.map_or(true, |s| date >= s);
-                let is_before_until = until_date.map_or(true, |u| date <= u);
+            // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
+            let date = if e.timestamp.contains(' ') {
+                // 新格式：直接解析日期部分
+                e.timestamp.split(' ').next()
+                    .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
+            } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
+                // 旧格式：RFC3339 格式
+                Some(dt.with_timezone(&Local).date_naive())
+            } else {
+                None
+            };
+
+            if let Some(d) = date {
+                let is_after_since = since_date.map_or(true, |s| d >= s);
+                let is_before_until = until_date.map_or(true, |u| d <= u);
                 is_after_since && is_before_until
             } else {
                 false
