@@ -13,18 +13,18 @@
   </p>
 
   <p>
-    <a href="#features"><img src="https://img.shields.io/badge/功能-✨-blue?style=for-the-badge" alt="Features"></a>
-    <a href="#installation"><img src="https://img.shields.io/badge/安装-🚀-green?style=for-the-badge" alt="Installation"></a>
-    <a href="#usage"><img src="https://img.shields.io/badge/使用-📖-purple?style=for-the-badge" alt="Usage"></a>
-    <a href="#development"><img src="https://img.shields.io/badge/开发-🛠️-orange?style=for-the-badge" alt="Development"></a>
+    <a href="#-功能特性"><img src="https://img.shields.io/badge/功能-✨-blue?style=for-the-badge" alt="Features"></a>
+    <a href="#-安装"><img src="https://img.shields.io/badge/安装-🚀-green?style=for-the-badge" alt="Installation"></a>
+    <a href="#-使用指南"><img src="https://img.shields.io/badge/使用-📖-purple?style=for-the-badge" alt="Usage"></a>
+    <a href="#️-开发"><img src="https://img.shields.io/badge/开发-🛠️-orange?style=for-the-badge" alt="Development"></a>
   </p>
-
+</div>
 
 ## 🎯 项目背景
 
 > **为什么要重复造轮子？**
 > 
-> 因为原版 Claudia-Suita 在我的电脑上无法正常运行，所以决定基于原项目进行改进和优化。虽然是"重复造轮子"，但这个轮子更适合我的使用场景，也希望能帮助到有类似需求的朋友。
+> 因为原版 Claudia-Suite 在我的电脑上无法正常运行，所以决定基于原项目进行改进和优化。虽然是"重复造轮子"，但这个轮子更适合我的使用场景，也希望能帮助到有类似需求的朋友。
 
 本项目基于 [Asterisk 的 Claudia](https://github.com/getAsterisk/claudia) 改进，并参考了以下优秀项目：
 - [Claude Suite](https://github.com/xinhai-ai/claude-suite) - Claude-Suite 中转站
@@ -40,14 +40,18 @@
 
 - [🎯 项目背景](#-项目背景)
 - [🌟 概述](#-概述)
+- [🆕 主要改进](#-主要改进)
 - [✨ 功能特性](#-功能特性)
   - [🗂️ 项目和会话管理](#️-项目和会话管理)
   - [🤖 CC 代理](#-cc-代理)
-  - [🔗 API 中转站管理](#-api-中转站管理)
+  - [🔗 API 中转站管理](#-api-中转站管理-)
   - [📊 使用分析仪表板](#-使用分析仪表板)
   - [🔌 MCP 服务器管理](#-mcp-服务器管理)
   - [⏰ 时间线和检查点](#-时间线和检查点)
   - [📝 CLAUDE.md 管理](#-claudemd-管理)
+  - [📁 实时文件监听系统](#-实时文件监听系统-)
+  - [🎨 增强的代码编辑器](#-增强的代码编辑器-)
+  - [📱 响应式布局系统](#-响应式布局系统-)
 - [📖 使用指南](#-使用指南)
 - [🚀 安装](#-安装)
 - [🔨 从源码构建](#-从源码构建)
@@ -56,6 +60,7 @@
 - [🤝 贡献](#-贡献)
 - [📄 许可证](#-许可证)
 - [🙏 致谢](#-致谢)
+- [⭐ Star History](#-star-history)
 
 ## 🆕 主要改进
 
@@ -156,7 +161,7 @@
 - **OneAPI** - 支持 OneAPI 标准（开发中）
 - **YourAPI** - YourAPI 平台集成（开发中）
 
-### 📊 **使用分析仪表板** 
+### 📊 **使用分析仪表板**
 - **成本跟踪**：实时监控您的 Claude API 使用和成本
 - **Token 分析**：按模型、项目和时间段的详细分类
 - **可视化图表**：展示使用趋势和模式的精美图表
@@ -525,6 +530,6 @@ Claudia 优先考虑您的隐私和安全：
 </div>
 
 
-## Star History
+## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yovinchen/claudia&type=Date)](https://www.star-history.com/#yovinchen/claudia&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=yovinchen/claudia&type=Date)](https://star-history.com/#yovinchen/claudia&Date)
