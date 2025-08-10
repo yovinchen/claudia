@@ -72,18 +72,18 @@ pub struct ProjectUsage {
 // Claude pricing constants (per million tokens)
 // 最新价格表 (2025-01)
 // Claude 4.x 系列
-const OPUS_4_1_INPUT_PRICE: f64 = 15.0;      // Opus 4.1
+const OPUS_4_1_INPUT_PRICE: f64 = 15.0;
 const OPUS_4_1_OUTPUT_PRICE: f64 = 75.0;
 const OPUS_4_1_CACHE_WRITE_PRICE: f64 = 18.75;
-const OPUS_4_1_CACHE_READ_PRICE: f64 = 1.50;  // 更新为 1.50
+const OPUS_4_1_CACHE_READ_PRICE: f64 = 1.50;
 
-const SONNET_4_INPUT_PRICE: f64 = 3.0;       // Sonnet 4
+const SONNET_4_INPUT_PRICE: f64 = 3.0;
 const SONNET_4_OUTPUT_PRICE: f64 = 15.0;
 const SONNET_4_CACHE_WRITE_PRICE: f64 = 3.75;
 const SONNET_4_CACHE_READ_PRICE: f64 = 0.30;
 
 // Claude 3.x 系列 (旧版本，价格可能不同)
-// Sonnet 3.7/3.5 - 假设与 Sonnet 4 相同
+// Sonnet 3.7/3.5
 const SONNET_3_INPUT_PRICE: f64 = 3.0;
 const SONNET_3_OUTPUT_PRICE: f64 = 15.0;
 const SONNET_3_CACHE_WRITE_PRICE: f64 = 3.75;
@@ -137,7 +137,7 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
 
     // 智能模型匹配，支持多种格式
     let model_lower = model.to_lowercase();
-    let (input_price, output_price, cache_write_price, cache_read_price) = 
+    let (input_price, output_price, cache_write_price, cache_read_price) =
         match_model_prices(&model_lower);
 
     // 计算成本（价格为每百万令牌）
@@ -155,7 +155,7 @@ fn match_model_prices(model_lower: &str) -> (f64, f64, f64, f64) {
     if model_lower.contains("opus") && (model_lower.contains("4-1") || model_lower.contains("4.1")) {
         (OPUS_4_1_INPUT_PRICE, OPUS_4_1_OUTPUT_PRICE, OPUS_4_1_CACHE_WRITE_PRICE, OPUS_4_1_CACHE_READ_PRICE)
     }
-    // Claude Sonnet 4 
+    // Claude Sonnet 4
     else if model_lower.contains("sonnet") && (model_lower.contains("-4-") || model_lower.contains("sonnet-4")) {
         (SONNET_4_INPUT_PRICE, SONNET_4_OUTPUT_PRICE, SONNET_4_CACHE_WRITE_PRICE, SONNET_4_CACHE_READ_PRICE)
     }
@@ -164,8 +164,8 @@ fn match_model_prices(model_lower: &str) -> (f64, f64, f64, f64) {
         (HAIKU_3_5_INPUT_PRICE, HAIKU_3_5_OUTPUT_PRICE, HAIKU_3_5_CACHE_WRITE_PRICE, HAIKU_3_5_CACHE_READ_PRICE)
     }
     // Claude 3.x Sonnet 系列（3.7, 3.5）
-    else if model_lower.contains("sonnet") && 
-            (model_lower.contains("3-7") || model_lower.contains("3.7") || 
+    else if model_lower.contains("sonnet") &&
+            (model_lower.contains("3-7") || model_lower.contains("3.7") ||
              model_lower.contains("3-5") || model_lower.contains("3.5")) {
         (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
     }
@@ -228,13 +228,13 @@ pub fn parse_jsonl_file(
                                 || usage.output_tokens.unwrap_or(0) > 0
                                 || usage.cache_creation_input_tokens.unwrap_or(0) > 0
                                 || usage.cache_read_input_tokens.unwrap_or(0) > 0;
-                            
+
                             if !has_tokens {
                                 continue;
                             }
 
                             // 智能去重策略
-                            let has_io_tokens = usage.input_tokens.unwrap_or(0) > 0 
+                            let has_io_tokens = usage.input_tokens.unwrap_or(0) > 0
                                 || usage.output_tokens.unwrap_or(0) > 0;
                             let has_cache_tokens = usage.cache_creation_input_tokens.unwrap_or(0) > 0
                                 || usage.cache_read_input_tokens.unwrap_or(0) > 0;
@@ -461,7 +461,7 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         model_stat.cache_creation_tokens += entry.cache_creation_tokens;
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
-        
+
         // 按模型统计唯一会话
         model_sessions
             .entry(entry.model.clone())
@@ -527,13 +527,13 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             + entry.output_tokens
             + entry.cache_creation_tokens
             + entry.cache_read_tokens;
-        
+
         // 按项目统计唯一会话
         project_sessions
             .entry(entry.project_path.clone())
             .or_insert_with(HashSet::new)
             .insert(entry.session_id.clone());
-        
+
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
         }
@@ -678,7 +678,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         model_stat.cache_creation_tokens += entry.cache_creation_tokens;
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
-        
+
         // 按模型统计唯一会话
         model_sessions
             .entry(entry.model.clone())
@@ -743,13 +743,13 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             + entry.output_tokens
             + entry.cache_creation_tokens
             + entry.cache_read_tokens;
-        
+
         // 按项目统计唯一会话
         project_sessions
             .entry(entry.project_path.clone())
             .or_insert_with(HashSet::new)
             .insert(entry.session_id.clone());
-        
+
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
         }
