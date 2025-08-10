@@ -7,6 +7,7 @@ mod commands;
 mod process;
 mod i18n;
 mod claude_config;
+mod file_watcher;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -68,12 +69,13 @@ use commands::packycode_nodes::{
 };
 use commands::filesystem::{
     read_directory_tree, search_files_by_name, get_file_info, watch_directory,
-    read_file, write_file, get_file_tree,
+    read_file, write_file, get_file_tree, unwatch_directory, get_watched_paths,
 };
 use commands::git::{
     get_git_status, get_git_history, get_git_branches, get_git_diff, get_git_commits,
 };
 use process::ProcessRegistryState;
+use file_watcher::FileWatcherState;
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -162,6 +164,11 @@ fn main() {
 
             // Initialize process registry
             app.manage(ProcessRegistryState::default());
+            
+            // Initialize file watcher state
+            let file_watcher_state = FileWatcherState::new();
+            file_watcher_state.init(app.handle().clone());
+            app.manage(file_watcher_state);
 
             // Initialize Claude process state
             app.manage(ClaudeProcessState::default());
@@ -332,6 +339,8 @@ fn main() {
             search_files_by_name,
             get_file_info,
             watch_directory,
+            unwatch_directory,
+            get_watched_paths,
             read_file,
             write_file,
             get_file_tree,

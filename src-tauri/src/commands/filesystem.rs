@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use tauri::Emitter;
+use tauri::State;
+use crate::file_watcher::FileWatcherState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileNode {
@@ -245,22 +246,39 @@ pub async fn get_file_info(path: String) -> Result<FileNode, String> {
     })
 }
 
-/// 监听文件系统变化（简化版本）
+/// 监听文件系统变化
 #[tauri::command]
 pub async fn watch_directory(
-    app: tauri::AppHandle,
+    watcher_state: State<'_, FileWatcherState>,
+    path: String,
+    recursive: Option<bool>,
+) -> Result<(), String> {
+    let recursive = recursive.unwrap_or(false);
+    
+    watcher_state.with_manager(|manager| {
+        manager.watch_path(&path, recursive)
+    })
+}
+
+/// 停止监听指定路径
+#[tauri::command]
+pub async fn unwatch_directory(
+    watcher_state: State<'_, FileWatcherState>,
     path: String,
 ) -> Result<(), String> {
-    // 这里可以集成 notify crate 来实现文件系统监听
-    // 为了简化，先返回成功
-    
-    // 发送测试事件
-    app.emit("file-system-change", FileSystemChange {
-        path: path.clone(),
-        change_type: String::from("watching"),
-    }).map_err(|e| e.to_string())?;
-    
-    Ok(())
+    watcher_state.with_manager(|manager| {
+        manager.unwatch_path(&path)
+    })
+}
+
+/// 获取当前监听的路径列表
+#[tauri::command]
+pub async fn get_watched_paths(
+    watcher_state: State<'_, FileWatcherState>,
+) -> Result<Vec<String>, String> {
+    watcher_state.with_manager(|manager| {
+        Ok(manager.get_watched_paths())
+    })
 }
 
 /// 获取文件树（简化版，供文件浏览器使用）

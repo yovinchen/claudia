@@ -1,0 +1,181 @@
+/* Grid Layout Styles for ClaudeCodeSession */
+
+/* Base layout classes */
+.mobile-layout {
+  @apply relative;
+}
+
+.tablet-layout {
+  @apply relative;
+}
+
+.desktop-layout {
+  @apply relative;
+}
+
+.widescreen-layout {
+  @apply relative;
+}
+
+/* Compact mode adjustments */
+.compact-mode {
+  @apply text-sm;
+}
+
+.compact-mode .floating-prompt-input {
+  @apply h-10;
+}
+
+.compact-mode .message-container {
+  @apply py-2;
+}
+
+/* Panel transitions */
+.panel-transition {
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile panel overlays */
+@media (max-width: 639px) {
+  .mobile-panel-overlay {
+    @apply fixed inset-0 bg-black/50 z-40;
+  }
+  
+  .mobile-panel {
+    @apply fixed inset-y-0 z-50 bg-background shadow-2xl;
+    max-width: 85vw;
+  }
+  
+  .mobile-panel-left {
+    @apply left-0;
+  }
+  
+  .mobile-panel-right {
+    @apply right-0;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tablet-sidebar {
+    width: min(320px, 40vw);
+  }
+}
+
+/* Desktop grid layout */
+@media (min-width: 1024px) {
+  .desktop-grid {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+  }
+  
+  .desktop-content-grid {
+    display: grid;
+    gap: 0;
+    height: 100%;
+    transition: grid-template-columns 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Widescreen optimizations */
+@media (min-width: 1536px) {
+  .widescreen-content {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* Resize handle styles */
+.resize-handle {
+  @apply absolute top-0 bottom-0 w-1 cursor-col-resize;
+  @apply hover:bg-primary/20 transition-colors;
+}
+
+.resize-handle:active {
+  @apply bg-primary/30;
+}
+
+.resize-handle-left {
+  @apply right-0;
+}
+
+.resize-handle-right {
+  @apply left-0;
+}
+
+/* Panel content scrolling */
+.panel-content {
+  @apply h-full overflow-y-auto;
+  scrollbar-width: thin;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+/* Animation classes */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-out-left {
+  animation: slideOutLeft 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}

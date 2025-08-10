@@ -7,6 +7,7 @@ pub mod claude_config;
 pub mod commands;
 pub mod process;
 pub mod i18n;
+pub mod file_watcher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

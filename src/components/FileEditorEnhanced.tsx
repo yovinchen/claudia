@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   X,
   Save,
@@ -156,11 +157,15 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   const [minimap, setMinimap] = useState(true);
   const [wordWrap, setWordWrap] = useState<'on' | 'off'>('on');
   const [autoSave, setAutoSave] = useState(false);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
+  const [fileChanged, setFileChanged] = useState(false);
   
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const unlistenRef = useRef<UnlistenFn | null>(null);
   
   const fileName = filePath.split("/").pop() || filePath;
   const language = getLanguageFromPath(filePath);
@@ -180,13 +185,15 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       setContent(fileContent);
       setOriginalContent(fileContent);
       setHasChanges(false);
+      setFileChanged(false);
+      setLastCheckTime(Date.now());
     } catch (err) {
       console.error("Failed to load file:", err);
       setError(err instanceof Error ? err.message : "Failed to load file");
     } finally {
       setLoading(false);
     }
-  }, [filePath]);
+  }, [filePath, hasChanges]);
   
   // 保存文件
   const saveFile = useCallback(async () => {
@@ -204,6 +211,8 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       setOriginalContent(content);
       setHasChanges(false);
       setSaved(true);
+      setLastCheckTime(Date.now());
+      setFileChanged(false);
       
       // 显示保存成功提示
       setTimeout(() => setSaved(false), 2000);
@@ -368,12 +377,128 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [hasChanges, saveFile, isFullscreen]);
   
+  // 使用真正的文件系统监听
+  useEffect(() => {
+    const setupFileWatcher = async () => {
+      if (!filePath) return;
+      
+      try {
+        // 监听文件所在目录
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        await invoke('watch_directory', { 
+          path: dirPath,
+          recursive: false 
+        });
+        
+        // 监听文件变化事件
+        unlistenRef.current = await listen('file-system-change', (event: any) => {
+          const { path, change_type } = event.payload;
+          
+          // 检查是否是当前文件的变化
+          if (path === filePath && (change_type === 'modified' || change_type === 'created')) {
+            // 检查时间间隔，避免自己保存触发的事件
+            const timeSinceLastSave = Date.now() - lastCheckTime;
+            
+            if (timeSinceLastSave > 1000) { // 超过1秒，可能是外部修改
+              console.log('File changed externally:', path, change_type);
+              setFileChanged(true);
+              
+              // 如果没有未保存的更改，自动重新加载
+              if (!hasChanges) {
+                loadFile();
+              } else {
+                // 显示提示
+                setError("文件已被外部程序修改，点击重新加载按钮查看最新内容");
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Failed to setup file watcher:', err);
+        // 如果文件监听失败，回退到轮询模式
+        fallbackToPolling();
+      }
+    };
+    
+    // 回退到轮询模式
+    const fallbackToPolling = () => {
+      const checkFileChanges = async () => {
+        if (!filePath || !editorRef.current) return;
+        
+        try {
+          const fileInfo = await invoke<any>('get_file_info', { path: filePath });
+          
+          if (fileInfo && fileInfo.modified) {
+            const fileModifiedTime = new Date(fileInfo.modified).getTime();
+            
+            if (fileModifiedTime > lastCheckTime && !hasChanges) {
+              const newContent = await invoke<string>('read_file', { path: filePath });
+              
+              if (newContent !== originalContent) {
+                setFileChanged(true);
+                if (!hasChanges) {
+                  setContent(newContent);
+                  setOriginalContent(newContent);
+                  setFileChanged(false);
+                  setLastCheckTime(Date.now());
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.debug('File check error:', err);
+        }
+      };
+      
+      // 每3秒检查一次文件变化
+      fileCheckIntervalRef.current = setInterval(checkFileChanges, 3000);
+    };
+    
+    setupFileWatcher();
+    
+    // 清理函数
+    return () => {
+      // 停止监听
+      if (filePath) {
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        invoke('unwatch_directory', { path: dirPath }).catch(console.error);
+      }
+      
+      // 清理事件监听
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
+      
+      // 清理轮询定时器
+      if (fileCheckIntervalRef.current) {
+        clearInterval(fileCheckIntervalRef.current);
+      }
+    };
+  }, [filePath, hasChanges, lastCheckTime, originalContent, loadFile]);
+  
+  // 移除旧的轮询实现
+  
+  // 重新加载文件
+  const reloadFile = useCallback(async () => {
+    if (!filePath) return;
+    
+    if (hasChanges) {
+      const shouldReload = window.confirm(
+        "您有未保存的更改。重新加载将丢失这些更改。是否继续？"
+      );
+      if (!shouldReload) return;
+    }
+    
+    await loadFile();
+  }, [filePath, hasChanges, loadFile]);
+  
   // 加载文件
   useEffect(() => {
     if (filePath) {
       loadFile();
     }
-  }, [filePath, loadFile]);
+  }, [filePath]); // 移除 loadFile 依赖，避免循环
   
   // 计算诊断统计
   const diagnosticStats = {
@@ -586,6 +711,28 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          {/* 文件外部修改提示 */}
+          {fileChanged && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={reloadFile}
+                    className="flex items-center gap-1 border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    重新加载
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>文件已被外部程序修改，点击重新加载最新内容</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           
           {/* 保存按钮 */}
           {hasChanges && (

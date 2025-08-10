@@ -12,7 +12,9 @@ import {
   ChevronUp,
   X,
   Hash,
-  Command
+  Command,
+  PanelLeftOpen,
+  PanelRightOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +40,8 @@ import { GitPanelEnhanced } from "./GitPanelEnhanced";
 import { FileEditorEnhanced } from "./FileEditorEnhanced";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useLayoutManager } from "@/hooks";
+import { GridLayoutContainer, ResponsivePanel } from "@/components/ui/grid-layout";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -82,6 +85,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onStreamingChange,
 }) => {
   const { t } = useTranslation();
+  const layoutManager = useLayoutManager(initialProjectPath || session?.project_path);
+  const { 
+    layout, 
+    breakpoints, 
+    toggleFileExplorer, 
+    toggleGitPanel, 
+    toggleTimeline,
+    setPanelWidth,
+    setSplitPosition: setLayoutSplitPosition,
+    getGridTemplateColumns,
+    getResponsiveClasses
+  } = layoutManager;
+  
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +108,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [totalTokens, setTotalTokens] = useState(0);
   const [extractedSessionInfo, setExtractedSessionInfo] = useState<{ sessionId: string; projectId: string } | null>(null);
   const [claudeSessionId, setClaudeSessionId] = useState<string | null>(null);
-  const [showTimeline, setShowTimeline] = useState(false);
   const [timelineVersion, setTimelineVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showForkDialog, setShowForkDialog] = useState(false);
@@ -107,15 +122,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [showPreviewPrompt, setShowPreviewPrompt] = useState(false);
-  const [splitPosition, setSplitPosition] = useState(50);
   const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
-  
-  // New state for file explorer and git panel
-  const [showFileExplorer, setShowFileExplorer] = useState(false);
-  const [showGitPanel, setShowGitPanel] = useState(false);
   
   // File editor state
   const [editingFile, setEditingFile] = useState<string | null>(null);
@@ -1080,7 +1090,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setIsPreviewMaximized(!isPreviewMaximized);
     // Reset split position when toggling maximize
     if (isPreviewMaximized) {
-      setSplitPosition(50);
+      setLayoutSplitPosition(50);
     }
   };
 
@@ -1260,7 +1270,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-background relative", className)}>
+    <div className={cn("flex flex-col h-full bg-background relative", getResponsiveClasses(), className)}>
       <div className="w-full h-full flex flex-col">
         {/* Header */}
         <motion.div
@@ -1298,10 +1308,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setShowFileExplorer(!showFileExplorer)}
-                      className={cn("h-8 w-8", showFileExplorer && "text-primary")}
+                      onClick={toggleFileExplorer}
+                      className={cn("h-8 w-8", layout.showFileExplorer && "text-primary")}
                     >
-                      <FolderOpen className="h-4 w-4" />
+                      <PanelLeftOpen className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1319,10 +1329,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setShowGitPanel(!showGitPanel)}
-                      className={cn("h-8 w-8", showGitPanel && "text-primary")}
+                      onClick={toggleGitPanel}
+                      className={cn("h-8 w-8", layout.showGitPanel && "text-primary")}
                     >
-                      <GitBranch className="h-4 w-4" />
+                      <PanelRightOpen className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1397,10 +1407,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowTimeline(!showTimeline)}
+                        onClick={toggleTimeline}
                         className="h-8 w-8"
                       >
-                        <GitBranch className={cn("h-4 w-4", showTimeline && "text-primary")} />
+                        <GitBranch className={cn("h-4 w-4", layout.showTimeline && "text-primary")} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -1450,36 +1460,45 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
         </motion.div>
 
-        {/* Main Content Area with panels */}
-        <div className={cn(
-          "flex-1 overflow-hidden transition-all duration-300 flex",
-          showTimeline && "sm:mr-96"
-        )}>
+        {/* Main Content Area with Grid Layout */}
+        <GridLayoutContainer
+          className="flex-1 overflow-hidden"
+          gridTemplateColumns={getGridTemplateColumns()}
+          isMobile={breakpoints.isMobile}
+          isTablet={breakpoints.isTablet}
+          showFileExplorer={layout.showFileExplorer}
+          showGitPanel={layout.showGitPanel}
+          showTimeline={layout.showTimeline}
+        >
           {/* File Explorer Panel */}
-          <FileExplorerPanelEnhanced
-            projectPath={projectPath}
-            isVisible={showFileExplorer}
-            onFileSelect={(path) => {
-              // Add file path to prompt input (double click)
-              floatingPromptRef.current?.addImage(path);
-            }}
-            onFileOpen={(path) => {
-              // Open file in editor (single click)
-              setEditingFile(path);
-            }}
-            onToggle={() => setShowFileExplorer(!showFileExplorer)}
-          />
-          
-          {/* Main Content with Input */}
-          <div className={cn(
-            "flex-1 transition-all duration-300 relative flex flex-col"
+          {layout.showFileExplorer && (
+            <ResponsivePanel
+              isVisible={layout.showFileExplorer}
+              position="left"
+              width={layout.fileExplorerWidth}
+              isMobile={breakpoints.isMobile}
+              onClose={toggleFileExplorer}
+              resizable={!breakpoints.isMobile}
+              onResize={(width) => setPanelWidth('fileExplorer', width)}
+              minWidth={200}
+              maxWidth={500}
+            >
+              <FileExplorerPanelEnhanced
+                projectPath={projectPath}
+                isVisible={true}
+                onFileSelect={(path) => {
+                  floatingPromptRef.current?.addImage(path);
+                }}
+                onFileOpen={(path) => {
+                  setEditingFile(path);
+                }}
+                onToggle={toggleFileExplorer}
+              />
+            </ResponsivePanel>
           )}
-          style={{
-            marginLeft: showFileExplorer ? '15vw' : 'auto',
-            marginRight: showGitPanel ? '15vw' : 'auto',
-            width: (!showFileExplorer && !showGitPanel) ? '90%' : 'calc(100% - ' + ((showFileExplorer ? 15 : 0) + (showGitPanel ? 15 : 0)) + 'vw)',
-            maxWidth: (!showFileExplorer && !showGitPanel) ? '100%' : 'none'
-          }}>
+          
+          {/* Main Content */}
+          <div className="flex-1 relative flex flex-col overflow-hidden">
           {showPreview ? (
             // Split pane layout when preview is active
             <div className="h-full">
@@ -1512,8 +1531,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     onUrlChange={handlePreviewUrlChange}
                   />
                 }
-                initialSplit={splitPosition}
-                onSplitChange={setSplitPosition}
+                initialSplit={layout.splitPosition}
+                onSplitChange={(position) => {
+                  setLayoutSplitPosition(position);
+                }}
                 minLeftWidth={400}
                 minRightWidth={400}
                 className="h-full"
@@ -1705,38 +1726,52 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
           
           {/* Git Panel */}
-          <GitPanelEnhanced
-            projectPath={projectPath}
-            isVisible={showGitPanel}
-            onToggle={() => setShowGitPanel(!showGitPanel)}
-          />
-        </div>
-
-        {/* Timeline */}
-        <AnimatePresence>
-          {showTimeline && effectiveSession && (
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="fixed right-0 top-0 h-full w-full sm:w-96 bg-background border-l border-border shadow-xl z-30 overflow-hidden"
+          {layout.showGitPanel && (
+            <ResponsivePanel
+              isVisible={layout.showGitPanel}
+              position="right"
+              width={layout.gitPanelWidth}
+              isMobile={breakpoints.isMobile}
+              onClose={toggleGitPanel}
+              resizable={!breakpoints.isMobile}
+              onResize={(width) => setPanelWidth('gitPanel', width)}
+              minWidth={200}
+              maxWidth={500}
+            >
+              <GitPanelEnhanced
+                projectPath={projectPath}
+                isVisible={true}
+                onToggle={toggleGitPanel}
+              />
+            </ResponsivePanel>
+          )}
+          
+          {/* Timeline Panel - Only on desktop */}
+          {layout.showTimeline && effectiveSession && !breakpoints.isMobile && (
+            <ResponsivePanel
+              isVisible={layout.showTimeline}
+              position="right"
+              width={layout.timelineWidth}
+              isMobile={false}
+              onClose={toggleTimeline}
+              resizable={true}
+              onResize={(width) => setPanelWidth('timeline', width)}
+              minWidth={320}
+              maxWidth={600}
+              className="border-l"
             >
               <div className="h-full flex flex-col">
-                {/* Timeline Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
                   <h3 className="text-lg font-semibold">{t('app.sessionTimeline')}</h3>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setShowTimeline(false)}
+                    onClick={toggleTimeline}
                     className="h-8 w-8"
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                {/* Timeline Content */}
                 <div className="flex-1 overflow-y-auto p-4">
                   <TimelineNavigator
                     sessionId={effectiveSession.id}
@@ -1750,9 +1785,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   />
                 </div>
               </div>
-            </motion.div>
+            </ResponsivePanel>
           )}
-        </AnimatePresence>
+        </GridLayoutContainer>
       </div>
 
       {/* Fork Dialog */}

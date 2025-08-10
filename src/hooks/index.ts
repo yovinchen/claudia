@@ -25,3 +25,4 @@ export {
 } from './usePerformanceMonitor';
 export { TAB_SCREEN_NAMES } from './useAnalytics';
 export { useTranslation, getLanguageDisplayName } from './useTranslation';
+export { useLayoutManager } from './useLayoutManager';
