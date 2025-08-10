@@ -84,12 +84,32 @@
    - ✅ 本地化的提示、错误信息和说明
    - ✅ 语言设置持久化存储
 
-4. **Bug 修复和性能优化**
+4. **实时文件监听和编辑器增强** 🆕
+   - ✅ 完整的文件系统实时监听（基于 notify crate）
+   - ✅ 毫秒级响应文件变化事件
+   - ✅ 支持外部编辑器修改文件实时同步
+   - ✅ 智能去重机制（500ms防抖）
+   - ✅ 跨平台文件系统监听（macOS/Linux/Windows）
+   - ✅ 增强的文件编辑器（40+ 语言语法高亮）
+   - ✅ 实时语法检查和错误诊断
+   - ✅ 代码格式化和智能提示
+   - ✅ 响应式布局系统（CSS Grid + 智能断点）
+
+5. **Usage Dashboard 优化** 🆕
+   - ✅ 响应式仪表板布局
+   - ✅ 时区本地化时间显示
+   - ✅ 智能宽度比例调整
+   - ✅ 性能优化的数据加载
+   - ✅ 虚拟滚动大数据集支持
+
+6. **Bug 修复和性能优化**
    - ✅ 修复了原版在某些环境下无法运行的问题
    - ✅ 修复了 JSON 配置文件解析错误
    - ✅ 优化了数据库操作性能
    - ✅ 改进了界面响应速度
    - ✅ 解决了中转站配置同步问题
+   - ✅ 修复了时间戳类型处理问题
+   - ✅ 优化了 TypeScript 编译错误处理
 
 ## ✨ 功能特性
 
@@ -165,6 +185,32 @@
 - **实时预览**：实时查看渲染的 Markdown
 - **项目扫描器**：查找项目中的所有 CLAUDE.md 文件
 - **语法高亮**：完整的 Markdown 支持和语法高亮
+
+### 📁 **实时文件监听系统** 🆕
+- **毫秒级文件监听**：基于 Rust notify crate 的跨平台文件系统监听
+- **智能去重机制**：500ms 防抖算法避免重复事件
+- **外部编辑器同步**：自动检测并同步外部工具的文件修改
+- **可视化变更提示**：文件被外部修改时显示重新加载提示
+- **降级方案支持**：如果实时监听失败自动回退到轮询模式
+- **跨平台兼容**：支持 macOS（FSEvent）、Linux（inotify）、Windows 文件系统
+
+### 🎨 **增强的代码编辑器** 🆕
+- **多语言支持**：40+ 编程语言语法高亮（JavaScript、TypeScript、Python、Rust、Go、Java、C++等）
+- **实时诊断**：TypeScript/JavaScript 语法检查和错误提示
+- **智能代码补全**：IntelliSense 自动完成和参数提示
+- **代码格式化**：支持 Prettier、Black、gofmt、rustfmt 等格式化工具
+- **高级编辑功能**：多光标编辑、代码折叠、括号匹配、小地图导航
+- **自动保存**：可配置的自动保存功能
+- **全屏模式**：专注编辑的全屏体验
+- **快捷键支持**：丰富的键盘快捷键（Ctrl/Cmd+S 保存、Ctrl/Cmd+Shift+F 格式化等）
+
+### 📱 **响应式布局系统** 🆕
+- **CSS Grid 布局**：基于现代 CSS Grid 的响应式布局系统
+- **智能断点**：Mobile (<640px)、Tablet (640-1024px)、Desktop (1024-1536px)、Widescreen (≥1536px)
+- **面板持久化**：布局配置自动保存到 localStorage
+- **移动端优化**：小屏设备的叠加面板设计
+- **可调节面板**：拖拽调整面板大小，支持最小/最大宽度限制
+- **项目级记忆**：每个项目独立保存布局设置
 
 ## 📖 使用指南
 
@@ -361,6 +407,9 @@ brew install pkg-config
 - **数据库**：SQLite（通过 rusqlite）
 - **包管理器**：Bun
 - **国际化**：i18next（支持中英文切换）
+- **文件监听**：notify crate（跨平台文件系统监听）
+- **代码编辑器**：Monaco Editor（VS Code 内核）
+- **布局系统**：CSS Grid + 响应式设计
 
 ### 项目结构
 
@@ -368,25 +417,39 @@ brew install pkg-config
 claudia/
 ├── src/                   # React 前端
 │   ├── components/        # UI 组件
-│   │   └── RelayStationManager.tsx  # 中转站管理组件
+│   │   ├── RelayStationManager.tsx  # 中转站管理组件
+│   │   ├── FileEditorEnhanced.tsx   # 增强文件编辑器
+│   │   ├── ClaudeCodeSession.tsx    # 响应式会话界面
+│   │   └── ui/grid-layout.tsx       # 网格布局组件
+│   ├── hooks/             # React Hooks
+│   │   └── useLayoutManager.ts      # 布局管理钩子
 │   ├── lib/               # API 客户端和工具
 │   ├── locales/          # 国际化文件
+│   ├── styles/           # CSS 样式
+│   │   └── grid-layout.css         # 网格布局样式
 │   └── assets/           # 静态资源
 ├── src-tauri/            # Rust 后端
 │   ├── src/
 │   │   ├── commands/     # Tauri 命令处理器
-│   │   │   ├── relay_stations.rs  # 中转站管理
-│   │   │   └── relay_adapters.rs  # 中转站适配器
-│   │   ├── checkpoint/   # 时间线管理
-│   │   └── process/      # 进程管理
-│   └── tests/            # Rust 测试套件
+│   │   │   ├── relay_stations.rs   # 中转站管理
+│   │   │   ├── relay_adapters.rs   # 中转站适配器
+│   │   │   └── filesystem.rs       # 文件系统操作
+│   │   ├── file_watcher.rs         # 实时文件监听系统
+│   │   ├── checkpoint/             # 时间线管理
+│   │   └── process/                # 进程管理
+│   ├── tests/            # Rust 测试套件 (58个测试全部通过)
+│   └── Cargo.toml        # Rust 依赖配置 (包含 notify 等)
+├── docs/                 # 项目文档
+│   ├── PERFORMANCE_OPTIMIZATION.md  # 性能优化文档
+│   ├── RELAY_STATION_USER_GUIDE.md  # 中转站用户指南
+│   └── usage-scan-db-design.md      # 数据库设计文档
 └── public/               # 公共资源
 ```
 
 ### 开发命令
 
 ```bash
-# 启动开发服务器
+# 启动开发服务器（带实时文件监听）
 bun run tauri dev
 
 # 仅运行前端
@@ -395,11 +458,20 @@ bun run dev
 # 类型检查
 bunx tsc --noEmit
 
-# 运行 Rust 测试
+# 运行 Rust 测试（包含文件监听功能测试）
 cd src-tauri && cargo test
+
+# 运行特定测试模块
+cd src-tauri && cargo test file_watcher::
 
 # 格式化代码
 cd src-tauri && cargo fmt
+
+# Rust 代码检查
+cd src-tauri && cargo check
+
+# 完整检查 (TypeScript + Rust)
+bun run check
 ```
 
 ## 🔒 安全性
