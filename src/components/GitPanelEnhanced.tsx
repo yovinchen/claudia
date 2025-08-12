@@ -639,30 +639,14 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
     <>
       <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <div
           ref={panelRef}
-          initial={{ x: 300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 300, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ width: `${width}px` }}
           className={cn(
-            "fixed right-0 top-[172px] bottom-0 bg-background border-l shadow-lg z-40",
+            "h-full bg-background border-l border-border",
             "flex flex-col",
             className
           )}
         >
-          {/* 拖拽手柄 */}
-          <div
-            ref={resizeHandleRef}
-            className="absolute left-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-primary/20 cursor-col-resize transition-all"
-            onMouseDown={() => setIsResizing(true)}
-          >
-            <div className="absolute left-0 top-1/2 -translate-y-1/2">
-              <GripVertical className="h-6 w-6 text-muted-foreground/50" />
-            </div>
-          </div>
-
           {/* Header */}
           <div className="flex items-center justify-between p-3 border-b">
             <div className="flex items-center gap-2">
@@ -823,7 +807,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
               </>
             )}
           </Tabs>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
     

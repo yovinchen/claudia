@@ -872,7 +872,7 @@ const FloatingPromptInputInner = (
       {/* Fixed Position Input Bar */}
       <div
         className={cn(
-          "absolute bottom-0 left-0 right-0 z-40 bg-background/98 backdrop-blur-sm border-t border-border/40",
+          "w-full bg-background/98 backdrop-blur-sm border-t border-border/40",
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}
@@ -881,7 +881,7 @@ const FloatingPromptInputInner = (
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="w-full">
           {/* Image previews */}
           {embeddedImages.length > 0 && (
             <ImagePreview
@@ -891,7 +891,7 @@ const FloatingPromptInputInner = (
             />
           )}
 
-          <div className="p-3">
+          <div className="p-2">
             <div className="flex items-center gap-2">
               {/* Model Picker */}
               <Popover
@@ -900,7 +900,7 @@ const FloatingPromptInputInner = (
                     variant="outline"
                     size="default"
                     disabled={disabled}
-                    className="gap-2 min-w-[160px] h-10 justify-start"
+                    className="gap-2 min-w-[140px] h-8 justify-start"
                   >
                     {selectedModelData.icon}
                     <span className="flex-1 text-left">{selectedModelData.name}</span>
@@ -949,7 +949,7 @@ const FloatingPromptInputInner = (
                           variant="outline"
                           size="default"
                           disabled={disabled}
-                          className="gap-2 h-10"
+                          className="gap-2 h-8"
                         >
                           <Brain className="h-4 w-4" />
                           <ThinkingModeIndicator 
@@ -1010,7 +1010,7 @@ const FloatingPromptInputInner = (
                   placeholder={dragActive ? t('messages.dropImagesHere') : t('messages.askClaudeAnything')}
                   disabled={disabled}
                   className={cn(
-                    "min-h-[40px] max-h-[120px] resize-none pr-10 py-2",
+                    "min-h-[32px] max-h-[100px] resize-none pr-10 py-1",
                     dragActive && "border-primary"
                   )}
                   rows={1}
@@ -1021,7 +1021,7 @@ const FloatingPromptInputInner = (
                   size="icon"
                   onClick={() => setIsExpanded(true)}
                   disabled={disabled}
-                  className="absolute right-1 bottom-1 h-8 w-8"
+                  className="absolute right-1 bottom-0 h-6 w-6"
                 >
                   <Maximize2 className="h-4 w-4" />
                 </Button>
@@ -1057,7 +1057,7 @@ const FloatingPromptInputInner = (
                 disabled={isLoading ? false : (!prompt.trim() || disabled)}
                 variant={isLoading ? "destructive" : "default"}
                 size="default"
-                className="min-w-[60px] h-10"
+                className="min-w-[56px] h-8"
               >
                 {isLoading ? (
                   <>
@@ -1068,10 +1068,6 @@ const FloatingPromptInputInner = (
                   <Send className="h-4 w-4" />
                 )}
               </Button>
-            </div>
-
-            <div className="mt-2 text-xs text-muted-foreground">
-              {t('input.pressEnterToSend')}{projectPath?.trim() && t('input.withFileAndCommandSupport')}
             </div>
           </div>
         </div>

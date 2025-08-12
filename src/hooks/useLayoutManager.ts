@@ -9,6 +9,9 @@ interface LayoutState {
   showTimeline: boolean;
   splitPosition: number;
   isCompactMode: boolean;
+  activeView: 'chat' | 'editor' | 'preview';  // 新增：当前活动视图
+  editingFile: string | null;  // 新增：正在编辑的文件
+  previewUrl: string | null;  // 新增：预览URL
 }
 
 interface LayoutBreakpoints {
@@ -29,6 +32,9 @@ const DEFAULT_LAYOUT: LayoutState = {
   showTimeline: false,
   splitPosition: 50,
   isCompactMode: false,
+  activeView: 'chat',  // 默认显示聊天视图
+  editingFile: null,
+  previewUrl: null,
 };
 
 const STORAGE_KEY = 'claudia_layout_preferences';
@@ -250,6 +256,49 @@ export function useLayoutManager(projectPath?: string) {
     return classes.join(' ');
   }, [breakpoints, layout.isCompactMode]);
   
+  // 打开文件编辑器
+  const openFileEditor = useCallback((filePath: string) => {
+    saveLayout({
+      activeView: 'editor',
+      editingFile: filePath,
+      previewUrl: null,  // 关闭预览
+    });
+  }, [saveLayout]);
+  
+  // 关闭文件编辑器
+  const closeFileEditor = useCallback(() => {
+    saveLayout({
+      activeView: 'chat',
+      editingFile: null,
+    });
+  }, [saveLayout]);
+  
+  // 打开预览
+  const openPreview = useCallback((url: string) => {
+    saveLayout({
+      activeView: 'preview',
+      previewUrl: url,
+      editingFile: null,  // 关闭编辑器
+    });
+  }, [saveLayout]);
+  
+  // 关闭预览
+  const closePreview = useCallback(() => {
+    saveLayout({
+      activeView: 'chat',
+      previewUrl: null,
+    });
+  }, [saveLayout]);
+  
+  // 切换到聊天视图
+  const switchToChatView = useCallback(() => {
+    saveLayout({
+      activeView: 'chat',
+      editingFile: null,
+      previewUrl: null,
+    });
+  }, [saveLayout]);
+  
   return {
     layout,
     breakpoints,
@@ -264,5 +313,11 @@ export function useLayoutManager(projectPath?: string) {
     getGridTemplateColumns,
     getResponsiveClasses,
     saveLayout,
+    // 新增的方法
+    openFileEditor,
+    closeFileEditor,
+    openPreview,
+    closePreview,
+    switchToChatView,
   };
 }

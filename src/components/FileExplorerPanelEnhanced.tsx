@@ -667,39 +667,17 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
     );
   };
 
+  // 如果不可见，返回null
+  if (!isVisible) return null;
+  
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          ref={panelRef}
-          initial={{ x: -300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -300, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ width: `${width}px` }}
-          className={cn(
-            "fixed left-0 top-[172px] bottom-0 bg-background border-r shadow-lg z-40",
-            "flex flex-col",
-            className
-          )}
-        >
-          {/* 拖拽手柄 */}
-          <div
-            ref={resizeHandleRef}
-            className="absolute right-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-primary/20 cursor-col-resize transition-all"
-            onMouseDown={() => setIsResizing(true)}
-          >
-            <div className="absolute right-0 top-1/2 -translate-y-1/2">
-              <GripVertical className="h-6 w-6 text-muted-foreground/50" />
-            </div>
-          </div>
-
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b">
-            <div className="flex items-center gap-2">
-              <Folder className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium text-sm">{t("app.fileExplorer")}</h3>
-            </div>
+    <div className="flex flex-col h-full border-r border-border">
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b">
+        <div className="flex items-center gap-2">
+          <Folder className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-medium text-sm">{t("app.fileExplorer")}</h3>
+        </div>
             <div className="flex items-center gap-1">
               {/* 展开/收起按钮 */}
               <TooltipProvider>
@@ -819,9 +797,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
               </div>
             </ScrollArea>
           )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </div>
   );
 };
 

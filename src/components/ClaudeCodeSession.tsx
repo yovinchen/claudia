@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft,
@@ -14,7 +14,9 @@ import {
   Hash,
   Command,
   PanelLeftOpen,
-  PanelRightOpen
+  PanelRightOpen,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +43,13 @@ import { FileEditorEnhanced } from "./FileEditorEnhanced";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useLayoutManager } from "@/hooks";
-import { GridLayoutContainer, ResponsivePanel } from "@/components/ui/grid-layout";
+// import { GridLayoutContainer, ResponsivePanel } from "@/components/ui/grid-layout";
+
+// 新增布局组件导入
+import { FlexLayoutContainer } from "@/components/layout/FlexLayoutContainer";
+import { MainContentArea } from "@/components/layout/MainContentArea";
+import { SidePanel } from "@/components/layout/SidePanel";
+import { ChatView } from "@/components/layout/ChatView";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -94,8 +102,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     toggleTimeline,
     setPanelWidth,
     setSplitPosition: setLayoutSplitPosition,
-    getGridTemplateColumns,
-    getResponsiveClasses
+    getResponsiveClasses,
+    openFileEditor,
+    closeFileEditor,
+    openPreview: openLayoutPreview,
+    closePreview: closeLayoutPreview
   } = layoutManager;
   
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
@@ -118,17 +129,30 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Queued prompts state
   const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   
-  // New state for preview feature
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState("");
+  // 使用布局管理器的预览功能
+  const handleOpenPreview = useCallback((url: string) => {
+    openLayoutPreview(url);
+    setShowPreviewPrompt(false);
+  }, [openLayoutPreview]);
+  
+  const handleClosePreview = useCallback(() => {
+    closeLayoutPreview();
+    setIsPreviewMaximized(false);
+  }, [closeLayoutPreview]);
+  
+  // 添加临时状态用于预览提示
   const [showPreviewPrompt, setShowPreviewPrompt] = useState(false);
   const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
   
   // File editor state
-  const [editingFile, setEditingFile] = useState<string | null>(null);
+  // 移除重复的状态，使用 layout 中的状态
+  // const [editingFile, setEditingFile] = useState<string | null>(null); // 移除，使用 layout.editingFile
   
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -287,13 +311,30 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     onStreamingChange?.(isLoading, claudeSessionId);
   }, [isLoading, claudeSessionId, onStreamingChange]);
+  
+  // 滚动到顶部
+  const scrollToTop = useCallback(() => {
+    if (parentRef.current) {
+      parentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+  
+  // 滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (parentRef.current) {
+      parentRef.current.scrollTo({ top: parentRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (displayableMessages.length > 0) {
-      rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'smooth' });
+      // 使用setTimeout确保DOM更新后再滚动
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
     }
-  }, [displayableMessages.length, rowVirtualizer]);
+  }, [displayableMessages.length, scrollToBottom]);
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -1067,31 +1108,50 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  // Handle URL detection from terminal output
+  // 处理URL检测
   const handleLinkDetected = (url: string) => {
-    if (!showPreview && !showPreviewPrompt) {
-      setPreviewUrl(url);
+    if (!layout.previewUrl && !showPreviewPrompt) {
+      openLayoutPreview(url);
       setShowPreviewPrompt(true);
     }
   };
-
-  const handleClosePreview = () => {
-    setShowPreview(false);
-    setIsPreviewMaximized(false);
-    // Keep the previewUrl so it can be restored when reopening
-  };
-
-  const handlePreviewUrlChange = (url: string) => {
-    console.log('[ClaudeCodeSession] Preview URL changed to:', url);
-    setPreviewUrl(url);
-  };
-
+  
+  // 监听滚动位置
+  useEffect(() => {
+    const scrollContainer = parentRef.current;
+    if (!scrollContainer) return;
+    
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      setIsAtTop(scrollTop < 10);
+      setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 10);
+      setShowScrollButtons(scrollHeight > clientHeight);
+    };
+    
+    handleScroll(); // 初始检查
+    scrollContainer.addEventListener('scroll', handleScroll);
+    
+    // 监听内容变化
+    const observer = new ResizeObserver(handleScroll);
+    observer.observe(scrollContainer);
+    
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
+  }, []);
+  
   const handleTogglePreviewMaximize = () => {
     setIsPreviewMaximized(!isPreviewMaximized);
-    // Reset split position when toggling maximize
+    // 重置分割位置
     if (isPreviewMaximized) {
       setLayoutSplitPosition(50);
     }
+  };
+  
+  const handlePreviewUrlChange = (url: string) => {
+    console.log('[ClaudeCodeSession] Preview URL changed to:', url);
+    openLayoutPreview(url);
   };
 
   // Cleanup event listeners and track mount state
@@ -1150,20 +1210,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const messagesList = (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto relative pb-24"
-      style={{
-        contain: 'strict',
-      }}
+      className="h-full overflow-y-auto relative pb-2"
     >
       <div
-        className="relative w-full max-w-5xl mx-auto px-4 pt-8 pb-4"
+        className="relative w-full max-w-5xl mx-auto px-4 pt-3 pb-2"
         style={{
-          height: `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
+          height: displayableMessages.length === 0 ? '100%' : `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
           minHeight: '100px',
         }}
       >
         <AnimatePresence>
-          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+          {displayableMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
+              <Terminal className="h-12 w-12 mb-3 opacity-50" />
+              <p className="text-sm">开始对话或等待消息加载...</p>
+            </div>
+          ) : (
+            rowVirtualizer.getVirtualItems().map((virtualItem) => {
             const message = displayableMessages[virtualItem.index];
             return (
               <motion.div
@@ -1174,7 +1237,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-x-4 pb-4"
+                className="absolute inset-x-4 pb-3"
                 style={{
                   top: virtualItem.start,
                 }}
@@ -1186,7 +1249,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 />
               </motion.div>
             );
-          })}
+          })
+          )}
         </AnimatePresence>
       </div>
 
@@ -1195,7 +1259,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="flex items-center justify-center py-4 mb-40"
+          className="flex items-center justify-center py-2 mb-4"
         >
           <div className="rotating-symbol text-primary" />
         </motion.div>
@@ -1206,11 +1270,62 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-5xl mx-auto"
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive w-full max-w-5xl mx-auto mb-4"
         >
           {error}
         </motion.div>
       )}
+      
+      {/* 滚动按钮 */}
+      <AnimatePresence>
+        {showScrollButtons && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed bottom-20 right-6 z-40 flex flex-col gap-2"
+          >
+            {!isAtTop && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={scrollToTop}
+                      className="h-9 w-9 rounded-full shadow-lg bg-background/95 backdrop-blur"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>滚动到顶部</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {!isAtBottom && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={scrollToBottom}
+                      className="h-9 w-9 rounded-full shadow-lg bg-background/95 backdrop-blur"
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>滚动到底部</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
@@ -1246,7 +1361,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   );
 
   // If preview is maximized, render only the WebviewPreview in full screen
-  if (showPreview && isPreviewMaximized) {
+  if (layout.activeView === 'preview' && layout.previewUrl && isPreviewMaximized) {
     return (
       <AnimatePresence>
         <motion.div 
@@ -1257,7 +1372,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           transition={{ duration: 0.2 }}
         >
           <WebviewPreview
-            initialUrl={previewUrl}
+            initialUrl={layout.previewUrl || ''}
             onClose={handleClosePreview}
             isMaximized={isPreviewMaximized}
             onToggleMaximize={handleTogglePreviewMaximize}
@@ -1300,6 +1415,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Token计数器 */}
+            {totalTokens > 0 && (
+              <div className="flex items-center gap-1.5 text-xs bg-muted/50 rounded-full px-2.5 py-1">
+                <Hash className="h-3 w-3 text-muted-foreground" />
+                <span className="font-mono">{totalTokens.toLocaleString()}</span>
+                <span className="text-muted-foreground">tokens</span>
+              </div>
+            )}
+            
             {/* File Explorer Toggle */}
             {projectPath && (
               <TooltipProvider>
@@ -1460,319 +1584,194 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </div>
         </motion.div>
 
-        {/* Main Content Area with Grid Layout */}
-        <GridLayoutContainer
+        {/* 使用新的 FlexLayoutContainer 替代 GridLayoutContainer */}
+        <FlexLayoutContainer
           className="flex-1 overflow-hidden"
-          gridTemplateColumns={getGridTemplateColumns()}
-          isMobile={breakpoints.isMobile}
-          isTablet={breakpoints.isTablet}
-          showFileExplorer={layout.showFileExplorer}
-          showGitPanel={layout.showGitPanel}
-          showTimeline={layout.showTimeline}
-        >
-          {/* File Explorer Panel */}
-          {layout.showFileExplorer && (
-            <ResponsivePanel
-              isVisible={layout.showFileExplorer}
-              position="left"
-              width={layout.fileExplorerWidth}
-              isMobile={breakpoints.isMobile}
-              onClose={toggleFileExplorer}
-              resizable={!breakpoints.isMobile}
-              onResize={(width) => setPanelWidth('fileExplorer', width)}
-              minWidth={200}
-              maxWidth={500}
-            >
-              <FileExplorerPanelEnhanced
-                projectPath={projectPath}
-                isVisible={true}
-                onFileSelect={(path) => {
-                  floatingPromptRef.current?.addImage(path);
-                }}
-                onFileOpen={(path) => {
-                  setEditingFile(path);
-                }}
-                onToggle={toggleFileExplorer}
-              />
-            </ResponsivePanel>
-          )}
-          
-          {/* Main Content */}
-          <div className="flex-1 relative flex flex-col overflow-hidden">
-          {showPreview ? (
-            // Split pane layout when preview is active
-            <div className="h-full">
-              <SplitPane
-                left={
-                  <div className="h-full flex flex-col">
-                    <div className="flex-1 flex flex-col mx-auto w-full px-4">
-                      {projectPathInput}
-                      {messagesList}
-                    </div>
-                    {/* Floating Input for preview mode */}
-                    <div className="mx-auto w-full relative px-4">
-                      <FloatingPromptInput
-                        ref={floatingPromptRef}
-                        onSend={handleSendPrompt}
-                        onCancel={handleCancelExecution}
-                        isLoading={isLoading}
-                        disabled={!projectPath}
-                        projectPath={projectPath}
-                      />
-                    </div>
-                  </div>
-                }
-                right={
-                  <WebviewPreview
-                    initialUrl={previewUrl}
-                    onClose={handleClosePreview}
-                    isMaximized={isPreviewMaximized}
-                    onToggleMaximize={handleTogglePreviewMaximize}
-                    onUrlChange={handlePreviewUrlChange}
-                  />
-                }
-                initialSplit={layout.splitPosition}
-                onSplitChange={(position) => {
-                  setLayoutSplitPosition(position);
-                }}
-                minLeftWidth={400}
-                minRightWidth={400}
-                className="h-full"
-              />
-            </div>
-          ) : editingFile ? (
-            // File Editor layout with enhanced features
-            <div className="h-full flex flex-col relative">
-              <FileEditorEnhanced
-                filePath={editingFile}
-                onClose={() => setEditingFile(null)}
-                className="flex-1"
-              />
-            </div>
-          ) : (
-            // Original layout when no preview or editor
-            <div className="h-full flex flex-col relative">
-              {/* Main content area with messages */}
-              <div className="flex-1 flex flex-col mx-auto w-full px-4">
-                {projectPathInput}
-                {messagesList}
-                
-                {isLoading && messages.length === 0 && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="rotating-symbol text-primary" />
-                      <span className="text-sm text-muted-foreground">
-                        {session ? "Loading session history..." : "Initializing Claude Code..."}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Floating elements container - same width as main content */}
-              <div className="mx-auto w-full relative px-4">
-                <ErrorBoundary>
-                  {/* Queued Prompts Display */}
-                  <AnimatePresence>
-                    {queuedPrompts.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-24 left-0 right-0 z-30"
-                      >
-                        <div className="mx-4">
-                          <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs font-medium text-muted-foreground mb-1">
-                            Queued Prompts ({queuedPrompts.length})
-                          </div>
-                          <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                            {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                          </Button>
-                        </div>
-                        {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
-                          <motion.div
-                            key={queuedPrompt.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
-                                <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
-                                  {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
-                                </span>
-                              </div>
-                              <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
+          mainContentId="main-content"
+          panels={[
+            // 文件浏览器面板
+            {
+              id: 'file-explorer',
+              position: 'left',
+              visible: layout.showFileExplorer,
+              defaultWidth: layout.fileExplorerWidth,
+              minWidth: 200,
+              maxWidth: 500,
+              resizable: !breakpoints.isMobile,
+              content: (
+                <FileExplorerPanelEnhanced
+                  projectPath={projectPath}
+                  isVisible={true}
+                  onFileSelect={(path) => {
+                    floatingPromptRef.current?.addImage(path);
+                  }}
+                  onFileOpen={(path) => {
+                    openFileEditor(path);
+                  }}
+                  onToggle={toggleFileExplorer}
+                />
+              )
+            },
+            // 主内容区域
+            {
+              id: 'main-content',
+              position: 'center',
+              visible: true,
+              content: (
+                <MainContentArea isEditing={layout.activeView === 'editor'}>
+                  {layout.activeView === 'editor' && layout.editingFile ? (
+                    // 文件编辑器视图
+                    <FileEditorEnhanced
+                      filePath={layout.editingFile}
+                      onClose={closeFileEditor}
+                      className="h-full"
+                    />
+                  ) : layout.activeView === 'preview' && layout.previewUrl ? (
+                    // 预览视图
+                    <SplitPane
+                      left={
+                        <ChatView
+                          projectPathInput={projectPathInput}
+                          messagesList={messagesList}
+                          floatingInput={
+                            <div className="w-full max-w-5xl mx-auto px-4">
+                              <FloatingPromptInput
+                                ref={floatingPromptRef}
+                                onSend={handleSendPrompt}
+                                onCancel={handleCancelExecution}
+                                isLoading={isLoading}
+                                disabled={!projectPath}
+                                projectPath={projectPath}
+                              />
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </motion.div>
-                        ))}
+                          }
+                        />
+                      }
+                      right={
+                        <WebviewPreview
+                          initialUrl={layout.previewUrl}
+                          onClose={handleClosePreview}
+                          isMaximized={isPreviewMaximized}
+                          onToggleMaximize={handleTogglePreviewMaximize}
+                          onUrlChange={handlePreviewUrlChange}
+                        />
+                      }
+                      initialSplit={layout.splitPosition}
+                      onSplitChange={(position) => {
+                        setLayoutSplitPosition(position);
+                      }}
+                      minLeftWidth={400}
+                      minRightWidth={400}
+                      className="h-full"
+                    />
+                  ) : (
+                    // 默认聊天视图
+                    <ChatView
+                      projectPathInput={projectPathInput}
+                      messagesList={messagesList}
+                      floatingInput={
+                        <div className="w-full max-w-5xl mx-auto px-4">
+                          <FloatingPromptInput
+                            ref={floatingPromptRef}
+                            onSend={handleSendPrompt}
+                            onCancel={handleCancelExecution}
+                            isLoading={isLoading}
+                            disabled={!projectPath}
+                            projectPath={projectPath}
+                          />
                         </div>
-                      </div>
-                    </motion.div>
+                      }
+                      floatingElements={
+                        <>
+                          {/* 排队提示显示 */}
+                          <AnimatePresence>
+                            {queuedPrompts.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 20 }}
+                                className="absolute bottom-20 left-0 right-0 z-30 pointer-events-auto px-4"
+                              >
+                                <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                                      Queued Prompts ({queuedPrompts.length})
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
+                                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                    </Button>
+                                  </div>
+                                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
+                                    <motion.div
+                                      key={queuedPrompt.id}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      exit={{ opacity: 0, x: 20 }}
+                                      transition={{ delay: index * 0.05 }}
+                                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+                                          <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+                                            {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </motion.div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </>
+                      }
+                    />
                   )}
-                  </AnimatePresence>
-
-                  {/* Navigation Arrows */}
-                  {displayableMessages.length > 5 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ delay: 0.5 }}
-                      className="absolute bottom-32 right-6 z-50"
-                    >
-                    <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (displayableMessages.length > 0) {
-                            parentRef.current?.scrollTo({
-                              top: 0,
-                              behavior: 'smooth'
-                            });
-                            
-                            setTimeout(() => {
-                              if (parentRef.current) {
-                                parentRef.current.scrollTop = 1;
-                                requestAnimationFrame(() => {
-                                  if (parentRef.current) {
-                                    parentRef.current.scrollTop = 0;
-                                  }
-                                });
-                              }
-                            }, 500);
-                          }
-                        }}
-                        className="px-3 py-2 hover:bg-accent rounded-none"
-                        title="Scroll to top"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                      <div className="w-px h-4 bg-border" />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (displayableMessages.length > 0) {
-                            const scrollElement = parentRef.current;
-                            if (scrollElement) {
-                              scrollElement.scrollTo({
-                                top: scrollElement.scrollHeight,
-                                behavior: 'smooth'
-                              });
-                            }
-                          }
-                        }}
-                        className="px-3 py-2 hover:bg-accent rounded-none"
-                        title="Scroll to bottom"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Floating Prompt Input - Now properly aligned with main content */}
-                <div className="relative">
-                  <FloatingPromptInput
-                    ref={floatingPromptRef}
-                    onSend={handleSendPrompt}
-                    onCancel={handleCancelExecution}
-                    isLoading={isLoading}
-                    disabled={!projectPath}
-                    projectPath={projectPath}
-                  />
-                </div>
-
-                {/* Token Counter */}
-                {totalTokens > 0 && (
-                  <div className="absolute bottom-0 right-0 z-30 pointer-events-none">
-                    <div className="w-full">
-                      <div className="flex justify-end px-4 pb-2">
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="bg-background/95 backdrop-blur-md border rounded-full px-3 py-1 shadow-lg pointer-events-auto"
-                        >
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <Hash className="h-3 w-3 text-muted-foreground" />
-                            <span className="font-mono">{totalTokens.toLocaleString()}</span>
-                            <span className="text-muted-foreground">tokens</span>
-                          </div>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                </ErrorBoundary>
-              </div>
-            </div>
-          )}
-          </div>
-          
-          {/* Git Panel */}
-          {layout.showGitPanel && (
-            <ResponsivePanel
-              isVisible={layout.showGitPanel}
-              position="right"
-              width={layout.gitPanelWidth}
-              isMobile={breakpoints.isMobile}
-              onClose={toggleGitPanel}
-              resizable={!breakpoints.isMobile}
-              onResize={(width) => setPanelWidth('gitPanel', width)}
-              minWidth={200}
-              maxWidth={500}
-            >
-              <GitPanelEnhanced
-                projectPath={projectPath}
-                isVisible={true}
-                onToggle={toggleGitPanel}
-              />
-            </ResponsivePanel>
-          )}
-          
-          {/* Timeline Panel - Only on desktop */}
-          {layout.showTimeline && effectiveSession && !breakpoints.isMobile && (
-            <ResponsivePanel
-              isVisible={layout.showTimeline}
-              position="right"
-              width={layout.timelineWidth}
-              isMobile={false}
-              onClose={toggleTimeline}
-              resizable={true}
-              onResize={(width) => setPanelWidth('timeline', width)}
-              minWidth={320}
-              maxWidth={600}
-              className="border-l"
-            >
-              <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold">{t('app.sessionTimeline')}</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleTimeline}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4">
+                </MainContentArea>
+              )
+            },
+            // Git 面板
+            {
+              id: 'git-panel',
+              position: 'right',
+              visible: layout.showGitPanel,
+              defaultWidth: layout.gitPanelWidth,
+              minWidth: 200,
+              maxWidth: 500,
+              resizable: !breakpoints.isMobile,
+              content: (
+                <GitPanelEnhanced
+                  projectPath={projectPath}
+                  isVisible={true}
+                  onToggle={toggleGitPanel}
+                />
+              )
+            },
+            // 时间线面板（仅桌面端）
+            ...(layout.showTimeline && effectiveSession && !breakpoints.isMobile ? [{
+              id: 'timeline',
+              position: 'right' as const,
+              visible: true,
+              defaultWidth: layout.timelineWidth,
+              minWidth: 320,
+              maxWidth: 600,
+              resizable: true,
+              content: (
+                <SidePanel
+                  title={t('app.sessionTimeline')}
+                  onClose={toggleTimeline}
+                  position="right"
+                >
                   <TimelineNavigator
                     sessionId={effectiveSession.id}
                     projectId={effectiveSession.project_id}
@@ -1783,11 +1782,25 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     onCheckpointCreated={handleCheckpointCreated}
                     refreshVersion={timelineVersion}
                   />
-                </div>
-              </div>
-            </ResponsivePanel>
-          )}
-        </GridLayoutContainer>
+                </SidePanel>
+              )
+            }] : [])
+          ]}
+          onPanelResize={(panelId, width) => {
+            if (panelId === 'file-explorer') {
+              setPanelWidth('fileExplorer', width);
+            } else if (panelId === 'git-panel') {
+              setPanelWidth('gitPanel', width);
+            } else if (panelId === 'timeline') {
+              setPanelWidth('timeline', width);
+            }
+          }}
+          savedWidths={{
+            'file-explorer': layout.fileExplorerWidth,
+            'git-panel': layout.gitPanelWidth,
+            'timeline': layout.timelineWidth,
+          }}
+        />
       </div>
 
       {/* Fork Dialog */}
