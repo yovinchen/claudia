@@ -431,3 +431,28 @@ pub async fn get_git_commits(project_path: String, limit: usize) -> Result<Vec<G
     // 使用已有的 get_git_history 函数，直接传递 limit 参数
     get_git_history(project_path, Some(limit), None).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_git_status() {
+        let status_text = "?? test-untracked.txt\nA  staged-file.txt\n M modified-file.txt";
+        let (staged, modified, untracked, conflicted) = parse_git_status(status_text);
+        
+        println!("Untracked files: {:?}", untracked);
+        println!("Staged files: {:?}", staged);
+        println!("Modified files: {:?}", modified);
+        
+        assert_eq!(untracked.len(), 1);
+        assert_eq!(untracked[0].path, "test-untracked.txt");
+        assert_eq!(untracked[0].status, "untracked");
+        
+        assert_eq!(staged.len(), 1);
+        assert_eq!(staged[0].path, "staged-file.txt");
+        
+        assert_eq!(modified.len(), 1);
+        assert_eq!(modified[0].path, "modified-file.txt");
+    }
+}

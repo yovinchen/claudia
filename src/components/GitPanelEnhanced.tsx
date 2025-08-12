@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { invoke } from "@tauri-apps/api/core";
 import {
   GitBranch,
@@ -14,7 +14,6 @@ import {
   FilePlus,
   FileX,
   FileDiff,
-  GripVertical,
   Check,
   Folder,
   FolderOpen,
@@ -139,8 +138,6 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("changes");
-  const [width, setWidth] = useState(window.innerWidth * 0.15); // 15% of viewport width
-  const [isResizing, setIsResizing] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [showDiffViewer, setShowDiffViewer] = useState(false);
@@ -148,55 +145,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
   const [diffStaged, setDiffStaged] = useState(false);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 响应窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      // 保持15%的比例
-      setWidth(window.innerWidth * 0.15);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 处理拖拽调整宽度
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const windowWidth = window.innerWidth;
-      const newWidth = windowWidth - e.clientX;
-      const minWidth = window.innerWidth * 0.1; // Min 10%
-      const maxWidth = window.innerWidth * 0.25; // Max 25%
-
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    if (isResizing) {
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
 
   // 加载 Git 状态
   const loadGitStatus = useCallback(async () => {
@@ -208,6 +159,14 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
 
       const status = await invoke<GitStatus>("get_git_status", {
         path: projectPath,  // 修改参数名为 path
+      });
+
+      console.log('[GitPanelEnhanced] Git status loaded:', {
+        untracked: status.untracked,
+        untrackedCount: status.untracked.length,
+        staged: status.staged.length,
+        modified: status.modified.length,
+        conflicted: status.conflicted.length
       });
 
       setGitStatus(status);
@@ -552,9 +511,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
 
   // 渲染文件列表（树形结构）
   const renderFileList = (files: GitFileStatus[], statusType: 'modified' | 'staged' | 'untracked' | 'conflicted') => {
+    console.log(`[GitPanelEnhanced] Rendering ${statusType} files:`, files);
     if (files.length === 0) return null;
 
     const fileTree = buildFileTree(files);
+    console.log(`[GitPanelEnhanced] Built file tree for ${statusType}:`, fileTree);
 
     return (
       <div className="space-y-2">
@@ -659,6 +620,26 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
               )}
             </div>
             <div className="flex items-center gap-1">
+              {/* Debug button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (gitStatus) {
+                    console.log('=== GitPanelEnhanced Debug ===');
+                    console.log('Full gitStatus:', gitStatus);
+                    console.log('Untracked files:', gitStatus.untracked);
+                    console.log('Untracked count:', gitStatus.untracked.length);
+                    if (gitStatus.untracked.length > 0) {
+                      console.log('First untracked file:', gitStatus.untracked[0]);
+                    }
+                    alert(`Untracked files: ${gitStatus.untracked.length}\n${JSON.stringify(gitStatus.untracked, null, 2)}`);
+                  }
+                }}
+                className="h-7 w-7"
+              >
+                ?
+              </Button>
               {/* 展开/收起按钮 */}
               <TooltipProvider>
                 <Tooltip>
@@ -780,6 +761,7 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                     <div className="p-2 space-y-4">
                       {gitStatus && (
                         <>
+                          {console.log('[GitPanelEnhanced] Rendering all file lists with gitStatus:', gitStatus)}
                           {renderFileList(gitStatus.staged, 'staged')}
                           {renderFileList(gitStatus.modified, 'modified')}
                           {renderFileList(gitStatus.untracked, 'untracked')}

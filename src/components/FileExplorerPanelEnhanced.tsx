@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -17,7 +16,6 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
-  GripVertical,
   FolderTree,
   FileStack,
   Maximize2,
@@ -58,7 +56,6 @@ interface FileExplorerPanelEnhancedProps {
   onFileSelect?: (path: string) => void;
   onFileOpen?: (path: string) => void;
   onToggle: () => void;
-  className?: string;
 }
 
 // 获取文件图标
@@ -140,7 +137,6 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
   onFileSelect,
   onFileOpen,
   onToggle,
-  className,
 }) => {
   const { t } = useTranslation();
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -153,56 +149,9 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
   const [flattenedNodes, setFlattenedNodes] = useState<FileNode[]>([]);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [lastClickPath, setLastClickPath] = useState<string | null>(null);
-  const [width, setWidth] = useState(window.innerWidth * 0.15); // 15% of viewport width
-  const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<"tree" | "folder">("tree");
   
-  const panelRef = useRef<HTMLDivElement>(null);
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
   const unlistenRef = useRef<UnlistenFn | null>(null);
-
-  // 响应窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      // 保持15%的比例
-      setWidth(window.innerWidth * 0.15);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 处理拖拽调整宽度
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      
-      const newWidth = e.clientX;
-      const minWidth = window.innerWidth * 0.1; // Min 10%
-      const maxWidth = window.innerWidth * 0.25; // Max 25%
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    if (isResizing) {
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
 
   // 切换节点展开状态
   const toggleExpand = useCallback((path: string) => {
