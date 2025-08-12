@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   X,
   Save,
@@ -174,6 +175,8 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   const loadFile = useCallback(async () => {
     if (!filePath) return;
     
+    console.log('[FileEditor] Loading file:', filePath);
+    
     try {
       setLoading(true);
       setError(null);
@@ -182,18 +185,20 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
         path: filePath,
       });
       
+      console.log('[FileEditor] File loaded, content length:', fileContent.length);
+      
       setContent(fileContent);
       setOriginalContent(fileContent);
       setHasChanges(false);
       setFileChanged(false);
       setLastCheckTime(Date.now());
     } catch (err) {
-      console.error("Failed to load file:", err);
+      console.error("[FileEditor] Failed to load file:", err);
       setError(err instanceof Error ? err.message : "Failed to load file");
     } finally {
       setLoading(false);
     }
-  }, [filePath, hasChanges]);
+  }, [filePath]);
   
   // 保存文件
   const saveFile = useCallback(async () => {
@@ -244,17 +249,20 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   }, [autoSave, hasChanges, saveFile]);
   
   // 处理内容变化
-  const handleContentChange = (value: string | undefined) => {
+  const handleContentChange = useCallback((value: string | undefined) => {
+    console.log('[FileEditor] Content change detected, new length:', value?.length);
     if (value !== undefined) {
       setContent(value);
-      setHasChanges(value !== originalContent);
+      const changed = value !== originalContent;
+      setHasChanges(changed);
+      console.log('[FileEditor] Has changes:', changed);
       
       // 触发语法检查
       if (editorRef.current && (language === 'typescript' || language === 'javascript')) {
         validateCode(value);
       }
     }
-  };
+  }, [originalContent, language]);
   
   // 验证代码
   const validateCode = async (_code: string) => {
@@ -303,8 +311,57 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   
   // Monaco Editor 挂载时的处理
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => {
+    console.log('[FileEditor] Editor mounted successfully');
     editorRef.current = editor;
     monacoRef.current = monaco;
+    
+    // 检查编辑器是否可编辑
+    const model = editor.getModel();
+    if (model) {
+      const options = editor.getOptions();
+      console.log('[FileEditor] Editor readOnly:', options.get(monaco.editor.EditorOption.readOnly));
+      console.log('[FileEditor] Editor value length:', model.getValue().length);
+      
+      // 强制设置模型可编辑
+      model.updateOptions({ tabSize: 2, insertSpaces: true });
+    }
+    
+    // 确保编辑器获得焦点
+    editor.focus();
+    
+    // 手动处理回车键
+    editor.addCommand(monaco.KeyCode.Enter, () => {
+      const position = editor.getPosition();
+      if (position) {
+        const model = editor.getModel();
+        if (model) {
+          // 获取当前行内容
+          const lineContent = model.getLineContent(position.lineNumber);
+          const beforeCursor = lineContent.substring(0, position.column - 1);
+          
+          // 计算缩进
+          const indent = beforeCursor.match(/^\s*/)?.[0] || '';
+          
+          // 插入新行
+          editor.executeEdits('enter', [{
+            range: new monaco.Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column
+            ),
+            text: '\n' + indent,
+            forceMoveMarkers: true
+          }]);
+          
+          // 移动光标到新行
+          editor.setPosition({
+            lineNumber: position.lineNumber + 1,
+            column: indent.length + 1
+          });
+        }
+      }
+    });
     
     // 监听光标位置变化
     editor.onDidChangeCursorPosition((e) => {
@@ -312,6 +369,105 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
         line: e.position.lineNumber,
         column: e.position.column
       });
+    });
+    
+    // 使用简单的复制处理，避免剪贴板权限问题
+    editor.addAction({
+      id: 'custom-copy',
+      label: 'Copy',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.5,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection) {
+          const text = ed.getModel()?.getValueInRange(selection);
+          if (text) {
+            try {
+              // 尝试使用 Tauri 的剪贴板 API
+              await writeText(text).catch(() => {
+                // 如果失败，使用浏览器原生 API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(text).catch(console.error);
+                }
+              });
+              console.log('[FileEditor] Text copied');
+            } catch (err) {
+              console.error('[FileEditor] Copy failed:', err);
+            }
+          }
+        }
+      }
+    });
+    
+    editor.addAction({
+      id: 'custom-paste',
+      label: 'Paste',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.6,
+      run: async (ed) => {
+        try {
+          let text = '';
+          try {
+            // 尝试使用 Tauri API
+            text = await readText();
+          } catch {
+            // 如果失败，使用浏览器原生 API
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              text = await navigator.clipboard.readText().catch(() => '');
+            }
+          }
+          
+          if (text) {
+            const selection = ed.getSelection();
+            if (selection) {
+              ed.executeEdits('paste', [{
+                range: selection,
+                text: text,
+                forceMoveMarkers: true
+              }]);
+            }
+          }
+        } catch (err) {
+          console.error('[FileEditor] Paste failed:', err);
+        }
+      }
+    });
+    
+    editor.addAction({
+      id: 'custom-cut',
+      label: 'Cut',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.4,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection) {
+          const text = ed.getModel()?.getValueInRange(selection);
+          if (text) {
+            try {
+              // 尝试复制到剪贴板
+              await writeText(text).catch(() => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(text).catch(console.error);
+                }
+              });
+              
+              // 删除选中的文本
+              ed.executeEdits('cut', [{
+                range: selection,
+                text: '',
+                forceMoveMarkers: true
+              }]);
+              
+              console.log('[FileEditor] Text cut');
+            } catch (err) {
+              console.error('[FileEditor] Cut failed:', err);
+            }
+          }
+        }
+      }
     });
     
     // 初始化 Monaco 配置
@@ -326,13 +482,16 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       showErrorsInMinimap: true,
     });
     
-    // 设置快捷键
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      saveFile();
-    });
+    // 移除原有的快捷键绑定，使用 Monaco 内置的
+    // 这些快捷键会自动工作，不需要额外处理
     
-    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF, () => {
-      handleFormat();
+    // 监听内容变化事件（作为备用）
+    editor.onDidChangeModelContent(() => {
+      const value = editor.getValue();
+      if (value !== content) {
+        console.log('[FileEditor] Content changed via editor event');
+        handleContentChange(value);
+      }
     });
     
     // 监听光标位置变化
@@ -349,16 +508,27 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   // 快捷键处理
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在编辑器内，除了特定快捷键外不处理其他按键
+      const activeElement = document.activeElement;
+      const isInEditor = activeElement?.closest('.monaco-editor');
+      
       // Ctrl/Cmd + S 保存
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         saveFile();
+        return;
       }
       
       // Ctrl/Cmd + Shift + F 格式化
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "f") {
         e.preventDefault();
         handleFormat();
+        return;
+      }
+      
+      // 如果在编辑器内，不处理其他快捷键
+      if (isInEditor) {
+        return;
       }
       
       // F11 全屏
@@ -848,6 +1018,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
             onMount={handleEditorDidMount}
             theme={theme}
             options={{
+              readOnly: false,  // 确保编辑器可编辑
               fontSize: fontSize,
               minimap: { enabled: minimap },
               lineNumbers: "on",  // 显示行号
@@ -862,7 +1033,11 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               formatOnPaste: true,
               formatOnType: true,
               suggestOnTriggerCharacters: true,
-              quickSuggestions: true,
+              quickSuggestions: {
+                other: true,
+                comments: true,
+                strings: true
+              },
               parameterHints: { enabled: true },
               folding: true,
               foldingStrategy: 'indentation',
@@ -878,6 +1053,25 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               hover: { enabled: true, delay: 300 },
               definitionLinkOpensInPeek: true,
               peekWidgetDefaultFocus: 'editor',
+              // 确保回车键和其他基本编辑功能正常工作
+              acceptSuggestionOnEnter: "off",  // 关闭回车接受建议，避免冲突
+              autoClosingBrackets: "always",
+              autoClosingQuotes: "always",
+              autoIndent: "full",
+              emptySelectionClipboard: false,  // 禁用空选择剪贴板
+              copyWithSyntaxHighlighting: false,  // 禁用语法高亮复制
+              multiCursorModifier: "alt",
+              snippetSuggestions: "bottom",
+              tabCompletion: "on",
+              wordBasedSuggestions: "currentDocument",
+              // 确保编辑器可以接收输入
+              domReadOnly: false,
+              readOnlyMessage: undefined,
+              // 添加更多编辑器配置
+              cursorBlinking: "blink",
+              cursorSmoothCaretAnimation: "on",
+              mouseWheelZoom: true,
+              smoothScrolling: true,
             }}
           />
         </div>

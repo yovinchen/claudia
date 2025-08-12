@@ -29,6 +29,7 @@
     "@tailwindcss/vite": "^4.1.8",
     "@tanstack/react-virtual": "^3.13.10",
     "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
     "@tauri-apps/plugin-dialog": "^2.0.2",
     "@tauri-apps/plugin-global-shortcut": "^2.0.0",
     "@tauri-apps/plugin-opener": "^2",
