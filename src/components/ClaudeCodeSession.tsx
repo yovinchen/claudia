@@ -29,7 +29,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
-import { ErrorBoundary } from "./ErrorBoundary";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { SlashCommandsManager } from "./SlashCommandsManager";
@@ -130,10 +129,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   
   // 使用布局管理器的预览功能
-  const handleOpenPreview = useCallback((url: string) => {
-    openLayoutPreview(url);
-    setShowPreviewPrompt(false);
-  }, [openLayoutPreview]);
+  // Note: openLayoutPreview is used directly instead of wrapping in handleOpenPreview
   
   const handleClosePreview = useCallback(() => {
     closeLayoutPreview();
