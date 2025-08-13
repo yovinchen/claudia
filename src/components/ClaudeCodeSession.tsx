@@ -45,6 +45,7 @@ import { WebviewPreview } from "./WebviewPreview";
 import { FileExplorerPanelEnhanced } from "./FileExplorerPanelEnhanced";
 import { GitPanelEnhanced } from "./GitPanelEnhanced";
 import { FileEditorEnhanced } from "./FileEditorEnhanced";
+import { SlashCommandsManager } from "./SlashCommandsManager";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useLayoutManager } from "@/hooks";
@@ -162,7 +163,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   
   // 文件监控相关状态
   const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
-  const [showFileMonitor, setShowFileMonitor] = useState(false);
   const [isFileWatching, setIsFileWatching] = useState(false);
   const [fileMonitorCollapsed, setFileMonitorCollapsed] = useState(false);
   const [fileMonitorExpanded, setFileMonitorExpanded] = useState(false);
