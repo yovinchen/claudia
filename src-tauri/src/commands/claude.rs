@@ -926,11 +926,17 @@ pub async fn execute_claude_code(
 
     let claude_path = find_claude_binary(&app)?;
     
+    // Map opus-plan to the appropriate Claude CLI parameter
+    let claude_model = match model.as_str() {
+        "opus-plan" => "opusplan".to_string(),
+        _ => model.clone()
+    };
+    
     let args = vec![
         "-p".to_string(),
         prompt.clone(),
         "--model".to_string(),
-        model.clone(),
+        claude_model,
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
@@ -957,12 +963,18 @@ pub async fn continue_claude_code(
 
     let claude_path = find_claude_binary(&app)?;
     
+    // Map opus-plan to the appropriate Claude CLI parameter
+    let claude_model = match model.as_str() {
+        "opus-plan" => "opusplan".to_string(),
+        _ => model.clone()
+    };
+    
     let args = vec![
         "-c".to_string(), // Continue flag
         "-p".to_string(),
         prompt.clone(),
         "--model".to_string(),
-        model.clone(),
+        claude_model,
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
@@ -991,13 +1003,19 @@ pub async fn resume_claude_code(
 
     let claude_path = find_claude_binary(&app)?;
     
+    // Map opus-plan to the appropriate Claude CLI parameter
+    let claude_model = match model.as_str() {
+        "opus-plan" => "opusplan".to_string(),
+        _ => model.clone()
+    };
+    
     let args = vec![
         "--resume".to_string(),
         session_id.clone(),
         "-p".to_string(),
         prompt.clone(),
         "--model".to_string(),
-        model.clone(),
+        claude_model,
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),

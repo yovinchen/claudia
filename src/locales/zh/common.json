@@ -187,6 +187,8 @@
     "sonnetDescription": "更快，适用于大多数任务",
     "opusName": "Claude 4.1 Opus",
     "opusDescription": "功能更强，适用于复杂任务",
+    "opusPlanName": "Opus 计划模式",
+    "opusPlanDescription": "计划时使用 Opus 4.1，执行时使用 Sonnet 4",
     "defaultTaskDescription": "执行智能体时将用作默认任务占位符",
     "systemPromptDescription": "定义您的 CC 智能体的行为和功能",
     "manageAgents": "管理您的 Claude Code 智能体",

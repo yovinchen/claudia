@@ -198,6 +198,8 @@
     "sonnetDescription": "Faster, efficient for most tasks",
     "opusName": "Claude 4.1 Opus",
     "opusDescription": "More capable, better for complex tasks",
+    "opusPlanName": "Opus Plan Mode",
+    "opusPlanDescription": "Use Opus 4.1 for planning, Sonnet 4 otherwise",
     "defaultTaskDescription": "This will be used as the default task placeholder when executing the agent",
     "systemPromptDescription": "Define the behavior and capabilities of your CC Agent",
     "manageAgents": "Manage your Claude Code agents",

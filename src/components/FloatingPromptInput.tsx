@@ -26,7 +26,7 @@ interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
    */
-  onSend: (prompt: string, model: "sonnet" | "opus") => void;
+  onSend: (prompt: string, model: "sonnet" | "opus" | "opus-plan") => void;
   /**
    * Whether the input is loading
    */
@@ -38,7 +38,7 @@ interface FloatingPromptInputProps {
   /**
    * Default model to select
    */
-  defaultModel?: "sonnet" | "opus";
+  defaultModel?: "sonnet" | "opus" | "opus-plan";
   /**
    * Project path for file picker
    */
@@ -95,7 +95,7 @@ const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
 };
 
 type Model = {
-  id: "sonnet" | "opus";
+  id: "sonnet" | "opus" | "opus-plan";
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -139,6 +139,12 @@ const FloatingPromptInputInner = (
       name: t('agents.opusName'),
       description: t('agents.opusDescription'),
       icon: <Sparkles className="h-4 w-4" />
+    },
+    {
+      id: "opus-plan",
+      name: t('agents.opusPlanName'),
+      description: t('agents.opusPlanDescription'),
+      icon: <Brain className="h-4 w-4" />
     }
   ];
 
@@ -180,7 +186,7 @@ const FloatingPromptInputInner = (
     }
   ];
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
+  const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus" | "opus-plan">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
