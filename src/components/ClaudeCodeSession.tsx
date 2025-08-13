@@ -16,7 +16,13 @@ import {
   PanelLeftOpen,
   PanelRightOpen,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Eye,
+  EyeOff,
+  FileText,
+  FilePlus,
+  FileX,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +49,14 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useLayoutManager } from "@/hooks";
 // import { GridLayoutContainer, ResponsivePanel } from "@/components/ui/grid-layout";
+
+// 文件变化监控接口
+interface FileChange {
+  path: string;
+  changeType: 'created' | 'modified' | 'deleted' | 'renamed';
+  timestamp: number;
+  oldPath?: string; // 用于重命名操作
+}
 
 // 新增布局组件导入
 import { FlexLayoutContainer } from "@/components/layout/FlexLayoutContainer";
@@ -146,6 +160,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
   
+  // 文件监控相关状态
+  const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
+  const [showFileMonitor, setShowFileMonitor] = useState(false);
+  const [isFileWatching, setIsFileWatching] = useState(false);
+  const [fileMonitorCollapsed, setFileMonitorCollapsed] = useState(false);
+  
   // File editor state
   // 移除重复的状态，使用 layout 中的状态
   // const [editingFile, setEditingFile] = useState<string | null>(null); // 移除，使用 layout.editingFile
@@ -158,6 +178,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
   const sessionStartTime = useRef<number>(Date.now());
+  const fileWatcherUnlistenRef = useRef<UnlistenFn | null>(null);
   
   // Session metrics state for enhanced analytics
   const sessionMetrics = useRef({
@@ -183,6 +204,97 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // const aiTracking = useAIInteractionTracking('sonnet'); // Default model
   const workflowTracking = useWorkflowTracking('claude_session');
   
+  // 启动文件监控
+  const startFileWatching = useCallback(async () => {
+    if (!projectPath || isFileWatching) return;
+    
+    try {
+      console.log('[FileMonitor] Starting file watching for:', projectPath);
+      
+      // 启动文件监控
+      await api.watchDirectory(projectPath, true); // recursive = true
+      setIsFileWatching(true);
+      setShowFileMonitor(true);
+      
+      console.log('[FileMonitor] File watching started successfully');
+      
+      // 监听文件系统变化事件
+      const unlisten = await listen<any>('file-system-change', (event) => {
+        if (!isMountedRef.current) return;
+        
+        const { path, change_type } = event.payload;
+        console.log('[FileMonitor] File change detected:', { path, change_type });
+        
+        // 过滤掉隐藏文件和临时文件
+        const fileName = path.split('/').pop() || '';
+        if (fileName.startsWith('.') || fileName.includes('~') || fileName.endsWith('.tmp')) {
+          return;
+        }
+        
+        const newChange: FileChange = {
+          path: path.replace(projectPath + '/', ''), // 相对路径
+          changeType: change_type,
+          timestamp: Date.now(),
+        };
+        
+        setFileChanges(prev => {
+          // 限制最多保存100个变化记录
+          const updated = [newChange, ...prev].slice(0, 100);
+          return updated;
+        });
+      });
+      
+      fileWatcherUnlistenRef.current = unlisten;
+    } catch (err) {
+      console.error('[FileMonitor] Failed to start file watching:', err);
+      setIsFileWatching(false);
+      setShowFileMonitor(false);
+    }
+  }, [projectPath, isFileWatching]);
+  
+  // 停止文件监控
+  const stopFileWatching = useCallback(async () => {
+    if (!projectPath || !isFileWatching) return;
+    
+    try {
+      console.log('[FileMonitor] Stopping file watching for:', projectPath);
+      
+      // 停止监听事件
+      if (fileWatcherUnlistenRef.current) {
+        fileWatcherUnlistenRef.current();
+        fileWatcherUnlistenRef.current = null;
+      }
+      
+      // 停止文件监控
+      await api.unwatchDirectory(projectPath);
+      setIsFileWatching(false);
+      
+      // 清空文件变化记录
+      setFileChanges([]);
+      
+      console.log('[FileMonitor] File watching stopped successfully');
+    } catch (err) {
+      console.error('[FileMonitor] Failed to stop file watching:', err);
+      // 即使后端出错，也要更新前端状态
+      setIsFileWatching(false);
+      setFileChanges([]);
+    }
+  }, [projectPath, isFileWatching]);
+  
+  // 切换文件监控状态
+  const toggleFileWatching = useCallback(() => {
+    if (isFileWatching) {
+      stopFileWatching();
+    } else {
+      startFileWatching();
+    }
+  }, [isFileWatching, startFileWatching, stopFileWatching]);
+  
+  // 清空文件变化历史
+  const clearFileChanges = useCallback(() => {
+    setFileChanges([]);
+  }, []);
+
   // Keep ref in sync with state
   useEffect(() => {
     queuedPromptsRef.current = queuedPrompts;
@@ -1194,6 +1306,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       unlistenRefs.current.forEach(unlisten => unlisten());
       unlistenRefs.current = [];
       
+      // 清理文件监控
+      if (fileWatcherUnlistenRef.current) {
+        fileWatcherUnlistenRef.current();
+        fileWatcherUnlistenRef.current = null;
+      }
+      
+      // 停止文件监控
+      if (projectPath && isFileWatching) {
+        api.unwatchDirectory(projectPath).catch(err => {
+          console.error("[FileMonitor] Failed to unwatch directory:", err);
+        });
+      }
+      
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
         api.clearCheckpointManager(effectiveSession.id).catch(err => {
@@ -1462,6 +1587,27 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </TooltipProvider>
             )}
             
+            {/* File Monitor Toggle */}
+            {projectPath && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleFileWatching}
+                      className={cn("h-8 w-8", isFileWatching && "text-primary")}
+                    >
+                      {isFileWatching ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isFileWatching ? '停止文件监控' : '启动文件监控'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
             {projectPath && onProjectSettings && (
               <TooltipProvider>
                 <Tooltip>
@@ -1679,6 +1825,96 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       }
                       floatingElements={
                         <>
+                          {/* 文件监控面板 */}
+                          <AnimatePresence>
+                            {showFileMonitor && fileChanges.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 20 }}
+                                className="absolute bottom-20 right-4 z-30 pointer-events-auto w-80"
+                              >
+                                <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-primary" />
+                                      <span className="text-sm font-medium">文件变化监控</span>
+                                      <div className={cn(
+                                        "w-2 h-2 rounded-full",
+                                        isFileWatching ? "bg-green-500" : "bg-gray-400"
+                                      )} />
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setFileMonitorCollapsed(!fileMonitorCollapsed)}
+                                        className="h-6 w-6"
+                                      >
+                                        {fileMonitorCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={clearFileChanges}
+                                        className="h-6 w-6"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  {!fileMonitorCollapsed && (
+                                    <div className="max-h-64 overflow-y-auto space-y-1">
+                                      {fileChanges.map((change, index) => {
+                                        const getChangeIcon = () => {
+                                          switch (change.changeType) {
+                                            case 'created':
+                                              return <FilePlus className="h-3 w-3 text-green-500" />;
+                                            case 'modified':
+                                              return <FileText className="h-3 w-3 text-yellow-500" />;
+                                            case 'deleted':
+                                              return <FileX className="h-3 w-3 text-red-500" />;
+                                            case 'renamed':
+                                              return <FileText className="h-3 w-3 text-blue-500" />;
+                                            default:
+                                              return <FileText className="h-3 w-3 text-gray-500" />;
+                                          }
+                                        };
+                                        
+                                        return (
+                                          <motion.div
+                                            key={`${change.path}-${change.timestamp}`}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.02 }}
+                                            className="flex items-start gap-2 p-2 bg-muted/30 rounded text-xs"
+                                          >
+                                            {getChangeIcon()}
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-mono text-xs truncate" title={change.path}>
+                                                {change.path}
+                                              </div>
+                                              <div className="text-xs text-muted-foreground">
+                                                {change.changeType} • {new Date(change.timestamp).toLocaleTimeString()}
+                                              </div>
+                                            </div>
+                                          </motion.div>
+                                        );
+                                      })}
+                                      
+                                      {fileChanges.length === 0 && isFileWatching && (
+                                        <div className="text-center py-4 text-muted-foreground text-xs">
+                                          监控中，等待文件变化...
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          
                           {/* 排队提示显示 */}
                           <AnimatePresence>
                             {queuedPrompts.length > 0 && (

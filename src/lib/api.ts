@@ -2451,5 +2451,36 @@ export const api = {
       console.error("Failed to get PackyCode user quota:", error);
       throw error;
     }
+  },
+
+  // ============= File System Watching =============
+  
+  /**
+   * Starts watching a directory for file system changes
+   * @param directoryPath - The directory path to watch
+   * @param recursive - Whether to watch subdirectories recursively
+   * @returns Promise resolving when watching starts
+   */
+  async watchDirectory(directoryPath: string, recursive: boolean = true): Promise<void> {
+    try {
+      return await invoke<void>("watch_directory", { path: directoryPath, recursive });
+    } catch (error) {
+      console.error("Failed to watch directory:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Stops watching a directory for file system changes
+   * @param directoryPath - The directory path to stop watching
+   * @returns Promise resolving when watching stops
+   */
+  async unwatchDirectory(directoryPath: string): Promise<void> {
+    try {
+      return await invoke<void>("unwatch_directory", { path: directoryPath });
+    } catch (error) {
+      console.error("Failed to unwatch directory:", error);
+      throw error;
+    }
   }
 };

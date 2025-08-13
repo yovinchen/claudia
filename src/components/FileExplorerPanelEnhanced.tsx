@@ -306,6 +306,35 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isVisible) return;
       
+      // 检查事件目标是否是输入元素
+      const target = e.target as HTMLElement;
+      const isInputElement = target && (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.contentEditable === 'true' ||
+        target.closest('[contenteditable="true"]') !== null ||
+        target.closest('input, textarea, [contenteditable]') !== null
+      );
+      
+      // 如果事件来自输入元素，不处理键盘导航
+      if (isInputElement) {
+        return;
+      }
+      
+      // 检查是否在文件浏览器区域内
+      const explorerPanel = document.querySelector('[data-file-explorer-panel]');
+      if (explorerPanel && !explorerPanel.contains(target)) {
+        // 如果事件不是来自文件浏览器区域，并且有输入元素获得焦点，则不处理
+        const activeElement = document.activeElement;
+        if (activeElement && (
+          activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          (activeElement as HTMLElement).contentEditable === 'true'
+        )) {
+          return;
+        }
+      }
+      
       const currentIndex = flattenedNodes.findIndex(node => node.path === selectedPath);
       if (currentIndex === -1 && flattenedNodes.length > 0) {
         setSelectedPath(flattenedNodes[0].path);
@@ -620,7 +649,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
   if (!isVisible) return null;
   
   return (
-    <div className="flex flex-col h-full border-r border-border">
+    <div className="flex flex-col h-full border-r border-border" data-file-explorer-panel>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center gap-2">

@@ -617,9 +617,24 @@ const FloatingPromptInputInner = (
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker) {
-      e.preventDefault();
-      handleSend();
+    // 处理发送快捷键
+    if (e.key === "Enter") {
+      if (isExpanded) {
+        // 展开模式：Ctrl+Enter发送，Enter换行
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation(); // 防止事件冒泡到窗口级别
+          handleSend();
+        }
+        // 普通Enter键在展开模式下允许换行，不需要处理
+      } else {
+        // 收起模式：Enter发送，Shift+Enter换行
+        if (!e.shiftKey && !showFilePicker && !showSlashCommandPicker) {
+          e.preventDefault();
+          e.stopPropagation(); // 防止事件冒泡到窗口级别
+          handleSend();
+        }
+      }
     }
   };
 
@@ -763,6 +778,7 @@ const FloatingPromptInputInner = (
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 placeholder={t('messages.typeYourPromptHere')}
                 className="min-h-[200px] resize-none"
