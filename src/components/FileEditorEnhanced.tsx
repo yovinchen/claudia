@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   X,
   Save,
@@ -390,104 +389,11 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       });
     });
     
-    // 使用简单的复制处理，避免剪贴板权限问题
-    editor.addAction({
-      id: 'custom-copy',
-      label: 'Copy',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 1.5,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection) {
-          const text = ed.getModel()?.getValueInRange(selection);
-          if (text) {
-            try {
-              // 尝试使用 Tauri 的剪贴板 API
-              await writeText(text).catch(() => {
-                // 如果失败，使用浏览器原生 API
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(text).catch(console.error);
-                }
-              });
-              console.log('[FileEditor] Text copied');
-            } catch (err) {
-              console.error('[FileEditor] Copy failed:', err);
-            }
-          }
-        }
-      }
-    });
+    // 使用系统默认的复制快捷键，避免拦截导致权限/聚焦问题
     
-    editor.addAction({
-      id: 'custom-paste',
-      label: 'Paste',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV],
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 1.6,
-      run: async (ed) => {
-        try {
-          let text = '';
-          try {
-            // 尝试使用 Tauri API
-            text = await readText();
-          } catch {
-            // 如果失败，使用浏览器原生 API
-            if (navigator.clipboard && navigator.clipboard.readText) {
-              text = await navigator.clipboard.readText().catch(() => '');
-            }
-          }
-          
-          if (text) {
-            const selection = ed.getSelection();
-            if (selection) {
-              ed.executeEdits('paste', [{
-                range: selection,
-                text: text,
-                forceMoveMarkers: true
-              }]);
-            }
-          }
-        } catch (err) {
-          console.error('[FileEditor] Paste failed:', err);
-        }
-      }
-    });
+    // 使用系统默认的粘贴快捷键（Cmd/Ctrl+V），避免拦截导致无法粘贴
     
-    editor.addAction({
-      id: 'custom-cut',
-      label: 'Cut',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
-      contextMenuGroupId: 'navigation',
-      contextMenuOrder: 1.4,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection) {
-          const text = ed.getModel()?.getValueInRange(selection);
-          if (text) {
-            try {
-              // 尝试复制到剪贴板
-              await writeText(text).catch(() => {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(text).catch(console.error);
-                }
-              });
-              
-              // 删除选中的文本
-              ed.executeEdits('cut', [{
-                range: selection,
-                text: '',
-                forceMoveMarkers: true
-              }]);
-              
-              console.log('[FileEditor] Text cut');
-            } catch (err) {
-              console.error('[FileEditor] Cut failed:', err);
-            }
-          }
-        }
-      }
-    });
+    // 使用系统默认的剪切快捷键，避免拦截导致不一致行为
     
     // 初始化 Monaco 配置
     initializeMonaco();

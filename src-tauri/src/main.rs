@@ -78,7 +78,7 @@ use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
 use tauri::Manager;
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 
 fn main() {
@@ -95,14 +95,30 @@ fn main() {
                 Target::new(TargetKind::Stdout),
             ])
             .build())
-        // Add an app menu with DevTools toggle for packaged builds
+        // App menu: include standard Edit actions so OS hotkeys (Undo/Redo/Cut/Copy/Paste/Select All)
+        // work across all pages, plus a DevTools toggle.
         .menu(|app| {
             let toggle_devtools = MenuItemBuilder::new("Toggle DevTools")
                 .id("toggle-devtools")
                 .accelerator("CmdOrCtrl+Alt+I")
                 .build(app)
                 .unwrap();
+            // Create a proper "Edit" submenu (macOS expects standard edit actions under Edit)
+            let edit_menu = SubmenuBuilder::new(app, "Edit")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+
             MenuBuilder::new(app)
+                .item(&edit_menu)
+                .separator()
+                // DevTools toggle
                 .item(&toggle_devtools)
                 .build()
         })
