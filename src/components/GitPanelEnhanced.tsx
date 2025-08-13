@@ -620,26 +620,6 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
               )}
             </div>
             <div className="flex items-center gap-1">
-              {/* Debug button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  if (gitStatus) {
-                    console.log('=== GitPanelEnhanced Debug ===');
-                    console.log('Full gitStatus:', gitStatus);
-                    console.log('Untracked files:', gitStatus.untracked);
-                    console.log('Untracked count:', gitStatus.untracked.length);
-                    if (gitStatus.untracked.length > 0) {
-                      console.log('First untracked file:', gitStatus.untracked[0]);
-                    }
-                    alert(`Untracked files: ${gitStatus.untracked.length}\n${JSON.stringify(gitStatus.untracked, null, 2)}`);
-                  }
-                }}
-                className="h-7 w-7"
-              >
-                ?
-              </Button>
               {/* 展开/收起按钮 */}
               <TooltipProvider>
                 <Tooltip>
