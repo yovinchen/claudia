@@ -18,19 +18,19 @@ jobs:
           - platform: 'macos-latest'
             target: 'universal-apple-darwin'
             name: 'macOS'
-          
+
           # Linux x64
           - platform: 'ubuntu-22.04'
             target: ''
             name: 'Linux'
-          
+
           # Windows x64
           - platform: 'windows-latest'
             target: ''
             name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
             ## 📦 下载说明
             
             ### macOS 用户
-            - 下载 `Claudia_*_universal.dmg`
+            - 下载 `Claudia_*.dmg`
             - 首次运行：右键点击应用 → 选择"打开"
             
             ### Windows 用户
