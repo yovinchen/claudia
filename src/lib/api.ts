@@ -2482,5 +2482,35 @@ export const api = {
       console.error("Failed to unwatch directory:", error);
       throw error;
     }
+  },
+
+  // ============= Claude Project Directory Watching =============
+  
+  /**
+   * Starts watching Claude project directory for the given project path
+   * @param projectPath - The project path to find the corresponding Claude directory
+   * @returns Promise resolving when watching starts
+   */
+  async watchClaudeProjectDirectory(projectPath: string): Promise<void> {
+    try {
+      return await invoke<void>("watch_claude_project_directory", { projectPath });
+    } catch (error) {
+      console.error("Failed to watch Claude project directory:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Stops watching Claude project directory for the given project path
+   * @param projectPath - The project path to find the corresponding Claude directory
+   * @returns Promise resolving when watching stops
+   */
+  async unwatchClaudeProjectDirectory(projectPath: string): Promise<void> {
+    try {
+      return await invoke<void>("unwatch_claude_project_directory", { projectPath });
+    } catch (error) {
+      console.error("Failed to unwatch Claude project directory:", error);
+      throw error;
+    }
   }
 };

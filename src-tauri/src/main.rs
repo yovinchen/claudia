@@ -30,6 +30,7 @@ use commands::claude::{
     save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
     track_checkpoint_message, track_session_messages, update_checkpoint_settings,
     get_hooks_config, update_hooks_config, validate_hook_command,
+    watch_claude_project_directory, unwatch_claude_project_directory,
     ClaudeProcessState,
 };
 use commands::mcp::{
@@ -237,6 +238,8 @@ fn main() {
             check_claude_version,
             save_system_prompt,
             save_claude_settings,
+            watch_claude_project_directory,
+            unwatch_claude_project_directory,
             find_claude_md_files,
             read_claude_md_file,
             save_claude_md_file,

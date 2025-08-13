@@ -37,7 +37,7 @@ import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
-import { SlashCommandsManager } from "./SlashCommandsManager";
+import { fileSyncManager } from "@/lib/fileSyncManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SplitPane } from "@/components/ui/split-pane";
@@ -165,6 +165,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showFileMonitor, setShowFileMonitor] = useState(false);
   const [isFileWatching, setIsFileWatching] = useState(false);
   const [fileMonitorCollapsed, setFileMonitorCollapsed] = useState(false);
+  const [fileMonitorExpanded, setFileMonitorExpanded] = useState(false);
   
   // File editor state
   // 移除重复的状态，使用 layout 中的状态
@@ -211,10 +212,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     try {
       console.log('[FileMonitor] Starting file watching for:', projectPath);
       
-      // 启动文件监控
+      // 启动项目目录文件监控
       await api.watchDirectory(projectPath, true); // recursive = true
+      
+      // 启动 Claude 项目目录监控
+      try {
+        await api.watchClaudeProjectDirectory(projectPath);
+        console.log('[FileMonitor] Claude project directory watching started for:', projectPath);
+      } catch (claudeErr) {
+        console.warn('[FileMonitor] Failed to start Claude project directory watching:', claudeErr);
+        // 不影响主要的文件监控功能
+      }
+      
       setIsFileWatching(true);
-      setShowFileMonitor(true);
       
       console.log('[FileMonitor] File watching started successfully');
       
@@ -231,8 +241,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           return;
         }
         
+        // 通知文件同步管理器
+        fileSyncManager.notifyFileChange(path, change_type);
+        
+        // 判断是否是 Claude 项目文件变化
+        const isClaudeProjectFile = path.includes('/.claude/projects/');
+        const displayPath = isClaudeProjectFile 
+          ? path.replace(/.*\/\.claude\/projects\/[^/]+\//, '[Claude] ') // 简化 Claude 项目文件路径显示
+          : path.replace(projectPath + '/', ''); // 项目文件相对路径
+        
         const newChange: FileChange = {
-          path: path.replace(projectPath + '/', ''), // 相对路径
+          path: displayPath,
           changeType: change_type,
           timestamp: Date.now(),
         };
@@ -242,13 +261,25 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           const updated = [newChange, ...prev].slice(0, 100);
           return updated;
         });
+        
+        // 如果是 Claude 项目文件变化且文件被修改，重新加载会话历史
+        if (isClaudeProjectFile && change_type === 'modified' && session) {
+          const fileName = path.split('/').pop() || '';
+          // 检查是否是当前会话的 JSONL 文件
+          if (fileName === `${session.id}.jsonl`) {
+            console.log('[FileMonitor] Claude session file updated, reloading history');
+            // 使用 setTimeout 避免频繁刷新
+            setTimeout(() => {
+              loadSessionHistory();
+            }, 500);
+          }
+        }
       });
       
       fileWatcherUnlistenRef.current = unlisten;
     } catch (err) {
       console.error('[FileMonitor] Failed to start file watching:', err);
       setIsFileWatching(false);
-      setShowFileMonitor(false);
     }
   }, [projectPath, isFileWatching]);
   
@@ -265,8 +296,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         fileWatcherUnlistenRef.current = null;
       }
       
-      // 停止文件监控
+      // 停止项目目录文件监控
       await api.unwatchDirectory(projectPath);
+      
+      // 停止 Claude 项目目录监控
+      try {
+        await api.unwatchClaudeProjectDirectory(projectPath);
+        console.log('[FileMonitor] Claude project directory watching stopped for:', projectPath);
+      } catch (claudeErr) {
+        console.warn('[FileMonitor] Failed to stop Claude project directory watching:', claudeErr);
+        // 不影响主要的停止功能
+      }
+      
       setIsFileWatching(false);
       
       // 清空文件变化记录
@@ -478,6 +519,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
+      
+      // 加载完成后自动滚动到底部
+      setTimeout(() => {
+        scrollToBottom();
+      }, 200);
     } catch (err) {
       console.error("Failed to load session history:", err);
       setError("Failed to load session history");
@@ -1397,15 +1443,46 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         </motion.div>
       )}
       
-      {/* 滚动按钮 */}
+      {/* 滚动按钮和文件监控小点 */}
       <AnimatePresence>
-        {showScrollButtons && (
+        {(showScrollButtons || isFileWatching) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             className="fixed bottom-20 right-6 z-40 flex flex-col gap-2"
           >
+            {/* 文件监控小绿点 */}
+            {isFileWatching && !fileMonitorExpanded && (
+              <div
+                onClick={() => setFileMonitorExpanded(true)}
+                className="relative cursor-pointer group self-center"
+              >
+                <div className={cn(
+                  "w-4 h-4 rounded-full shadow-lg border-2 border-background transition-all duration-200 group-hover:scale-110",
+                  isFileWatching ? "bg-green-500" : "bg-gray-400"
+                )}>
+                  {/* 脉冲效果 */}
+                  {isFileWatching && fileChanges.length > 0 && (
+                    <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-30" />
+                  )}
+                </div>
+                
+                {/* 悬浮提示 */}
+                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-background/95 backdrop-blur-sm border rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                  文件监控 {fileChanges.length > 0 && `(${fileChanges.length})`}
+                </div>
+                
+                {/* 变化数量小徽章 */}
+                {fileChanges.length > 0 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
+                    {fileChanges.length > 9 ? '9+' : fileChanges.length}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 滚动到顶部按钮 */}
             {!isAtTop && (
               <TooltipProvider>
                 <Tooltip>
@@ -1425,6 +1502,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 </Tooltip>
               </TooltipProvider>
             )}
+            
+            {/* 滚动到底部按钮 */}
             {!isAtBottom && (
               <TooltipProvider>
                 <Tooltip>
@@ -1825,14 +1904,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       }
                       floatingElements={
                         <>
-                          {/* 文件监控面板 */}
+                          {/* 文件监控展开面板 */}
                           <AnimatePresence>
-                            {showFileMonitor && fileChanges.length > 0 && (
+                            {isFileWatching && fileMonitorExpanded && (
                               <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 20 }}
-                                className="absolute bottom-20 right-4 z-30 pointer-events-auto w-80"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="fixed bottom-20 right-4 z-30 pointer-events-auto w-80"
                               >
                                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3">
                                   <div className="flex items-center justify-between mb-3">
@@ -1857,6 +1936,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                         variant="ghost"
                                         size="icon"
                                         onClick={clearFileChanges}
+                                        className="h-6 w-6"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setFileMonitorExpanded(false)}
                                         className="h-6 w-6"
                                       >
                                         <X className="h-3 w-3" />

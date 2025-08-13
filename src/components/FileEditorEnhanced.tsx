@@ -41,6 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { fileSyncManager } from "@/lib/fileSyncManager";
 
 interface FileEditorEnhancedProps {
   filePath: string;
@@ -472,8 +473,39 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [hasChanges, saveFile, isFullscreen]);
   
-  // 使用真正的文件系统监听
+  // 使用文件同步管理器监听文件变化
   useEffect(() => {
+    if (!filePath) return;
+
+    const listenerId = `file-editor-${filePath}`;
+    
+    // 注册文件变化监听器
+    fileSyncManager.registerChangeListener(
+      listenerId,
+      filePath,
+      (changedPath, changeType) => {
+        // 检查是否是当前文件的变化
+        if (changedPath === filePath && (changeType === 'modified' || changeType === 'created')) {
+          // 检查时间间隔，避免自己保存触发的事件
+          const timeSinceLastSave = Date.now() - lastCheckTime;
+          
+          if (timeSinceLastSave > 1000) { // 超过1秒，可能是外部修改
+            console.log('[FileEditor] File changed externally via FileSyncManager:', changedPath, changeType);
+            setFileChanged(true);
+            
+            // 如果没有未保存的更改，自动重新加载
+            if (!hasChanges) {
+              console.log('[FileEditor] Auto-reloading file content');
+              loadFile();
+            } else {
+              // 显示提示
+              setError("文件已被外部程序修改，点击重新加载按钮查看最新内容");
+            }
+          }
+        }
+      }
+    );
+
     const setupFileWatcher = async () => {
       if (!filePath) return;
       
@@ -485,7 +517,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
           recursive: false 
         });
         
-        // 监听文件变化事件
+        // 监听文件变化事件（作为备用）
         unlistenRef.current = await listen('file-system-change', (event: any) => {
           const { path, change_type } = event.payload;
           
@@ -495,7 +527,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
             const timeSinceLastSave = Date.now() - lastCheckTime;
             
             if (timeSinceLastSave > 1000) { // 超过1秒，可能是外部修改
-              console.log('File changed externally:', path, change_type);
+              console.log('[FileEditor] File changed externally (fallback):', path, change_type);
               setFileChanged(true);
               
               // 如果没有未保存的更改，自动重新加载
@@ -553,6 +585,9 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
     
     // 清理函数
     return () => {
+      // 注销文件同步管理器监听器
+      fileSyncManager.unregisterListener(listenerId, filePath);
+      
       // 停止监听
       if (filePath) {
         const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));

@@ -284,6 +284,92 @@ fn create_system_command(
     cmd
 }
 
+/// Starts watching the Claude projects directory for the specific project
+#[tauri::command]
+pub async fn watch_claude_project_directory(
+    project_path: String,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    use crate::file_watcher::FileWatcherState;
+    
+    log::info!("Starting to watch Claude project directory for project: {}", project_path);
+    
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let projects_dir = claude_dir.join("projects");
+    
+    if !projects_dir.exists() {
+        return Err("Claude projects directory does not exist".to_string());
+    }
+    
+    // 找到对应项目的目录
+    if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    // 检查是否是当前项目的目录
+                    if let Ok(found_project_path) = get_project_path_from_sessions(&path) {
+                        if found_project_path == project_path {
+                            // 找到了对应的项目目录，开始监控
+                            let file_watcher_state = app_handle.state::<FileWatcherState>();
+                            let path_str = path.to_string_lossy().to_string();
+                            
+                            return file_watcher_state.with_manager(|manager| {
+                                manager.watch_path(&path_str, false)
+                            }).map_err(|e| format!("Failed to watch Claude project directory: {}", e));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Err("Could not find Claude project directory for the given project path".to_string())
+}
+
+/// Stops watching the Claude projects directory
+#[tauri::command]
+pub async fn unwatch_claude_project_directory(
+    project_path: String,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    use crate::file_watcher::FileWatcherState;
+    
+    log::info!("Stopping watch on Claude project directory for project: {}", project_path);
+    
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let projects_dir = claude_dir.join("projects");
+    
+    if !projects_dir.exists() {
+        return Ok(()); // 目录不存在，视为成功
+    }
+    
+    // 找到对应项目的目录
+    if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    // 检查是否是当前项目的目录
+                    if let Ok(found_project_path) = get_project_path_from_sessions(&path) {
+                        if found_project_path == project_path {
+                            // 找到了对应的项目目录，停止监控
+                            let file_watcher_state = app_handle.state::<FileWatcherState>();
+                            let path_str = path.to_string_lossy().to_string();
+                            
+                            return file_watcher_state.with_manager(|manager| {
+                                manager.unwatch_path(&path_str)
+                            }).map_err(|e| format!("Failed to stop watching Claude project directory: {}", e));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<Project>, String> {
