@@ -27,7 +27,7 @@ class AnalyticsService {
     
     // Default configuration - pulled from Vite environment variables
     this.config = {
-      apiKey: import.meta.env.VITE_PUBLIC_POSTHOG_KEY || 'phc_YOUR_PROJECT_API_KEY',
+      apiKey: (import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined) || '',
       apiHost: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
       persistence: 'localStorage',
       autocapture: false, // We'll manually track events
@@ -66,6 +66,11 @@ class AnalyticsService {
   
   private initializePostHog(settings: AnalyticsSettings): void {
     try {
+      // Guard: do not initialize PostHog without a valid API key
+      if (!this.config.apiKey) {
+        console.info('Analytics: PostHog not initialized (no API key provided)');
+        return;
+      }
       posthog.init(this.config.apiKey, {
         api_host: this.config.apiHost,
         capture_pageview: false, // Disable automatic pageview capture

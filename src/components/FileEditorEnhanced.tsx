@@ -166,6 +166,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isApplyingContentRef = useRef(false);
   const unlistenRef = useRef<UnlistenFn | null>(null);
   
   const fileName = filePath.split("/").pop() || filePath;
@@ -250,6 +251,9 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
   
   // 处理内容变化
   const handleContentChange = useCallback((value: string | undefined) => {
+    if (isApplyingContentRef.current) {
+      return;
+    }
     console.log('[FileEditor] Content change detected, new length:', value?.length);
     if (value !== undefined) {
       setContent(value);
@@ -263,6 +267,21 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       }
     }
   }, [originalContent, language]);
+
+  // 确保 Monaco 模型与 React state 同步，避免初始不显示或切换文件后不同步
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const model = ed.getModel();
+    if (!model) return;
+    const current = model.getValue();
+    if (content !== undefined && current !== content) {
+      console.log('[FileEditor] Syncing editor model from state');
+      isApplyingContentRef.current = true;
+      model.setValue(content);
+      isApplyingContentRef.current = false;
+    }
+  }, [content, filePath]);
   
   // 验证代码
   const validateCode = async (_code: string) => {
@@ -1011,8 +1030,10 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       ) : (
         <div className="flex-1 min-h-0">
           <Editor
+            key={filePath}
             height="100%"
             language={language}
+            path={filePath}
             value={content}
             onChange={handleContentChange}
             onMount={handleEditorDidMount}

@@ -586,9 +586,17 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 
                 // Use regex to directly extract version pattern (e.g., "1.0.41")
                 let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                
+
+                // Combine stdout and stderr for version extraction (some tools write version to stderr)
+                let mut version_src = stdout.clone();
+                if !stderr.is_empty() {
+                    version_src.push('\n');
+                    version_src.push_str(&stderr);
+                }
+
                 let version = if let Some(regex) = version_regex {
-                    regex.captures(&stdout)
+                    regex
+                        .captures(&version_src)
                         .and_then(|captures| captures.get(1))
                         .map(|m| m.as_str().to_string())
                 } else {
@@ -603,7 +611,11 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
 
                 // Check if the output matches the expected format
                 // Expected format: "1.0.17 (Claude Code)" or similar
-                let is_valid = stdout.contains("(Claude Code)") || stdout.contains("Claude Code");
+                let is_valid =
+                    stdout.contains("(Claude Code)")
+                    || stdout.contains("Claude Code")
+                    || stderr.contains("(Claude Code)")
+                    || stderr.contains("Claude Code");
 
                 Ok(ClaudeVersionStatus {
                     is_installed: is_valid && output.status.success(),

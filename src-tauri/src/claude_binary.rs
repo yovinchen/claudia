@@ -316,7 +316,14 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     if let Ok(output) = Command::new("claude").arg("--version").output() {
         if output.status.success() {
             debug!("claude is available in PATH");
-            let version = extract_version_from_output(&output.stdout);
+            // Combine stdout and stderr for robust version extraction
+            let mut combined: Vec<u8> = Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
+            combined.extend_from_slice(&output.stdout);
+            if !output.stderr.is_empty() {
+                combined.extend_from_slice(b"\n");
+                combined.extend_from_slice(&output.stderr);
+            }
+            let version = extract_version_from_output(&combined);
 
             installations.push(ClaudeInstallation {
                 path: "claude".to_string(),
@@ -335,7 +342,14 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
     match Command::new(path).arg("--version").output() {
         Ok(output) => {
             if output.status.success() {
-                Ok(extract_version_from_output(&output.stdout))
+                // Combine stdout and stderr for robust version extraction
+                let mut combined: Vec<u8> = Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
+                combined.extend_from_slice(&output.stdout);
+                if !output.stderr.is_empty() {
+                    combined.extend_from_slice(b"\n");
+                    combined.extend_from_slice(&output.stderr);
+                }
+                Ok(extract_version_from_output(&combined))
             } else {
                 Ok(None)
             }

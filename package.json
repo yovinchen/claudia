@@ -5,11 +5,13 @@
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
+    "predev": "node ./scripts/copy-monaco.mjs",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && node ./scripts/copy-monaco.mjs && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "check": "tsc --noEmit && cd src-tauri && cargo check"
+    "check": "tsc --noEmit && cd src-tauri && cargo check",
+    "postinstall": "node ./scripts/copy-monaco.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

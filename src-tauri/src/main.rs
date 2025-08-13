@@ -78,16 +78,41 @@ use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri_plugin_log::{Target, TargetKind};
 
 fn main() {
-    // Initialize logger
-    env_logger::init();
-
+    // Logging is initialized by tauri-plugin-log
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_log::Builder::new()
+            .level(log::LevelFilter::Debug)
+            .targets([
+                Target::new(TargetKind::LogDir { file_name: None }),
+                Target::new(TargetKind::Stdout),
+            ])
+            .build())
+        // Add an app menu with DevTools toggle for packaged builds
+        .menu(|app| {
+            let toggle_devtools = MenuItemBuilder::new("Toggle DevTools")
+                .id("toggle-devtools")
+                .accelerator("CmdOrCtrl+Alt+I")
+                .build(app)
+                .unwrap();
+            MenuBuilder::new(app)
+                .item(&toggle_devtools)
+                .build()
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == "toggle-devtools" {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.open_devtools();
+                }
+            }
+        })
         .setup(|app| {
             // Initialize agents database
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
@@ -178,6 +203,12 @@ fn main() {
             app.manage(UsageIndexState::default());
             app.manage(UsageCacheState::default());
 
+            // Optionally auto-open DevTools if env var is set (works in packaged builds)
+            if std::env::var("TAURI_OPEN_DEVTOOLS").ok().as_deref() == Some("1") {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.open_devtools();
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

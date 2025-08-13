@@ -74,8 +74,8 @@ export const Topbar: React.FC<TopbarProps> = ({
       const status = await api.checkClaudeVersion();
       setVersionStatus(status);
       
-      // If Claude is not installed and the error indicates it wasn't found
-      if (!status.is_installed && status.output.includes("No such file or directory")) {
+      // If Claude is not installed, prompt the selection/install dialog
+      if (!status.is_installed) {
         // Emit an event that can be caught by the parent
         window.dispatchEvent(new CustomEvent('claude-not-found'));
       }
