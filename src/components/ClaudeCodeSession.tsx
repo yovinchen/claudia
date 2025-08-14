@@ -1581,7 +1581,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             isMaximized={layout.isTerminalMaximized}
             onToggleMaximize={toggleTerminalMaximize}
             projectPath={projectPath}
-            className="h-full"
+            className="h-full w-full"
           />
         </motion.div>
       </AnimatePresence>
@@ -1896,7 +1896,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       isMaximized={layout.isTerminalMaximized}
                       onToggleMaximize={toggleTerminalMaximize}
                       projectPath={projectPath}
-                      className="h-full"
+                      className="h-full w-full"
                     />
                   ) : layout.activeView === 'editor' && layout.editingFile ? (
                     // 文件编辑器视图

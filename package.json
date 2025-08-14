@@ -61,7 +61,6 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.1.8",
     "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
     "xterm-addon-search": "^0.13.0",
     "xterm-addon-unicode11": "^0.6.0",
     "xterm-addon-web-links": "^0.9.0",

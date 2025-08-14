@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal as XTerm } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon } from 'xterm-addon-search';
 import 'xterm/css/xterm.css';
@@ -26,27 +25,83 @@ export const Terminal: React.FC<TerminalProps> = ({
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
   const isInitializedRef = useRef(false);
   const unlistenRef = useRef<(() => void) | null>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [isConnected, setIsConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [terminalSize, setTerminalSize] = useState({ cols: 80, rows: 24 });
 
-  // 调整终端大小
-  const handleResize = useCallback(() => {
-    if (fitAddonRef.current) {
-      setTimeout(() => {
-        try {
-          fitAddonRef.current?.fit();
-        } catch (error) {
-          console.warn('Terminal resize failed:', error);
-        }
-      }, 100);
-    }
+  // 计算终端应该有的尺寸
+  const calculateOptimalSize = useCallback(() => {
+    if (!terminalRef.current) return { cols: 80, rows: 24 };
+    
+    const container = terminalRef.current;
+    const rect = container.getBoundingClientRect();
+    
+    // 获取或估算字符尺寸
+    const fontSize = 14; // 我们设置的字体大小
+    const charWidth = fontSize * 0.6; // 等宽字体的典型宽度比例
+    const lineHeight = fontSize * 1.2; // 行高
+    
+    // 计算能容纳的最大列数和行数
+    // 减去一些像素避免滚动条
+    const cols = Math.max(80, Math.floor((rect.width - 2) / charWidth));
+    const rows = Math.max(24, Math.floor((rect.height - 2) / lineHeight));
+    
+    console.log('[Terminal] Calculated size:', {
+      containerWidth: rect.width,
+      containerHeight: rect.height,
+      cols,
+      rows,
+      charWidth,
+      lineHeight
+    });
+    
+    return { cols, rows };
   }, []);
 
-  // 初始化和启动终端 - 只运行一次
+  // 调整终端大小
+  const resizeTerminal = useCallback(() => {
+    if (!xtermRef.current || !terminalRef.current) return;
+    
+    const newSize = calculateOptimalSize();
+    
+    // 只有当尺寸真的改变时才调整
+    if (newSize.cols !== terminalSize.cols || newSize.rows !== terminalSize.rows) {
+      console.log('[Terminal] Resizing from', terminalSize, 'to', newSize);
+      
+      setTerminalSize(newSize);
+      xtermRef.current.resize(newSize.cols, newSize.rows);
+      
+      // 更新后端
+      if (sessionId) {
+        api.resizeTerminal(sessionId, newSize.cols, newSize.rows).catch(console.error);
+      }
+      
+      // 强制刷新渲染
+      if ((xtermRef.current as any)._core) {
+        const core = (xtermRef.current as any)._core;
+        if (core._renderService) {
+          core._renderService.onResize(newSize.cols, newSize.rows);
+        }
+      }
+    }
+  }, [calculateOptimalSize, terminalSize, sessionId]);
+
+  // 防抖的resize处理
+  const handleResize = useCallback(() => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    
+    resizeTimeoutRef.current = setTimeout(() => {
+      resizeTerminal();
+    }, 100);
+  }, [resizeTerminal]);
+
+  // 初始化终端
   useEffect(() => {
     if (isInitializedRef.current || !terminalRef.current) return;
     
@@ -54,18 +109,23 @@ export const Terminal: React.FC<TerminalProps> = ({
     
     const initializeTerminal = async () => {
       try {
-        console.log('Initializing terminal...');
+        console.log('[Terminal] Initializing...');
         isInitializedRef.current = true;
+
+        // 先计算初始尺寸
+        const initialSize = calculateOptimalSize();
+        setTerminalSize(initialSize);
 
         // 创建终端实例
         const xterm = new XTerm({
+          cols: initialSize.cols,
+          rows: initialSize.rows,
           theme: {
             background: '#1e1e1e',
             foreground: '#d4d4d4',
             cursor: '#ffffff',
             cursorAccent: '#000000',
             selectionBackground: '#264f78',
-            // ANSI 颜色
             black: '#000000',
             red: '#cd3131',
             green: '#0dbc79',
@@ -83,16 +143,12 @@ export const Terminal: React.FC<TerminalProps> = ({
             brightCyan: '#29b8db',
             brightWhite: '#e5e5e5',
           },
-          // 使用支持 Powerline 和 Nerd Font 的字体
-          fontFamily: '"MesloLGS NF", "JetBrainsMono Nerd Font", "FiraCode Nerd Font", "Hack Nerd Font", "SauceCodePro Nerd Font", "JetBrains Mono", "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Source Code Pro", monospace',
+          fontFamily: '"MesloLGS NF", "JetBrainsMono Nerd Font", "FiraCode Nerd Font", "Hack Nerd Font", "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New", monospace',
           fontSize: 14,
           fontWeight: 'normal',
           fontWeightBold: 'bold',
           lineHeight: 1.2,
           letterSpacing: 0,
-          cols: 80,
-          rows: 24,
-          allowTransparency: false,
           scrollback: 10000,
           convertEol: true,
           cursorBlink: true,
@@ -100,47 +156,39 @@ export const Terminal: React.FC<TerminalProps> = ({
           drawBoldTextInBrightColors: true,
           macOptionIsMeta: true,
           rightClickSelectsWord: true,
-          // 启用提议的 API 以支持 Unicode 插件
           allowProposedApi: true,
-          // 使用 canvas 渲染器以获得更好的性能
-          // @ts-ignore - xterm.js 类型定义可能过时
+          // @ts-ignore
           rendererType: 'canvas',
           windowsMode: false,
         });
 
         // 添加插件
-        const fitAddon = new FitAddon();
         const webLinksAddon = new WebLinksAddon();
         const searchAddon = new SearchAddon();
-
-        xterm.loadAddon(fitAddon);
+        
         xterm.loadAddon(webLinksAddon);
         xterm.loadAddon(searchAddon);
 
         // 打开终端
         if (terminalRef.current) {
           xterm.open(terminalRef.current);
+        } else {
+          console.error('[Terminal] Terminal container ref is null');
+          return;
         }
         
-        // 适应容器大小 - 延迟一点确保容器尺寸计算正确
-        setTimeout(() => {
-          fitAddon.fit();
-          // 发送 resize 命令到后端（虽然当前未实现）
-          const { cols, rows } = fitAddon.proposeDimensions() || { cols: 120, rows: 30 };
-          if (newSessionId) {
-            api.resizeTerminal(newSessionId, cols, rows).catch(console.error);
-          }
-        }, 150);
-
-        // 存储引用
+        // 保存引用
         xtermRef.current = xterm;
-        fitAddonRef.current = fitAddon;
+
+        // 延迟一下确保渲染完成，然后调整尺寸
+        setTimeout(() => {
+          resizeTerminal();
+        }, 100);
 
         // 创建终端会话
         const newSessionId = await api.createTerminalSession(projectPath || process.cwd());
         
         if (!isMounted) {
-          // 如果组件已卸载，清理会话
           await api.closeTerminalSession(newSessionId);
           return;
         }
@@ -158,21 +206,18 @@ export const Terminal: React.FC<TerminalProps> = ({
         unlistenRef.current = unlisten;
 
         // 监听数据输入
-        // 使用PTY后，shell会自动处理回显
         xterm.onData((data) => {
-          console.log('Terminal onData received:', JSON.stringify(data), 'Session ID:', newSessionId);
           if (newSessionId && isMounted) {
-            // 直接发送数据到PTY，PTY会处理回显
             api.sendTerminalInput(newSessionId, data).catch((error) => {
-              console.error('Failed to send terminal input:', error);
+              console.error('[Terminal] Failed to send input:', error);
             });
           }
         });
 
-        console.log('Terminal initialized with session:', newSessionId);
+        console.log('[Terminal] Initialized with session:', newSessionId);
 
       } catch (error) {
-        console.error('Failed to initialize terminal:', error);
+        console.error('[Terminal] Failed to initialize:', error);
         if (xtermRef.current && isMounted) {
           xtermRef.current.write('\r\n\x1b[31mFailed to start terminal session\x1b[0m\r\n');
         }
@@ -184,50 +229,58 @@ export const Terminal: React.FC<TerminalProps> = ({
     return () => {
       isMounted = false;
       
-      // 清理监听器
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      
       if (unlistenRef.current) {
         unlistenRef.current();
         unlistenRef.current = null;
       }
 
-      // 关闭会话
       if (sessionId) {
         api.closeTerminalSession(sessionId).catch(console.error);
       }
 
-      // 清理终端实例
       if (xtermRef.current) {
         xtermRef.current.dispose();
         xtermRef.current = null;
       }
       
-      fitAddonRef.current = null;
       isInitializedRef.current = false;
 
-      // 清理孤儿会话
       setTimeout(() => {
         api.cleanupTerminalSessions().catch(console.error);
       }, 1000);
     };
-  }, []); // 空依赖数组 - 只运行一次
+  }, []); // 只运行一次
 
-  // 监听窗口大小变化
+  // 监听容器大小变化
   useEffect(() => {
-    const handleWindowResize = () => handleResize();
-    window.addEventListener('resize', handleWindowResize);
+    if (!terminalRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    
+    resizeObserver.observe(terminalRef.current);
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize);
     
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
     };
   }, [handleResize]);
 
-  // 当最大化状态改变时调整大小
+  // 最大化状态改变时调整大小
   useEffect(() => {
     handleResize();
   }, [isMaximized, handleResize]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-[#1e1e1e]', className)}>
+    <div className={cn('flex flex-col h-full w-full bg-[#1e1e1e]', className)}>
       {/* 终端头部 */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-700">
         <div className="flex items-center gap-2">
@@ -245,6 +298,9 @@ export const Terminal: React.FC<TerminalProps> = ({
               {projectPath}
             </span>
           )}
+          <span className="text-xs text-gray-400">
+            {terminalSize.cols}×{terminalSize.rows}
+          </span>
         </div>
         
         <div className="flex items-center gap-1">
@@ -276,10 +332,10 @@ export const Terminal: React.FC<TerminalProps> = ({
       </div>
 
       {/* 终端主体 */}
-      <div className="flex-1 relative bg-[#1e1e1e]">
+      <div className="flex-1 relative overflow-hidden">
         <div
           ref={terminalRef}
-          className="absolute inset-0"
+          className="absolute inset-0 p-1"
           style={{
             backgroundColor: '#1e1e1e',
           }}

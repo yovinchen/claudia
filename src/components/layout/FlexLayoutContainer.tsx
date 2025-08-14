@@ -104,10 +104,10 @@ export const FlexLayoutContainer: React.FC<FlexLayoutContainerProps> = ({
         key={panel.id}
         className={cn(
           'relative h-full',
-          isMain ? 'flex-1 min-w-0' : 'overflow-hidden',
+          isMain ? 'flex-1 min-w-0 w-full overflow-hidden' : 'overflow-hidden',
           panel.className
         )}
-        style={!isMain ? { width, flexShrink: 0 } : undefined}
+        style={!isMain ? { width, flexShrink: 0 } : { width: '100%' }}
       >
         {panel.content}
         
