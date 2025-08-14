@@ -60,21 +60,52 @@ export const Terminal: React.FC<TerminalProps> = ({
         // 创建终端实例
         const xterm = new XTerm({
           theme: {
-            background: '#000000',
-            foreground: '#ffffff',
+            background: '#1e1e1e',
+            foreground: '#d4d4d4',
             cursor: '#ffffff',
             cursorAccent: '#000000',
-            selectionBackground: '#404040',
+            selectionBackground: '#264f78',
+            // ANSI 颜色
+            black: '#000000',
+            red: '#cd3131',
+            green: '#0dbc79',
+            yellow: '#e5e510',
+            blue: '#2472c8',
+            magenta: '#bc3fbc',
+            cyan: '#11a8cd',
+            white: '#e5e5e5',
+            brightBlack: '#666666',
+            brightRed: '#f14c4c',
+            brightGreen: '#23d18b',
+            brightYellow: '#f5f543',
+            brightBlue: '#3b8eea',
+            brightMagenta: '#d670d6',
+            brightCyan: '#29b8db',
+            brightWhite: '#e5e5e5',
           },
-          fontFamily: '"JetBrains Mono", "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Source Code Pro", monospace',
+          // 使用支持 Powerline 和 Nerd Font 的字体
+          fontFamily: '"MesloLGS NF", "JetBrainsMono Nerd Font", "FiraCode Nerd Font", "Hack Nerd Font", "SauceCodePro Nerd Font", "JetBrains Mono", "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Source Code Pro", monospace',
           fontSize: 14,
+          fontWeight: 'normal',
+          fontWeightBold: 'bold',
           lineHeight: 1.2,
+          letterSpacing: 0,
           cols: 80,
           rows: 24,
-          allowTransparency: true,
-          scrollback: 1000,
+          allowTransparency: false,
+          scrollback: 10000,
           convertEol: true,
           cursorBlink: true,
+          cursorStyle: 'block',
+          drawBoldTextInBrightColors: true,
+          macOptionIsMeta: true,
+          rightClickSelectsWord: true,
+          // 启用提议的 API 以支持 Unicode 插件
+          allowProposedApi: true,
+          // 使用 canvas 渲染器以获得更好的性能
+          // @ts-ignore - xterm.js 类型定义可能过时
+          rendererType: 'canvas',
+          windowsMode: false,
         });
 
         // 添加插件
@@ -91,8 +122,15 @@ export const Terminal: React.FC<TerminalProps> = ({
           xterm.open(terminalRef.current);
         }
         
-        // 适应容器大小
-        setTimeout(() => fitAddon.fit(), 100);
+        // 适应容器大小 - 延迟一点确保容器尺寸计算正确
+        setTimeout(() => {
+          fitAddon.fit();
+          // 发送 resize 命令到后端（虽然当前未实现）
+          const { cols, rows } = fitAddon.proposeDimensions() || { cols: 120, rows: 30 };
+          if (newSessionId) {
+            api.resizeTerminal(newSessionId, cols, rows).catch(console.error);
+          }
+        }, 150);
 
         // 存储引用
         xtermRef.current = xterm;
@@ -189,7 +227,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   }, [isMaximized, handleResize]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-black', className)}>
+    <div className={cn('flex flex-col h-full bg-[#1e1e1e]', className)}>
       {/* 终端头部 */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-700">
         <div className="flex items-center gap-2">
@@ -238,12 +276,12 @@ export const Terminal: React.FC<TerminalProps> = ({
       </div>
 
       {/* 终端主体 */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-[#1e1e1e]">
         <div
           ref={terminalRef}
-          className="absolute inset-0 p-2"
+          className="absolute inset-0"
           style={{
-            backgroundColor: 'transparent',
+            backgroundColor: '#1e1e1e',
           }}
         />
         

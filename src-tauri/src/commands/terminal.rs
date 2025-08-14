@@ -52,8 +52,8 @@ pub async fn create_terminal_session(
     
     // Create PTY pair with size
     let pty_pair = pty_system.openpty(PtySize {
-        rows: 24,
-        cols: 80,
+        rows: 30,
+        cols: 120,
         pixel_width: 0,
         pixel_height: 0,
     }).map_err(|e| format!("Failed to create PTY: {}", e))?;
@@ -75,6 +75,16 @@ pub async fn create_terminal_session(
     // Set environment variables
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
+    cmd.env("LANG", std::env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+    cmd.env("LC_ALL", std::env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+    cmd.env("LC_CTYPE", std::env::var("LC_CTYPE").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+    
+    // 继承其他环境变量
+    for (key, value) in std::env::vars() {
+        if !key.starts_with("TERM") && !key.starts_with("COLORTERM") && !key.starts_with("LC_") && !key.starts_with("LANG") {
+            cmd.env(&key, &value);
+        }
+    }
     
     // Spawn the shell process
     let _child = pty_pair.slave.spawn_command(cmd)
