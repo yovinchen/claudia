@@ -75,6 +75,10 @@ use commands::filesystem::{
 use commands::git::{
     get_git_status, get_git_history, get_git_branches, get_git_diff, get_git_commits,
 };
+use commands::terminal::{
+    create_terminal_session, send_terminal_input, close_terminal_session,
+    list_terminal_sessions, resize_terminal, cleanup_terminal_sessions, TerminalState,
+};
 use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
@@ -219,6 +223,9 @@ fn main() {
             // Initialize Usage Index state
             app.manage(UsageIndexState::default());
             app.manage(UsageCacheState::default());
+
+            // Initialize Terminal state
+            app.manage(TerminalState::default());
 
             // Optionally auto-open DevTools if env var is set (works in packaged builds)
             if std::env::var("TAURI_OPEN_DEVTOOLS").ok().as_deref() == Some("1") {
@@ -402,6 +409,14 @@ fn main() {
             get_git_branches,
             get_git_diff,
             get_git_commits,
+            
+            // Terminal
+            create_terminal_session,
+            send_terminal_input,
+            close_terminal_session,
+            list_terminal_sessions,
+            resize_terminal,
+            cleanup_terminal_sessions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

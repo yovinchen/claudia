@@ -13,3 +13,4 @@ pub mod relay_adapters;
 pub mod packycode_nodes;
 pub mod filesystem;
 pub mod git;
+pub mod terminal;

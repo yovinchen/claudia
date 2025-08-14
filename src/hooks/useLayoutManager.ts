@@ -9,9 +9,10 @@ interface LayoutState {
   showTimeline: boolean;
   splitPosition: number;
   isCompactMode: boolean;
-  activeView: 'chat' | 'editor' | 'preview';  // 新增：当前活动视图
+  activeView: 'chat' | 'editor' | 'preview' | 'terminal';  // 新增终端视图
   editingFile: string | null;  // 新增：正在编辑的文件
   previewUrl: string | null;  // 新增：预览URL
+  isTerminalMaximized: boolean;  // 新增：终端是否最大化
 }
 
 interface LayoutBreakpoints {
@@ -35,6 +36,7 @@ const DEFAULT_LAYOUT: LayoutState = {
   activeView: 'chat',  // 默认显示聊天视图
   editingFile: null,
   previewUrl: null,
+  isTerminalMaximized: false,  // 默认终端不最大化
 };
 
 const STORAGE_KEY = 'claudia_layout_preferences';
@@ -298,6 +300,29 @@ export function useLayoutManager(projectPath?: string) {
       previewUrl: null,
     });
   }, [saveLayout]);
+
+  // 打开终端
+  const openTerminal = useCallback(() => {
+    saveLayout({
+      activeView: 'terminal',
+      editingFile: null,
+      previewUrl: null,
+    });
+  }, [saveLayout]);
+
+  // 关闭终端
+  const closeTerminal = useCallback(() => {
+    saveLayout({
+      activeView: 'chat',
+    });
+  }, [saveLayout]);
+
+  // 切换终端最大化状态
+  const toggleTerminalMaximize = useCallback(() => {
+    saveLayout({
+      isTerminalMaximized: !layout.isTerminalMaximized,
+    });
+  }, [layout.isTerminalMaximized, saveLayout]);
   
   return {
     layout,
@@ -319,5 +344,9 @@ export function useLayoutManager(projectPath?: string) {
     openPreview,
     closePreview,
     switchToChatView,
+    // 终端相关方法
+    openTerminal,
+    closeTerminal,
+    toggleTerminalMaximize,
   };
 }

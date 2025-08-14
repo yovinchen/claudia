@@ -2512,5 +2512,111 @@ export const api = {
       console.error("Failed to unwatch Claude project directory:", error);
       throw error;
     }
+  },
+
+  // ============= Terminal API =============
+  
+  /**
+   * Creates a new terminal session using Zellij
+   * @param workingDirectory - The working directory for the terminal session
+   * @returns Promise resolving to the session ID
+   */
+  async createTerminalSession(workingDirectory: string): Promise<string> {
+    try {
+      return await invoke<string>("create_terminal_session", { workingDirectory });
+    } catch (error) {
+      console.error("Failed to create terminal session:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sends input to a terminal session
+   * @param sessionId - The terminal session ID
+   * @param input - The input data to send
+   * @returns Promise resolving when input is sent
+   */
+  async sendTerminalInput(sessionId: string, input: string): Promise<void> {
+    try {
+      return await invoke<void>("send_terminal_input", { sessionId, input });
+    } catch (error) {
+      console.error("Failed to send terminal input:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Listen to terminal output for a session
+   * @param sessionId - The terminal session ID
+   * @param callback - Callback function to handle output
+   * @returns Promise resolving to unlisten function
+   */
+  async listenToTerminalOutput(sessionId: string, callback: (data: string) => void): Promise<() => void> {
+    try {
+      const { listen } = await import("@tauri-apps/api/event");
+      const unlisten = await listen<string>(`terminal-output:${sessionId}`, (event) => {
+        callback(event.payload);
+      });
+      return unlisten;
+    } catch (error) {
+      console.error("Failed to listen to terminal output:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Closes a terminal session
+   * @param sessionId - The terminal session ID to close
+   * @returns Promise resolving when session is closed
+   */
+  async closeTerminalSession(sessionId: string): Promise<void> {
+    try {
+      return await invoke<void>("close_terminal_session", { sessionId });
+    } catch (error) {
+      console.error("Failed to close terminal session:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Lists all active terminal sessions
+   * @returns Promise resolving to array of active terminal session IDs
+   */
+  async listTerminalSessions(): Promise<string[]> {
+    try {
+      return await invoke<string[]>("list_terminal_sessions");
+    } catch (error) {
+      console.error("Failed to list terminal sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Resizes a terminal session
+   * @param sessionId - The terminal session ID
+   * @param cols - Number of columns
+   * @param rows - Number of rows
+   * @returns Promise resolving when resize is complete
+   */
+  async resizeTerminal(sessionId: string, cols: number, rows: number): Promise<void> {
+    try {
+      return await invoke<void>("resize_terminal", { sessionId, cols, rows });
+    } catch (error) {
+      console.error("Failed to resize terminal:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cleanup orphaned terminal sessions
+   * @returns Promise resolving to the number of sessions cleaned up
+   */
+  async cleanupTerminalSessions(): Promise<number> {
+    try {
+      return await invoke<number>("cleanup_terminal_sessions");
+    } catch (error) {
+      console.error("Failed to cleanup terminal sessions:", error);
+      throw error;
+    }
   }
 };

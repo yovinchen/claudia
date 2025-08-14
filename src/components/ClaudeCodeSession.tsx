@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft,
-  Terminal,
+  Terminal as TerminalIcon,
   FolderOpen,
   Copy,
   ChevronDown,
@@ -22,7 +22,8 @@ import {
   FileText,
   FilePlus,
   FileX,
-  Clock
+  Clock,
+  Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ import { FlexLayoutContainer } from "@/components/layout/FlexLayoutContainer";
 import { MainContentArea } from "@/components/layout/MainContentArea";
 import { SidePanel } from "@/components/layout/SidePanel";
 import { ChatView } from "@/components/layout/ChatView";
+import { Terminal } from "@/components/Terminal";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -120,7 +122,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     openFileEditor,
     closeFileEditor,
     openPreview: openLayoutPreview,
-    closePreview: closeLayoutPreview
+    closePreview: closeLayoutPreview,
+    openTerminal,
+    closeTerminal,
+    toggleTerminalMaximize
   } = layoutManager;
   
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
@@ -1389,7 +1394,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <AnimatePresence>
           {displayableMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
-              <Terminal className="h-12 w-12 mb-3 opacity-50" />
+              <TerminalIcon className="h-12 w-12 mb-3 opacity-50" />
               <p className="text-sm">开始对话或等待消息加载...</p>
             </div>
           ) : (
@@ -1560,6 +1565,29 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     </motion.div>
   );
 
+  // If terminal is maximized, render only the Terminal in full screen
+  if (layout.activeView === 'terminal' && layout.isTerminalMaximized) {
+    return (
+      <AnimatePresence>
+        <motion.div 
+          className="fixed inset-0 z-50 bg-background"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Terminal
+            onClose={closeTerminal}
+            isMaximized={layout.isTerminalMaximized}
+            onToggleMaximize={toggleTerminalMaximize}
+            projectPath={projectPath}
+            className="h-full"
+          />
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
   // If preview is maximized, render only the WebviewPreview in full screen
   if (layout.activeView === 'preview' && layout.previewUrl && isPreviewMaximized) {
     return (
@@ -1604,7 +1632,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-muted-foreground" />
+              <TerminalIcon className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
                 <h1 className="text-xl font-bold">{t('app.claudeCodeSession')}</h1>
                 <p className="text-sm text-muted-foreground">
@@ -1622,6 +1650,27 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 <span className="font-mono">{totalTokens.toLocaleString()}</span>
                 <span className="text-muted-foreground">tokens</span>
               </div>
+            )}
+            
+            {/* Terminal Toggle */}
+            {projectPath && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={openTerminal}
+                      className={cn("h-8 w-8", layout.activeView === 'terminal' && "text-primary")}
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>终端</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             
             {/* File Explorer Toggle */}
@@ -1840,7 +1889,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               visible: true,
               content: (
                 <MainContentArea isEditing={layout.activeView === 'editor'}>
-                  {layout.activeView === 'editor' && layout.editingFile ? (
+                  {layout.activeView === 'terminal' ? (
+                    // 终端视图
+                    <Terminal
+                      onClose={closeTerminal}
+                      isMaximized={layout.isTerminalMaximized}
+                      onToggleMaximize={toggleTerminalMaximize}
+                      projectPath={projectPath}
+                      className="h-full"
+                    />
+                  ) : layout.activeView === 'editor' && layout.editingFile ? (
                     // 文件编辑器视图
                     <FileEditorEnhanced
                       filePath={layout.editingFile}
