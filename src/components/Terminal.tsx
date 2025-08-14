@@ -32,6 +32,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [terminalSize, setTerminalSize] = useState({ cols: 80, rows: 24 });
+  const [containerWidth, setContainerWidth] = useState(0);
 
   // 计算终端应该有的尺寸
   const calculateOptimalSize = useCallback(() => {
@@ -46,17 +47,26 @@ export const Terminal: React.FC<TerminalProps> = ({
     const lineHeight = fontSize * 1.2; // 行高
     
     // 计算能容纳的最大列数和行数
-    // 减去一些像素避免滚动条
-    const cols = Math.max(80, Math.floor((rect.width - 2) / charWidth));
-    const rows = Math.max(24, Math.floor((rect.height - 2) / lineHeight));
+    const availableWidth = rect.width - 2;
+    const availableHeight = rect.height - 2;
     
-    console.log('[Terminal] Calculated size:', {
+    const cols = Math.max(80, Math.floor(availableWidth / charWidth));
+    const rows = Math.max(24, Math.floor(availableHeight / lineHeight));
+    
+    // 计算实际使用的宽度
+    const usedWidth = cols * charWidth;
+    const unusedWidth = availableWidth - usedWidth;
+    const percentUsed = ((usedWidth / availableWidth) * 100).toFixed(1);
+    
+    console.log('[Terminal] Size calculation:', {
       containerWidth: rect.width,
-      containerHeight: rect.height,
-      cols,
-      rows,
+      availableWidth,
       charWidth,
-      lineHeight
+      cols,
+      usedWidth,
+      unusedWidth,
+      percentUsed: `${percentUsed}%`,
+      message: unusedWidth > 10 ? `还有 ${unusedWidth.toFixed(1)}px 未使用` : '宽度使用正常'
     });
     
     return { cols, rows };
@@ -66,29 +76,73 @@ export const Terminal: React.FC<TerminalProps> = ({
   const resizeTerminal = useCallback(() => {
     if (!xtermRef.current || !terminalRef.current) return;
     
-    const newSize = calculateOptimalSize();
+    // 先尝试获取实际的字符尺寸
+    let actualCharWidth = 8.4; // 默认值
+    let actualLineHeight = 16.8; // 默认值
+    
+    try {
+      const core = (xtermRef.current as any)._core;
+      if (core && core._renderService && core._renderService.dimensions) {
+        const dims = core._renderService.dimensions;
+        if (dims.actualCellWidth) actualCharWidth = dims.actualCellWidth;
+        if (dims.actualCellHeight) actualLineHeight = dims.actualCellHeight;
+        
+        console.log('[Terminal] Using actual char dimensions:', {
+          actualCharWidth,
+          actualLineHeight
+        });
+      }
+    } catch (e) {
+      // 使用默认值
+    }
+    
+    // 使用实际字符尺寸计算新的列数和行数
+    const rect = terminalRef.current.getBoundingClientRect();
+    const availableWidth = rect.width - 2;
+    const availableHeight = rect.height - 2;
+    
+    // 更新容器宽度显示
+    setContainerWidth(rect.width);
+    
+    const newCols = Math.max(80, Math.floor(availableWidth / actualCharWidth));
+    const newRows = Math.max(24, Math.floor(availableHeight / actualLineHeight));
+    
+    // 计算宽度使用情况
+    const usedWidth = newCols * actualCharWidth;
+    const unusedWidth = availableWidth - usedWidth;
+    const percentUsed = ((usedWidth / availableWidth) * 100).toFixed(1);
     
     // 只有当尺寸真的改变时才调整
-    if (newSize.cols !== terminalSize.cols || newSize.rows !== terminalSize.rows) {
-      console.log('[Terminal] Resizing from', terminalSize, 'to', newSize);
+    if (newCols !== terminalSize.cols || newRows !== terminalSize.rows) {
+      console.log('[Terminal] Resizing:', {
+        from: terminalSize,
+        to: { cols: newCols, rows: newRows },
+        containerWidth: rect.width,
+        availableWidth,
+        usedWidth,
+        unusedWidth,
+        percentUsed: `${percentUsed}%`
+      });
       
-      setTerminalSize(newSize);
-      xtermRef.current.resize(newSize.cols, newSize.rows);
+      setTerminalSize({ cols: newCols, rows: newRows });
+      xtermRef.current.resize(newCols, newRows);
       
       // 更新后端
       if (sessionId) {
-        api.resizeTerminal(sessionId, newSize.cols, newSize.rows).catch(console.error);
+        api.resizeTerminal(sessionId, newCols, newRows).catch(console.error);
       }
       
       // 强制刷新渲染
-      if ((xtermRef.current as any)._core) {
+      try {
         const core = (xtermRef.current as any)._core;
-        if (core._renderService) {
-          core._renderService.onResize(newSize.cols, newSize.rows);
+        if (core && core._renderService && core._renderService._onIntersectionChange) {
+          core._renderService._onIntersectionChange({ intersectionRatio: 1 });
         }
+      } catch (e) {
+        // 忽略错误，某些版本的 xterm 可能没有这个方法
       }
     }
-  }, [calculateOptimalSize, terminalSize, sessionId]);
+  }, [terminalSize, sessionId]);
 
   // 防抖的resize处理
   const handleResize = useCallback(() => {
@@ -180,10 +234,47 @@ export const Terminal: React.FC<TerminalProps> = ({
         // 保存引用
         xtermRef.current = xterm;
 
-        // 延迟一下确保渲染完成，然后调整尺寸
+        // 延迟一下确保渲染完成，然后获取实际字符尺寸并调整
         setTimeout(() => {
+          if (xtermRef.current && terminalRef.current) {
+            // 尝试获取实际的字符尺寸
+            try {
+              const core = (xtermRef.current as any)._core;
+              if (core && core._renderService && core._renderService.dimensions) {
+                const dims = core._renderService.dimensions;
+                const actualCharWidth = dims.actualCellWidth || dims.scaledCellWidth;
+                const actualLineHeight = dims.actualCellHeight || dims.scaledCellHeight;
+                
+                if (actualCharWidth && actualLineHeight) {
+                  console.log('[Terminal] Actual character dimensions:', {
+                    charWidth: actualCharWidth,
+                    lineHeight: actualLineHeight
+                  });
+                  
+                  // 使用实际尺寸重新计算
+                  const rect = terminalRef.current.getBoundingClientRect();
+                  const availableWidth = rect.width - 2;
+                  const newCols = Math.floor(availableWidth / actualCharWidth);
+                  
+                  console.log('[Terminal] Recalculating with actual dimensions:', {
+                    availableWidth,
+                    actualCharWidth,
+                    newCols,
+                    currentCols: xtermRef.current.cols
+                  });
+                  
+                  if (newCols > xtermRef.current.cols) {
+                    xtermRef.current.resize(newCols, xtermRef.current.rows);
+                    setTerminalSize({ cols: newCols, rows: xtermRef.current.rows });
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('[Terminal] Could not get actual char dimensions:', e);
+            }
+          }
           resizeTerminal();
-        }, 100);
+        }, 150);
 
         // 创建终端会话
         const newSessionId = await api.createTerminalSession(projectPath || process.cwd());
@@ -259,7 +350,15 @@ export const Terminal: React.FC<TerminalProps> = ({
   useEffect(() => {
     if (!terminalRef.current) return;
     
-    const resizeObserver = new ResizeObserver(() => {
+    // 初始化时立即获取容器宽度
+    const rect = terminalRef.current.getBoundingClientRect();
+    setContainerWidth(rect.width);
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width } = entry.contentRect;
+        setContainerWidth(width);
+      }
       handleResize();
     });
     
@@ -300,6 +399,9 @@ export const Terminal: React.FC<TerminalProps> = ({
           )}
           <span className="text-xs text-gray-400">
             {terminalSize.cols}×{terminalSize.rows}
+          </span>
+          <span className="text-xs text-yellow-400">
+            容器宽度: {containerWidth.toFixed(0)}px
           </span>
         </div>
         

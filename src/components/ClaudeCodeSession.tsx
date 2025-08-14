@@ -1889,8 +1889,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               visible: true,
               content: (
                 <MainContentArea isEditing={layout.activeView === 'editor'}>
-                  {layout.activeView === 'terminal' ? (
-                    // 终端视图
+                  {/* 终端始终渲染，通过显示/隐藏控制 */}
+                  <div className={cn("absolute inset-0", layout.activeView === 'terminal' ? 'block' : 'hidden')}>
                     <Terminal
                       onClose={closeTerminal}
                       isMaximized={layout.isTerminalMaximized}
@@ -1898,14 +1898,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       projectPath={projectPath}
                       className="h-full w-full"
                     />
-                  ) : layout.activeView === 'editor' && layout.editingFile ? (
-                    // 文件编辑器视图
-                    <FileEditorEnhanced
-                      filePath={layout.editingFile}
-                      onClose={closeFileEditor}
-                      className="h-full"
-                    />
-                  ) : layout.activeView === 'preview' && layout.previewUrl ? (
+                  </div>
+                  
+                  {/* 其他视图 */}
+                  <div className={cn("h-full w-full", layout.activeView === 'terminal' ? 'hidden' : 'block')}>
+                    {layout.activeView === 'editor' && layout.editingFile ? (
+                      // 文件编辑器视图
+                      <FileEditorEnhanced
+                        filePath={layout.editingFile}
+                        onClose={closeFileEditor}
+                        className="h-full"
+                      />
+                    ) : layout.activeView === 'preview' && layout.previewUrl ? (
                     // 预览视图
                     <SplitPane
                       left={
@@ -1943,24 +1947,24 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       minRightWidth={400}
                       className="h-full"
                     />
-                  ) : (
-                    // 默认聊天视图
-                    <ChatView
-                      projectPathInput={projectPathInput}
-                      messagesList={messagesList}
-                      floatingInput={
-                        <div className="w-full max-w-5xl mx-auto px-4">
-                          <FloatingPromptInput
-                            ref={floatingPromptRef}
-                            onSend={handleSendPrompt}
-                            onCancel={handleCancelExecution}
-                            isLoading={isLoading}
-                            disabled={!projectPath}
-                            projectPath={projectPath}
-                          />
-                        </div>
-                      }
-                      floatingElements={
+                    ) : (
+                      // 默认聊天视图
+                      <ChatView
+                        projectPathInput={projectPathInput}
+                        messagesList={messagesList}
+                        floatingInput={
+                          <div className="w-full max-w-5xl mx-auto px-4">
+                            <FloatingPromptInput
+                              ref={floatingPromptRef}
+                              onSend={handleSendPrompt}
+                              onCancel={handleCancelExecution}
+                              isLoading={isLoading}
+                              disabled={!projectPath}
+                              projectPath={projectPath}
+                            />
+                          </div>
+                        }
+                        floatingElements={
                         <>
                           {/* 文件监控展开面板 */}
                           <AnimatePresence>
@@ -2113,7 +2117,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         </>
                       }
                     />
-                  )}
+                    )}
+                  </div>
                 </MainContentArea>
               )
             },
