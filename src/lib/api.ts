@@ -585,16 +585,17 @@ export interface NodeSpeedTestResult {
 
 /** PackyCode 用户额度信息 */
 export interface PackycodeUserQuota {
-  daily_budget_usd: number;       // 日预算（美元）
-  daily_spent_usd: number;        // 日已使用（美元）
-  monthly_budget_usd: number;     // 月预算（美元）
-  monthly_spent_usd: number;      // 月已使用（美元）
-  balance_usd: number;            // 账户余额（美元）
-  total_spent_usd: number;        // 总消费（美元）
-  plan_type: string;              // 计划类型 (pro, basic, etc.)
-  plan_expires_at: string;         // 计划过期时间
-  username?: string;              // 用户名
-  email?: string;                 // 邮箱
+  daily_budget_usd: string | number;       // 日预算（美元）
+  daily_spent_usd: string | number | null; // 日已使用（美元）
+  monthly_budget_usd: string | number;     // 月预算（美元）
+  monthly_spent_usd: string | number | null; // 月已使用（美元）
+  balance_usd: string | number;            // 账户余额（美元）
+  total_spent_usd: string | number;        // 总消费（美元）
+  plan_type: string;                       // 计划类型 (pro, basic, etc.)
+  plan_expires_at: string;                  // 计划过期时间
+  username?: string;                       // 用户名
+  email?: string;                          // 邮箱
+  opus_enabled?: boolean;                  // 是否启用Opus模型
 }
 
 /**

@@ -357,6 +357,11 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               <Badge variant="secondary" className="text-xs">
                                 {quotaData[station.id].plan_type.toUpperCase()}
                               </Badge>
+                              {quotaData[station.id].opus_enabled && (
+                                <Badge variant="default" className="text-xs bg-purple-600">
+                                  Opus
+                                </Badge>
+                              )}
                             </div>
                             {quotaData[station.id].plan_expires_at && (
                               <span className="text-muted-foreground">
@@ -369,7 +374,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">账户余额:</span>
                             <span className="font-semibold text-blue-600">
-                              ${quotaData[station.id].balance_usd.toFixed(2)}
+                              ${Number(quotaData[station.id].balance_usd).toFixed(2)}
                             </span>
                           </div>
 
@@ -378,21 +383,36 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">日额度:</span>
                               <div className="flex items-center gap-2">
-                                <span className={quotaData[station.id].daily_spent_usd > quotaData[station.id].daily_budget_usd * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                  ${quotaData[station.id].daily_spent_usd.toFixed(2)}
-                                </span>
-                                <span className="text-muted-foreground">/</span>
-                                <span className="text-muted-foreground">${quotaData[station.id].daily_budget_usd.toFixed(2)}</span>
+                                {(() => {
+                                  const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                  const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                                  return (
+                                    <>
+                                      <span className={daily_spent > daily_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                        ${daily_spent.toFixed(2)}
+                                      </span>
+                                      <span className="text-muted-foreground">/</span>
+                                      <span className="text-muted-foreground">${daily_budget.toFixed(2)}</span>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                             <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div 
                                 className={`h-full transition-all ${
-                                  quotaData[station.id].daily_spent_usd / quotaData[station.id].daily_budget_usd > 0.8 
-                                    ? 'bg-orange-500' 
-                                    : 'bg-green-500'
+                                  (() => {
+                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                    const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                                    return daily_spent / daily_budget > 0.8;
+                                  })() ? 'bg-orange-500' : 'bg-green-500'
                                 }`}
-                                style={{ width: `${Math.min((quotaData[station.id].daily_spent_usd / quotaData[station.id].daily_budget_usd) * 100, 100)}%` }}
+                                style={{ width: `${Math.min(
+                                  (() => {
+                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                    const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                                    return (daily_spent / daily_budget) * 100;
+                                  })(), 100)}%` }}
                               />
                             </div>
                           </div>
@@ -402,28 +422,43 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">月额度:</span>
                               <div className="flex items-center gap-2">
-                                <span className={quotaData[station.id].monthly_spent_usd > quotaData[station.id].monthly_budget_usd * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                  ${quotaData[station.id].monthly_spent_usd.toFixed(2)}
-                                </span>
-                                <span className="text-muted-foreground">/</span>
-                                <span className="text-muted-foreground">${quotaData[station.id].monthly_budget_usd.toFixed(2)}</span>
+                                {(() => {
+                                  const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                  const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                                  return (
+                                    <>
+                                      <span className={monthly_spent > monthly_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                        ${monthly_spent.toFixed(2)}
+                                      </span>
+                                      <span className="text-muted-foreground">/</span>
+                                      <span className="text-muted-foreground">${monthly_budget.toFixed(2)}</span>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                             <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div 
                                 className={`h-full transition-all ${
-                                  quotaData[station.id].monthly_spent_usd / quotaData[station.id].monthly_budget_usd > 0.8 
-                                    ? 'bg-orange-500' 
-                                    : 'bg-green-500'
+                                  (() => {
+                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                    const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                                    return monthly_spent / monthly_budget > 0.8;
+                                  })() ? 'bg-orange-500' : 'bg-green-500'
                                 }`}
-                                style={{ width: `${Math.min((quotaData[station.id].monthly_spent_usd / quotaData[station.id].monthly_budget_usd) * 100, 100)}%` }}
+                                style={{ width: `${Math.min(
+                                  (() => {
+                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                    const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                                    return (monthly_spent / monthly_budget) * 100;
+                                  })(), 100)}%` }}
                               />
                             </div>
                           </div>
 
                           {/* 总消费 */}
                           <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                            <span>总消费: ${quotaData[station.id].total_spent_usd.toFixed(2)}</span>
+                            <span>总消费: ${Number(quotaData[station.id].total_spent_usd).toFixed(2)}</span>
                             <Button
                               variant="ghost"
                               size="sm"

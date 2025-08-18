@@ -1002,6 +1002,7 @@ pub struct PackycodeUserQuota {
     pub plan_expires_at: String,     // 计划过期时间
     pub username: Option<String>,    // 用户名
     pub email: Option<String>,       // 邮箱
+    pub opus_enabled: Option<bool>,  // 是否启用Opus模型
 }
 
 /// 获取 PackyCode 用户信息（额度等）
@@ -1044,23 +1045,37 @@ pub async fn packycode_get_user_quota(station_id: String, db: State<'_, AgentDb>
         "https://www.packycode.com/api/backend/users/info"
     };
     
-    // 创建 HTTP 客户端
+    // 创建 HTTP 客户端 - 禁用系统代理
     let client = Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
+        .no_proxy()  // 禁用所有代理
         .build()
         .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
     
-    // 发送请求
+    log::info!("正在请求 PackyCode 用户信息: {}", url);
+    log::debug!("使用 Token: {}...", &station.system_token[..10.min(station.system_token.len())]);
+    
+    // 发送请求 - 只使用必要的请求头
     let response = client
         .get(url)
         .header("Authorization", format!("Bearer {}", station.system_token))
-        .header("User-Agent", "Apifox/1.0.0 (https://apifox.com)")
+        .header("User-Agent", "Claudia")
         .header("Accept", "*/*")
-        .header("Host", if url.contains("share.packycode.com") { "share.packycode.com" } else { "www.packycode.com" })
-        .header("Connection", "keep-alive")
         .send()
         .await
-        .map_err(|e| format!("请求失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("请求 PackyCode API 失败: {}", e);
+            // 提供更详细的错误信息
+            if e.is_connect() {
+                format!("网络连接失败: {}", e)
+            } else if e.is_timeout() {
+                format!("请求超时: {}", e)
+            } else if e.is_request() {
+                format!("请求错误: {}", e)
+            } else {
+                format!("请求失败: {}", e)
+            }
+        })?;
     
     // 检查响应状态
     if !response.status().is_success() {
@@ -1082,28 +1097,86 @@ pub async fn packycode_get_user_quota(station_id: String, db: State<'_, AgentDb>
     // 提取额度信息
     let quota = PackycodeUserQuota {
         daily_budget_usd: response_data.get("daily_budget_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         daily_spent_usd: response_data.get("daily_spent_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_null() {
+                    Some(0.0)
+                } else if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         monthly_budget_usd: response_data.get("monthly_budget_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         monthly_spent_usd: response_data.get("monthly_spent_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_null() {
+                    Some(0.0)
+                } else if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         balance_usd: response_data.get("balance_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         total_spent_usd: response_data.get("total_spent_usd")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<f64>().ok())
+            .and_then(|v| {
+                if v.is_string() {
+                    v.as_str().and_then(|s| s.parse::<f64>().ok())
+                } else if v.is_f64() {
+                    v.as_f64()
+                } else if v.is_i64() {
+                    v.as_i64().map(|i| i as f64)
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         plan_type: response_data.get("plan_type")
             .and_then(|v| v.as_str())
@@ -1119,6 +1192,8 @@ pub async fn packycode_get_user_quota(station_id: String, db: State<'_, AgentDb>
         email: response_data.get("email")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
+        opus_enabled: response_data.get("opus_enabled")
+            .and_then(|v| v.as_bool()),
     };
     
     Ok(quota)
