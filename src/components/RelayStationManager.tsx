@@ -54,7 +54,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+
   // PackyCode 额度相关状态
   const [quotaData, setQuotaData] = useState<Record<string, PackycodeUserQuota>>({});
   const [loadingQuota, setLoadingQuota] = useState<Record<string, boolean>>({});
@@ -399,7 +399,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               </div>
                             </div>
                             <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className={`h-full transition-all ${
                                   (() => {
                                     const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
@@ -438,7 +438,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               </div>
                             </div>
                             <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className={`h-full transition-all ${
                                   (() => {
                                     const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
@@ -499,6 +499,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                           setShowEditDialog(true);
                         }}
                       >
+                          测试
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -617,8 +618,8 @@ const CreateStationDialog: React.FC<{
       setFormData(prev => ({
         ...prev,
         auth_method: 'api_key', // PackyCode 固定使用 API Key
-        api_url: packycodeService === 'taxi' 
-          ? 'https://share-api.packycode.com' 
+        api_url: packycodeService === 'taxi'
+          ? 'https://share-api.packycode.com'
           : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
@@ -638,10 +639,10 @@ const CreateStationDialog: React.FC<{
   const fillStationName = (serviceType: string) => {
     const serviceName = serviceType === 'taxi' ? t('relayStation.taxiService') : t('relayStation.busService');
     const newName = `PackyCode ${serviceName}`;
-    
+
     // 如果名称为空，或者当前名称是之前自动生成的PackyCode名称，则更新
-    if (!formData.name.trim() || 
-        formData.name.startsWith('PackyCode ') || 
+    if (!formData.name.trim() ||
+        formData.name.startsWith('PackyCode ') ||
         formData.name === `PackyCode ${t('relayStation.taxiService')}` ||
         formData.name === `PackyCode ${t('relayStation.busService')}`) {
       setFormData(prev => ({
@@ -746,7 +747,7 @@ const CreateStationDialog: React.FC<{
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
                   </div>
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant={packycodeService === 'bus' ? 'default' : 'outline'}
@@ -768,7 +769,7 @@ const CreateStationDialog: React.FC<{
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                {packycodeService === 'taxi' 
+                {packycodeService === 'taxi'
                   ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
                   : t('relayStation.busServiceNote')
                 }
@@ -830,9 +831,9 @@ const CreateStationDialog: React.FC<{
                       const best = await api.autoSelectBestNode();
                       setPackycodeNode(best.url);
                       setFormData(prev => ({ ...prev, api_url: best.url }));
-                      setFormToast({ 
-                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`, 
-                        type: "success" 
+                      setFormToast({
+                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`,
+                        type: "success"
                       });
                     } catch (error) {
                       setFormToast({ message: "节点测速失败", type: "error" });
@@ -842,7 +843,7 @@ const CreateStationDialog: React.FC<{
                   自动选择
                 </Button>
               </div>
-              
+
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.selectedNode') + ': ' + packycodeNode}
               </p>
@@ -967,8 +968,8 @@ const CreateStationDialog: React.FC<{
           <Button type="button" variant="outline" onClick={() => {}}>
             {t('common.cancel')}
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={submitting}
             className="min-w-[120px]"
           >
@@ -1010,7 +1011,7 @@ const EditStationDialog: React.FC<{
   });
   const [submitting, setSubmitting] = useState(false);
   const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+
   // PackyCode 特定状态
   const [packycodeService, setPackycodeService] = useState<string>(() => {
     // 从API URL判断服务类型
@@ -1035,8 +1036,8 @@ const EditStationDialog: React.FC<{
       setFormData(prev => ({
         ...prev,
         auth_method: 'api_key', // PackyCode 固定使用 API Key
-        api_url: packycodeService === 'taxi' 
-          ? 'https://share-api.packycode.com' 
+        api_url: packycodeService === 'taxi'
+          ? 'https://share-api.packycode.com'
           : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
@@ -1150,7 +1151,7 @@ const EditStationDialog: React.FC<{
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
                   </div>
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant={packycodeService === 'bus' ? 'default' : 'outline'}
@@ -1171,7 +1172,7 @@ const EditStationDialog: React.FC<{
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                {packycodeService === 'taxi' 
+                {packycodeService === 'taxi'
                   ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
                   : t('relayStation.busServiceNote')
                 }
@@ -1227,9 +1228,9 @@ const EditStationDialog: React.FC<{
                       const best = await api.autoSelectBestNode();
                       setPackycodeNode(best.url);
                       setFormData(prev => ({ ...prev, api_url: best.url }));
-                      setFormToast({ 
-                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`, 
-                        type: "success" 
+                      setFormToast({
+                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`,
+                        type: "success"
                       });
                     } catch (error) {
                       setFormToast({ message: "节点测速失败", type: "error" });
@@ -1239,7 +1240,7 @@ const EditStationDialog: React.FC<{
                   自动选择
                 </Button>
               </div>
-              
+
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.selectedNode') + ': ' + packycodeNode}
               </p>
@@ -1364,8 +1365,8 @@ const EditStationDialog: React.FC<{
           <Button type="button" variant="outline" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={submitting}
             className="min-w-[120px]"
           >

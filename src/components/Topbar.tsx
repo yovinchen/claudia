@@ -4,6 +4,7 @@ import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useTranslation } from "@/hooks/useTranslation";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -239,6 +240,9 @@ export const Topbar: React.FC<TopbarProps> = ({
         
         {/* Language Switcher */}
         <LanguageSwitcher />
+        
+        {/* Theme Switcher */}
+        <ThemeSwitcher />
         
         <Button
           variant="ghost"
