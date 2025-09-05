@@ -79,6 +79,10 @@ use commands::terminal::{
     create_terminal_session, send_terminal_input, close_terminal_session,
     list_terminal_sessions, resize_terminal, cleanup_terminal_sessions, TerminalState,
 };
+use commands::ccr::{
+    check_ccr_installation, get_ccr_version, get_ccr_service_status, start_ccr_service,
+    stop_ccr_service, restart_ccr_service, open_ccr_ui, get_ccr_config_path,
+};
 use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
@@ -417,6 +421,16 @@ fn main() {
             list_terminal_sessions,
             resize_terminal,
             cleanup_terminal_sessions,
+            
+            // CCR (Claude Code Router)
+            check_ccr_installation,
+            get_ccr_version,
+            get_ccr_service_status,
+            start_ccr_service,
+            stop_ccr_service,
+            restart_ccr_service,
+            open_ccr_ui,
+            get_ccr_config_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

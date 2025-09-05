@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { HooksConfiguration } from '@/types/hooks';
 
 /** Process type for tracking in ProcessRegistry */
-export type ProcessType = 
+export type ProcessType =
   | { AgentRun: { agent_id: number; agent_name: string } }
   | { ClaudeSession: { session_id: string } };
 
@@ -451,7 +451,7 @@ export interface ImportServerResult {
 // ================================
 
 /** 中转站适配器类型 */
-export type RelayStationAdapter = 
+export type RelayStationAdapter =
   | 'packycode' // PackyCode 平台（默认）
   | 'newapi'    // NewAPI 兼容平台
   | 'oneapi'    // OneAPI 兼容平台
@@ -459,7 +459,7 @@ export type RelayStationAdapter =
   | 'custom';   // 自定义简单配置
 
 /** 认证方式 */
-export type AuthMethod = 
+export type AuthMethod =
   | 'bearer_token'  // Bearer Token 认证（推荐）
   | 'api_key'       // API Key 认证
   | 'custom';       // 自定义认证方式
@@ -560,7 +560,7 @@ export interface TokenPaginationResponse {
 // ============= PackyCode Nodes =============
 
 /** PackyCode 节点类型 */
-export type NodeType = 
+export type NodeType =
   | 'direct'     // 直连节点
   | 'backup'     // 备用节点
   | 'emergency'; // 紧急节点
@@ -678,13 +678,13 @@ export const api = {
     try {
       const result = await invoke<{ data: ClaudeSettings }>("get_claude_settings");
       console.log("Raw result from get_claude_settings:", result);
-      
+
       // The Rust backend returns ClaudeSettings { data: ... }
       // We need to extract the data field
       if (result && typeof result === 'object' && 'data' in result) {
         return result.data;
       }
-      
+
       // If the result is already the settings object, return it
       return result as ClaudeSettings;
     } catch (error) {
@@ -805,7 +805,7 @@ export const api = {
   },
 
   // Agent API methods
-  
+
   /**
    * Lists all CC agents
    * @returns Promise resolving to an array of agents
@@ -830,17 +830,17 @@ export const api = {
    * @returns Promise resolving to the created agent
    */
   async createAgent(
-    name: string, 
-    icon: string, 
-    system_prompt: string, 
-    default_task?: string, 
+    name: string,
+    icon: string,
+    system_prompt: string,
+    default_task?: string,
     model?: string,
     hooks?: string
   ): Promise<Agent> {
     try {
-      return await invoke<Agent>('create_agent', { 
-        name, 
-        icon, 
+      return await invoke<Agent>('create_agent', {
+        name,
+        icon,
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
@@ -864,19 +864,19 @@ export const api = {
    * @returns Promise resolving to the updated agent
    */
   async updateAgent(
-    id: number, 
-    name: string, 
-    icon: string, 
-    system_prompt: string, 
-    default_task?: string, 
+    id: number,
+    name: string,
+    icon: string,
+    system_prompt: string,
+    default_task?: string,
     model?: string,
     hooks?: string
   ): Promise<Agent> {
     try {
-      return await invoke<Agent>('update_agent', { 
-        id, 
-        name, 
-        icon, 
+      return await invoke<Agent>('update_agent', {
+        id,
+        name,
+        icon,
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
@@ -1545,9 +1545,9 @@ export const api = {
    * Tracks a batch of messages for a session for checkpointing
    */
   trackSessionMessages: (
-    sessionId: string, 
-    projectId: string, 
-    projectPath: string, 
+    sessionId: string,
+    projectId: string,
+    projectPath: string,
     messages: string[]
   ): Promise<void> =>
     invoke("track_session_messages", { sessionId, projectId, projectPath, messages }),
@@ -1662,7 +1662,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_test_connection", { name });
     } catch (error) {
-      console.error("Failed to test MCP connection:", error);
+      console.error("Failed to test.md MCP connection:", error);
       throw error;
     }
   },
@@ -2289,13 +2289,13 @@ export const api = {
   /**
    * Tests relay station connection
    * @param stationId - The relay station ID
-   * @returns Promise resolving to connection test result
+   * @returns Promise resolving to connection test.md result
    */
   async relayStationTestConnection(stationId: string): Promise<ConnectionTestResult> {
     try {
       return await invoke<ConnectionTestResult>("relay_station_test_connection", { stationId });
     } catch (error) {
-      console.error("Failed to test connection:", error);
+      console.error("Failed to test.md connection:", error);
       throw error;
     }
   },
@@ -2309,9 +2309,9 @@ export const api = {
    * @returns Promise resolving to usage logs
    */
   async relayStationGetUsageLogs(
-    stationId: string, 
-    userId: string, 
-    page?: number, 
+    stationId: string,
+    userId: string,
+    page?: number,
     size?: number
   ): Promise<any> {
     try {
@@ -2330,8 +2330,8 @@ export const api = {
    * @returns Promise resolving to token pagination response
    */
   async relayStationListTokens(
-    stationId: string, 
-    page?: number, 
+    stationId: string,
+    page?: number,
     size?: number
   ): Promise<TokenPaginationResponse> {
     try {
@@ -2350,8 +2350,8 @@ export const api = {
    * @returns Promise resolving to created token info
    */
   async relayStationCreateToken(
-    stationId: string, 
-    name: string, 
+    stationId: string,
+    name: string,
     quota?: number
   ): Promise<TokenInfo> {
     try {
@@ -2371,9 +2371,9 @@ export const api = {
    * @returns Promise resolving to updated token info
    */
   async relayStationUpdateToken(
-    stationId: string, 
-    tokenId: string, 
-    name?: string, 
+    stationId: string,
+    tokenId: string,
+    name?: string,
     quota?: number
   ): Promise<TokenInfo> {
     try {
@@ -2400,16 +2400,16 @@ export const api = {
   },
 
   // ============= PackyCode Nodes =============
-  
+
   /**
-   * Tests all PackyCode nodes and returns speed test results
-   * @returns Promise resolving to array of node speed test results
+   * Tests all PackyCode nodes and returns speed test.md results
+   * @returns Promise resolving to array of node speed test.md results
    */
   async testAllPackycodeNodes(): Promise<NodeSpeedTestResult[]> {
     try {
       return await invoke<NodeSpeedTestResult[]>("test_all_packycode_nodes");
     } catch (error) {
-      console.error("Failed to test PackyCode nodes:", error);
+      console.error("Failed to test.md PackyCode nodes:", error);
       throw error;
     }
   },
@@ -2455,7 +2455,7 @@ export const api = {
   },
 
   // ============= File System Watching =============
-  
+
   /**
    * Starts watching a directory for file system changes
    * @param directoryPath - The directory path to watch
@@ -2486,7 +2486,7 @@ export const api = {
   },
 
   // ============= Claude Project Directory Watching =============
-  
+
   /**
    * Starts watching Claude project directory for the given project path
    * @param projectPath - The project path to find the corresponding Claude directory
@@ -2516,7 +2516,7 @@ export const api = {
   },
 
   // ============= Terminal API =============
-  
+
   /**
    * Creates a new terminal session using Zellij
    * @param workingDirectory - The working directory for the terminal session
@@ -2617,6 +2617,120 @@ export const api = {
       return await invoke<number>("cleanup_terminal_sessions");
     } catch (error) {
       console.error("Failed to cleanup terminal sessions:", error);
+      throw error;
+    }
+  }
+};
+
+// CCR (Claude Code Router) Related Interfaces
+export interface CcrServiceStatus {
+  is_running: boolean;
+  port?: number;
+  endpoint?: string;
+  has_ccr_binary: boolean;
+  ccr_version?: string;
+  process_id?: number;
+}
+
+export interface CcrServiceInfo {
+  status: CcrServiceStatus;
+  message: string;
+}
+
+// CCR API methods
+export const ccrApi = {
+  /**
+   * Check if CCR is installed
+   */
+  async checkInstallation(): Promise<boolean> {
+    try {
+      return await invoke<boolean>("check_ccr_installation");
+    } catch (error) {
+      console.error("Failed to check CCR installation:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get CCR version
+   */
+  async getVersion(): Promise<string> {
+    try {
+      return await invoke<string>("get_ccr_version");
+    } catch (error) {
+      console.error("Failed to get CCR version:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get CCR service status
+   */
+  async getServiceStatus(): Promise<CcrServiceStatus> {
+    try {
+      return await invoke<CcrServiceStatus>("get_ccr_service_status");
+    } catch (error) {
+      console.error("Failed to get CCR service status:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Start CCR service
+   */
+  async startService(): Promise<CcrServiceInfo> {
+    try {
+      return await invoke<CcrServiceInfo>("start_ccr_service");
+    } catch (error) {
+      console.error("Failed to start CCR service:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Stop CCR service
+   */
+  async stopService(): Promise<CcrServiceInfo> {
+    try {
+      return await invoke<CcrServiceInfo>("stop_ccr_service");
+    } catch (error) {
+      console.error("Failed to stop CCR service:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Restart CCR service
+   */
+  async restartService(): Promise<CcrServiceInfo> {
+    try {
+      return await invoke<CcrServiceInfo>("restart_ccr_service");
+    } catch (error) {
+      console.error("Failed to restart CCR service:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Open CCR UI
+   */
+  async openUI(): Promise<string> {
+    try {
+      return await invoke<string>("open_ccr_ui");
+    } catch (error) {
+      console.error("Failed to open CCR UI:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get CCR config file path
+   */
+  async getConfigPath(): Promise<string> {
+    try {
+      return await invoke<string>("get_ccr_config_path");
+    } catch (error) {
+      console.error("Failed to get CCR config path:", error);
       throw error;
     }
   }

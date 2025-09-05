@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bot, FolderCode, BarChart, ServerCog, FileText, Settings, Network } from "lucide-react";
+import { Bot, FolderCode, BarChart, ServerCog, FileText, Settings, Network, Router } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Button } from "@/components/ui/button";
 import { ClaudiaLogoMinimal } from "@/components/ClaudiaLogo";
@@ -60,6 +60,15 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
       color: "text-orange-500",
       bgColor: "bg-orange-500/10",
       view: "mcp"
+    },
+    {
+      id: "ccr-router",
+      icon: Router,
+      title: t("welcome.ccrRouter"),
+      subtitle: t("welcome.ccrRouterDesc"),
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
+      view: "ccr-router"
     },
     {
       id: "claude-md",
@@ -147,7 +156,7 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
         </div>
 
         {/* Bottom Feature Cards */}
-        <div className="grid grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-5 gap-6 mb-10">
           {bottomFeatures.map((feature, index) => (
             <motion.div
               key={feature.id}

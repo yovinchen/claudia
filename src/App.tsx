@@ -29,6 +29,7 @@ import { useAppLifecycle, useTrackEvent } from "@/hooks";
 import { useTranslation } from "@/hooks/useTranslation";
 import { WelcomePage } from "@/components/WelcomePage";
 import RelayStationManager from "@/components/RelayStationManager";
+import { CcrRouterManager } from "@/components/CcrRouterManager";
 import i18n from "@/lib/i18n";
 
 type View = 
@@ -44,6 +45,7 @@ type View =
   | "agent-run-view"
   | "mcp"
   | "relay-stations"
+  | "ccr-router"
   | "usage-dashboard"
   | "project-settings"
   | "tabs"; // New view for tab-based interface
@@ -280,6 +282,11 @@ function AppContent() {
       case "relay-stations":
         return (
           <RelayStationManager onBack={() => handleViewChange("welcome")} />
+        );
+
+      case "ccr-router":
+        return (
+          <CcrRouterManager onBack={() => handleViewChange("welcome")} />
         );
 
       case "cc-agents":

@@ -118,7 +118,7 @@ bun run tauri build  # 生产构建
 ```bash
 bun run tauri dev      # 启动开发服务器
 bunx tsc --noEmit      # 类型检查
-cd src-tauri && cargo test  # Rust 测试
+cd src-tauri && cargo test.md  # Rust 测试
 bun run check          # 完整检查
 ```
 

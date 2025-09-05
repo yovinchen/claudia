@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use dirs::home_dir;
@@ -16,9 +17,27 @@ pub struct ClaudeConfig {
     pub model: Option<String>,
     #[serde(rename = "apiKeyHelper", skip_serializing_if = "Option::is_none")]
     pub api_key_helper: Option<String>,
+    #[serde(rename = "statusLine", skip_serializing_if = "Option::is_none")]
+    pub status_line: Option<StatusLineConfig>,
+    // 使用 flatten 来支持任何其他未知字段
+    #[serde(flatten)]
+    pub extra_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatusLineConfig {
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub config_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padding: Option<i32>,
+    // 支持其他可能的 statusLine 字段
+    #[serde(flatten)]
+    pub extra_fields: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaudeEnv {
     #[serde(rename = "ANTHROPIC_AUTH_TOKEN", skip_serializing_if = "Option::is_none")]
     pub anthropic_auth_token: Option<String>,
@@ -26,6 +45,20 @@ pub struct ClaudeEnv {
     pub anthropic_base_url: Option<String>,
     #[serde(rename = "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", skip_serializing_if = "Option::is_none")]
     pub disable_nonessential_traffic: Option<String>,
+    // 使用 flatten 来支持任何其他环境变量
+    #[serde(flatten)]
+    pub extra_fields: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl Default for ClaudeEnv {
+    fn default() -> Self {
+        Self {
+            anthropic_auth_token: None,
+            anthropic_base_url: None,
+            disable_nonessential_traffic: None,
+            extra_fields: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -59,6 +92,8 @@ pub fn read_claude_config() -> Result<ClaudeConfig, String> {
             permissions: Some(ClaudePermissions::default()),
             model: None,
             api_key_helper: None,
+            status_line: None,
+            extra_fields: HashMap::new(),
         });
     }
     
@@ -146,7 +181,7 @@ pub fn restore_claude_config() -> Result<(), String> {
     Ok(())
 }
 
-/// 根据中转站配置更新 Claude 配置
+/// 根据中转站配置更新 Claude 配置（仅更新 API 相关字段）
 pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), String> {
     // 先备份当前配置
     backup_claude_config()?;
@@ -154,17 +189,17 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
     // 读取当前配置
     let mut config = read_claude_config()?;
     
-    // 更新 API URL
+    // 仅更新这三个关键字段，保留其他所有配置不变：
+    // 1. ANTHROPIC_BASE_URL
     config.env.anthropic_base_url = Some(station.api_url.clone());
     
-    // 更新 API Token
+    // 2. ANTHROPIC_AUTH_TOKEN  
     config.env.anthropic_auth_token = Some(station.system_token.clone());
     
-    // 将中转站的 token 也设置到 apiKeyHelper
-    // 格式：echo 'token'
+    // 3. apiKeyHelper - 设置为 echo 格式
     config.api_key_helper = Some(format!("echo '{}'", station.system_token));
     
-    // 如果是特定适配器，可能需要特殊处理
+    // 如果是特定适配器，可能需要特殊处理 URL 格式
     match station.adapter.as_str() {
         "packycode" => {
             // PackyCode 使用原始配置，不做特殊处理
@@ -187,7 +222,7 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
     // 写入更新后的配置
     write_claude_config(&config)?;
     
-    log::info!("已将中转站 {} 的配置应用到 Claude 配置文件", station.name);
+    log::info!("已将中转站 {} 的 API 配置（apiKeyHelper, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN）应用到 Claude 配置文件", station.name);
     Ok(())
 }
 

@@ -125,7 +125,9 @@
     "claudeMdDesc": "Edit Claude configuration files",
     "settings": "Settings",
     "settingsDesc": "App settings and configuration",
-    "quickStartSession": "Quick Start New Session"
+    "quickStartSession": "Quick Start New Session",
+    "ccrRouter": "CCR Router",
+    "ccrRouterDesc": "Claude Code Router configuration management"
   },
   "projects": {
     "title": "Projects",
