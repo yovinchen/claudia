@@ -453,6 +453,10 @@ export interface ImportServerResult {
 /** 中转站适配器类型 */
 export type RelayStationAdapter =
   | 'packycode' // PackyCode 平台（默认）
+  | 'deepseek'  // DeepSeek v3.1
+  | 'glm'       // 智谱GLM
+  | 'qwen'      // 千问Qwen
+  | 'kimi'      // Kimi k2
   | 'newapi'    // NewAPI 兼容平台
   | 'oneapi'    // OneAPI 兼容平台
   | 'yourapi'   // YourAPI 特定平台

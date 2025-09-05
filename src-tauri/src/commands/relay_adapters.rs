@@ -838,6 +838,11 @@ impl StationAdapter for CustomAdapter {
 pub fn create_adapter(adapter_type: &RelayStationAdapter) -> Box<dyn StationAdapter> {
     match adapter_type {
         RelayStationAdapter::Packycode => Box::new(PackycodeAdapter),
+        // DeepSeek、GLM、Qwen、Kimi 都使用类似 NewAPI 的适配器
+        RelayStationAdapter::Deepseek => Box::new(NewApiAdapter),
+        RelayStationAdapter::Glm => Box::new(NewApiAdapter),
+        RelayStationAdapter::Qwen => Box::new(NewApiAdapter),
+        RelayStationAdapter::Kimi => Box::new(NewApiAdapter),
         RelayStationAdapter::Newapi => Box::new(NewApiAdapter),
         RelayStationAdapter::Oneapi => Box::new(NewApiAdapter), // OneAPI 兼容 NewAPI
         RelayStationAdapter::Yourapi => Box::new(YourApiAdapter::new()),

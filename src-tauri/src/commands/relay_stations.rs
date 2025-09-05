@@ -15,6 +15,10 @@ use crate::claude_config;
 #[serde(rename_all = "snake_case")]
 pub enum RelayStationAdapter {
     Packycode, // PackyCode 平台（放在第一位）
+    Deepseek,  // DeepSeek v3.1
+    Glm,       // 智谱GLM
+    Qwen,      // 千问Qwen
+    Kimi,      // Kimi k2
     Newapi,    // NewAPI 兼容平台
     Oneapi,    // OneAPI 兼容平台
     Yourapi,   // YourAPI 特定平台
@@ -25,6 +29,10 @@ impl RelayStationAdapter {
     pub fn as_str(&self) -> &str {
         match self {
             RelayStationAdapter::Packycode => "packycode",
+            RelayStationAdapter::Deepseek => "deepseek",
+            RelayStationAdapter::Glm => "glm",
+            RelayStationAdapter::Qwen => "qwen",
+            RelayStationAdapter::Kimi => "kimi",
             RelayStationAdapter::Newapi => "newapi",
             RelayStationAdapter::Oneapi => "oneapi",
             RelayStationAdapter::Yourapi => "yourapi",

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { open } from '@tauri-apps/plugin-shell';
+import MonacoEditor from '@monaco-editor/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +37,12 @@ import {
   Server,
   ArrowLeft,
   Settings,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  Eye,
+  Edit3,
+  Save,
+  X
 } from 'lucide-react';
 
 interface RelayStationManagerProps {
@@ -53,6 +60,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [togglingEnable, setTogglingEnable] = useState<Record<string, boolean>>({});
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
+  const [jsonConfigView, setJsonConfigView] = useState(false);
+  const [editingConfig, setEditingConfig] = useState(false);
+  const [configJson, setConfigJson] = useState<string>('');
+  const [savingConfig, setSavingConfig] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // PackyCode 额度相关状态
@@ -84,10 +95,27 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const loadCurrentConfig = async () => {
     try {
       setLoadingConfig(true);
-      const config = await api.relayStationGetCurrentConfig();
-      setCurrentConfig(config);
+      // 读取完整的 ~/.claude/settings.json 文件
+      const settings = await api.getClaudeSettings();
+      
+      // 保存配置用于简单视图显示
+      setCurrentConfig({
+        api_url: settings.env?.ANTHROPIC_BASE_URL || '',
+        api_token: settings.env?.ANTHROPIC_AUTH_TOKEN || ''
+      });
+      
+      // 格式化完整的JSON字符串
+      setConfigJson(JSON.stringify(settings, null, 2));
     } catch (error) {
       console.error('Failed to load current config:', error);
+      // 如果失败，尝试获取中转站配置
+      try {
+        const config = await api.relayStationGetCurrentConfig();
+        setCurrentConfig(config);
+        setConfigJson(JSON.stringify(config, null, 2));
+      } catch (fallbackError) {
+        console.error('Failed to load fallback config:', fallbackError);
+      }
     } finally {
       setLoadingConfig(false);
     }
@@ -102,6 +130,31 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     } catch (error) {
       console.error('Failed to sync config:', error);
       showToast(t('relayStation.syncFailed'), "error");
+    }
+  };
+
+  // 保存JSON配置
+  const saveJsonConfig = async () => {
+    try {
+      setSavingConfig(true);
+      // 验证JSON格式
+      const parsedConfig = JSON.parse(configJson);
+      
+      // 保存配置到 ~/.claude/settings.json
+      await api.saveClaudeSettings(parsedConfig);
+      
+      showToast(t('relayStation.configSaved'), "success");
+      setEditingConfig(false);
+      loadCurrentConfig();
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        showToast(t('relayStation.invalidJson'), "error");
+      } else {
+        console.error('Failed to save config:', error);
+        showToast(t('relayStation.saveFailed'), "error");
+      }
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -146,6 +199,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const getAdapterDisplayName = (adapter: RelayStationAdapter): string => {
     switch (adapter) {
       case 'packycode': return 'PackyCode';
+      case 'deepseek': return 'DeepSeek v3.1';
+      case 'glm': return '智谱GLM';
+      case 'qwen': return '千问Qwen';
+      case 'kimi': return 'Kimi k2';
       case 'newapi': return 'NewAPI';
       case 'oneapi': return 'OneAPI';
       case 'yourapi': return 'YourAPI';
@@ -235,7 +292,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               {t('relayStation.create')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <CreateStationDialog
               onSuccess={() => {
                 setShowCreateDialog(false);
@@ -274,23 +331,113 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2">
-              <span className="font-medium text-muted-foreground min-w-[100px]">API URL:</span>
-              <span className="font-mono text-xs break-all">
-                {currentConfig.api_url || t('relayStation.notConfigured')}
-              </span>
+          {jsonConfigView ? (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setJsonConfigView(false);
+                      setEditingConfig(false);
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    {t('common.back')}
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  {!editingConfig ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingConfig(true)}
+                    >
+                      <Edit3 className="h-4 w-4 mr-1" />
+                      {t('common.edit')}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingConfig(false);
+                          setConfigJson(JSON.stringify(currentConfig, null, 2));
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        {t('common.cancel')}
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={saveJsonConfig}
+                        disabled={savingConfig}
+                      >
+                        {savingConfig ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white mr-1" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-1" />
+                        )}
+                        {t('common.save')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+                <MonacoEditor
+                  language="json"
+                  theme="vs-dark"
+                  value={configJson}
+                  onChange={(value) => setConfigJson(value || '')}
+                  options={{
+                    readOnly: !editingConfig,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 12,
+                    wordWrap: 'on',
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="font-medium text-muted-foreground min-w-[100px]">API Token:</span>
-              <span className="font-mono text-xs">
-                {currentConfig.api_token || t('relayStation.notConfigured')}
-              </span>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium">{t('relayStation.configPreview')}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setJsonConfigView(true)}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  {t('relayStation.viewJson')}
+                </Button>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="font-medium text-muted-foreground min-w-[100px]">API URL:</span>
+                  <span className="font-mono text-xs break-all">
+                    {currentConfig.api_url || t('relayStation.notConfigured')}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-medium text-muted-foreground min-w-[100px]">API Token:</span>
+                  <span className="font-mono text-xs">
+                    {currentConfig.api_token || t('relayStation.notConfigured')}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-3">
+                  {t('relayStation.configLocation')}: ~/.claude/settings.json
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground mt-3">
-              {t('relayStation.configLocation')}: ~/.claude/settings.json
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -499,7 +646,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                           setShowEditDialog(true);
                         }}
                       >
-                          测试
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -524,7 +670,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       {/* 编辑对话框 */}
       {selectedStation && (
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <EditStationDialog
               station={selectedStation}
               onSuccess={() => {
@@ -612,6 +758,36 @@ const CreateStationDialog: React.FC<{
 
   const { t } = useTranslation();
 
+  // 获取API Key获取地址
+  const getApiKeyUrl = (adapter: string, service?: string): string | null => {
+    switch (adapter) {
+      case 'deepseek':
+        return 'https://platform.deepseek.com/api_keys';
+      case 'glm':
+        return 'https://bigmodel.cn/usercenter/proj-mgmt/apikeys';
+      case 'qwen':
+        return 'https://bailian.console.aliyun.com/?tab=model#/api-key';
+      case 'kimi':
+        return 'https://platform.moonshot.cn/console/api-keys';
+      case 'packycode':
+        if (service === 'taxi') {
+          return 'https://share.packycode.com/api-management';
+        }
+        return 'https://www.packycode.com/api-management';
+      default:
+        return null;
+    }
+  };
+
+  // 打开外部链接
+  const openExternalLink = async (url: string) => {
+    try {
+      await open(url);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
+  };
+
   // 当适配器改变时更新认证方式和 URL
   useEffect(() => {
     if (formData.adapter === 'packycode') {
@@ -640,23 +816,18 @@ const CreateStationDialog: React.FC<{
     const serviceName = serviceType === 'taxi' ? t('relayStation.taxiService') : t('relayStation.busService');
     const newName = `PackyCode ${serviceName}`;
 
-    // 如果名称为空，或者当前名称是之前自动生成的PackyCode名称，则更新
-    if (!formData.name.trim() ||
-        formData.name.startsWith('PackyCode ') ||
-        formData.name === `PackyCode ${t('relayStation.taxiService')}` ||
-        formData.name === `PackyCode ${t('relayStation.busService')}`) {
-      setFormData(prev => ({
-        ...prev,
-        name: newName
-      }));
-    }
+    // 当选择PackyCode服务类型时，始终更新名称
+    setFormData(prev => ({
+      ...prev,
+      name: newName
+    }));
   };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
+    if (formData.adapter === 'custom' && !formData.name.trim()) {
       setFormToast({ message: t('relayStation.nameRequired'), type: "error" });
       return;
     }
@@ -688,50 +859,231 @@ const CreateStationDialog: React.FC<{
       <DialogHeader>
         <DialogTitle>{t('relayStation.createTitle')}</DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-6">
+
+          <div className="col-span-2 space-y-2">
+            <Label className="text-sm font-medium">{t('relayStation.adapterType')}</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {/* 第一行：主流适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'packycode' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'packycode'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
+                    : 'hover:bg-blue-50 dark:hover:bg-blue-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'packycode',
+                  name: 'PackyCode',
+                  api_url: 'https://api.packycode.com'
+                }))}
+              >
+                <div className="text-xl">📦</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">PackyCode</div>
+                  <div className="text-xs opacity-80 mt-1">推荐使用</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'deepseek' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'deepseek'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
+                    : 'hover:bg-indigo-50 dark:hover:bg-indigo-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'deepseek',
+                  name: 'DeepSeek v3.1',
+                  api_url: 'https://api.deepseek.com/anthropic'
+                }))}
+              >
+                <div className="text-xl">🚀</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">DeepSeek</div>
+                  <div className="text-xs opacity-80 mt-1">v3.1</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'glm' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'glm'
+                    ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
+                    : 'hover:bg-cyan-50 dark:hover:bg-cyan-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'glm',
+                  name: '智谱GLM',
+                  api_url: 'https://open.bigmodel.cn/api/anthropic'
+                }))}
+              >
+                <div className="text-xl">🤖</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">智谱GLM</div>
+                  <div className="text-xs opacity-80 mt-1">清华智谱</div>
+                </div>
+              </Button>
+
+              {/* 第二行：更多适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'qwen' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'qwen'
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
+                    : 'hover:bg-amber-50 dark:hover:bg-amber-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'qwen',
+                  name: '千问Qwen',
+                  api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
+                }))}
+              >
+                <div className="text-xl">🎯</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">千问Qwen</div>
+                  <div className="text-xs opacity-80 mt-1">阿里通义</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'kimi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'kimi'
+                    ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
+                    : 'hover:bg-violet-50 dark:hover:bg-violet-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'kimi',
+                  name: 'Kimi k2',
+                  api_url: 'https://api.moonshot.cn/anthropic'
+                }))}
+              >
+                <div className="text-xl">🌙</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">Kimi k2</div>
+                  <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'newapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'newapi'
+                    ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-700'
+                    : 'hover:bg-green-50 dark:hover:bg-green-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'newapi',
+                  name: 'NewAPI'
+                }))}
+              >
+                <div className="text-xl">🆕</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">NewAPI</div>
+                  <div className="text-xs opacity-80 mt-1">通用接口</div>
+                </div>
+              </Button>
+
+              {/* 第三行：其他适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'oneapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'oneapi'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
+                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'oneapi',
+                  name: 'OneAPI'
+                }))}
+              >
+                <div className="text-xl">1️⃣</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">OneAPI</div>
+                  <div className="text-xs opacity-80 mt-1">统一接口</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'yourapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'yourapi'
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-700'
+                    : 'hover:bg-orange-50 dark:hover:bg-orange-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'yourapi',
+                  name: 'YourAPI'
+                }))}
+              >
+                <div className="text-xl">👤</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">YourAPI</div>
+                  <div className="text-xs opacity-80 mt-1">个人接口</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'custom' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'custom'
+                    ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ ...prev, adapter: 'custom' }))}
+              >
+                <div className="text-xl">⚙️</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
+                  <div className="text-xs opacity-80 mt-1">自定义</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* 仅在选择 Custom 时显示名称输入框 */}
+        {formData.adapter === 'custom' && (
           <div className="space-y-2">
-            <Label htmlFor="name">{t('relayStation.name')} *</Label>
+            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
             <Input
-              id="name"
+              id="custom-name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder={t('relayStation.namePlaceholder')}
               className="w-full"
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="adapter">{t('relayStation.adapterType')}</Label>
-            <Select
-              value={formData.adapter}
-              onValueChange={(value: RelayStationAdapter) =>
-                setFormData(prev => ({ ...prev, adapter: value }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="packycode">PackyCode</SelectItem>
-                <SelectItem value="newapi">NewAPI</SelectItem>
-                <SelectItem value="oneapi">OneAPI</SelectItem>
-                <SelectItem value="yourapi">YourAPI</SelectItem>
-                <SelectItem value="custom">{t('relayStation.custom')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        )}
 
         {formData.adapter === 'packycode' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <Label className="text-base font-medium">{t('relayStation.serviceType')}</Label>
+              <Label className="text-sm font-medium">{t('relayStation.serviceType')}</Label>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <Button
                   type="button"
                   variant={packycodeService === 'taxi' ? 'default' : 'outline'}
-                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                     packycodeService === 'taxi' 
                       ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                       : 'hover:bg-blue-50 dark:hover:bg-blue-950'
@@ -741,9 +1093,9 @@ const CreateStationDialog: React.FC<{
                     fillStationName('taxi');
                   }}
                 >
-                  <div className="text-2xl">🚗</div>
+                  <div className="text-xl">🚗</div>
                   <div className="text-center">
-                    <div className="font-semibold">{t('relayStation.taxiService')}</div>
+                    <div className="font-semibold text-sm">{t('relayStation.taxiService')}</div>
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
                   </div>
                 </Button>
@@ -751,7 +1103,7 @@ const CreateStationDialog: React.FC<{
                 <Button
                   type="button"
                   variant={packycodeService === 'bus' ? 'default' : 'outline'}
-                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                     packycodeService === 'bus' 
                       ? 'bg-green-600 hover:bg-green-700 text-white' 
                       : 'hover:bg-green-50 dark:hover:bg-green-950'
@@ -761,9 +1113,9 @@ const CreateStationDialog: React.FC<{
                     fillStationName('bus');
                   }}
                 >
-                  <div className="text-2xl">🚌</div>
+                  <div className="text-xl">🚌</div>
                   <div className="text-center">
-                    <div className="font-semibold">{t('relayStation.busService')}</div>
+                    <div className="font-semibold text-sm">{t('relayStation.busService')}</div>
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
                   </div>
                 </Button>
@@ -865,7 +1217,7 @@ const CreateStationDialog: React.FC<{
 
         {formData.adapter !== 'packycode' && (
           <div className="space-y-2">
-            <Label htmlFor="api_url">{t('relayStation.apiUrl')} *</Label>
+            <Label htmlFor="api_url">{t('relayStation.apiUrl')}</Label>
             <Input
               id="api_url"
               type="url"
@@ -881,7 +1233,24 @@ const CreateStationDialog: React.FC<{
           {formData.adapter === 'packycode' ? (
             // PackyCode 固定使用 API Key，不显示选择器
             <div className="space-y-2">
-              <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+                {getApiKeyUrl(formData.adapter, packycodeService) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      const url = getApiKeyUrl(formData.adapter, packycodeService);
+                      if (url) await openExternalLink(url);
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t('relayStation.getApiKey')}
+                  </Button>
+                )}
+              </div>
               <Input
                 id="system_token"
                 type="password"
@@ -917,7 +1286,24 @@ const CreateStationDialog: React.FC<{
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+                  {getApiKeyUrl(formData.adapter) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={async () => {
+                        const url = getApiKeyUrl(formData.adapter);
+                        if (url) await openExternalLink(url);
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      {t('relayStation.getApiKey')}
+                    </Button>
+                  )}
+                </div>
                 <Input
                   id="system_token"
                   type="password"
@@ -944,7 +1330,7 @@ const CreateStationDialog: React.FC<{
           </div>
         )}
 
-        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
           <div className="flex items-center space-x-3">
             <Switch
               id="enabled"
@@ -954,7 +1340,7 @@ const CreateStationDialog: React.FC<{
               }
             />
             <div>
-              <Label htmlFor="enabled" className="text-base font-medium cursor-pointer">
+              <Label htmlFor="enabled" className="text-sm font-medium cursor-pointer">
                 {t('relayStation.enabled')}
               </Label>
               <p className="text-xs text-muted-foreground">
@@ -964,7 +1350,21 @@ const CreateStationDialog: React.FC<{
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        {/* 仅在选择 Custom 时显示名称输入框 */}
+        {formData.adapter === 'custom' && (
+          <div className="space-y-2">
+            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
+            <Input
+              id="custom-name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={t('relayStation.namePlaceholder')}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-3 pt-3 border-t">
           <Button type="button" variant="outline" onClick={() => {}}>
             {t('common.cancel')}
           </Button>
@@ -1030,6 +1430,36 @@ const EditStationDialog: React.FC<{
 
   const { t } = useTranslation();
 
+  // 获取API Key获取地址
+  const getApiKeyUrl = (adapter: string, service?: string): string | null => {
+    switch (adapter) {
+      case 'deepseek':
+        return 'https://platform.deepseek.com/api_keys';
+      case 'glm':
+        return 'https://bigmodel.cn/usercenter/proj-mgmt/apikeys';
+      case 'qwen':
+        return 'https://bailian.console.aliyun.com/?tab=model#/api-key';
+      case 'kimi':
+        return 'https://platform.moonshot.cn/console/api-keys';
+      case 'packycode':
+        if (service === 'taxi') {
+          return 'https://share.packycode.com/api-management';
+        }
+        return 'https://www.packycode.com/api-management';
+      default:
+        return null;
+    }
+  };
+
+  // 打开外部链接
+  const openExternalLink = async (url: string) => {
+    try {
+      await open(url);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
+  };
+
   // 当适配器改变时更新认证方式和 URL
   useEffect(() => {
     if (formData.adapter === 'packycode') {
@@ -1057,7 +1487,7 @@ const EditStationDialog: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
+    if (formData.adapter === 'custom' && !formData.name.trim()) {
       setFormToast({ message: t('relayStation.nameRequired'), type: "error" });
       return;
     }
@@ -1089,50 +1519,230 @@ const EditStationDialog: React.FC<{
       <DialogHeader>
         <DialogTitle>{t('relayStation.editTitle')}</DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-6">
+          <div className="col-span-2 space-y-2">
+            <Label className="text-sm font-medium">{t('relayStation.adapterType')}</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {/* 第一行：主流适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'packycode' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'packycode'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
+                    : 'hover:bg-blue-50 dark:hover:bg-blue-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'packycode',
+                  name: 'PackyCode',
+                  api_url: 'https://api.packycode.com'
+                }))}
+              >
+                <div className="text-xl">📦</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">PackyCode</div>
+                  <div className="text-xs opacity-80 mt-1">推荐使用</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'deepseek' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'deepseek'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
+                    : 'hover:bg-indigo-50 dark:hover:bg-indigo-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'deepseek',
+                  name: 'DeepSeek v3.1',
+                  api_url: 'https://api.deepseek.com/anthropic'
+                }))}
+              >
+                <div className="text-xl">🚀</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">DeepSeek</div>
+                  <div className="text-xs opacity-80 mt-1">v3.1</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'glm' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'glm'
+                    ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
+                    : 'hover:bg-cyan-50 dark:hover:bg-cyan-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'glm',
+                  name: '智谱GLM',
+                  api_url: 'https://open.bigmodel.cn/api/anthropic'
+                }))}
+              >
+                <div className="text-xl">🤖</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">智谱GLM</div>
+                  <div className="text-xs opacity-80 mt-1">清华智谱</div>
+                </div>
+              </Button>
+
+              {/* 第二行：更多适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'qwen' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'qwen'
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
+                    : 'hover:bg-amber-50 dark:hover:bg-amber-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'qwen',
+                  name: '千问Qwen',
+                  api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
+                }))}
+              >
+                <div className="text-xl">🎯</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">千问Qwen</div>
+                  <div className="text-xs opacity-80 mt-1">阿里通义</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'kimi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'kimi'
+                    ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
+                    : 'hover:bg-violet-50 dark:hover:bg-violet-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'kimi',
+                  name: 'Kimi k2',
+                  api_url: 'https://api.moonshot.cn/anthropic'
+                }))}
+              >
+                <div className="text-xl">🌙</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">Kimi k2</div>
+                  <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'newapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'newapi'
+                    ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-700'
+                    : 'hover:bg-green-50 dark:hover:bg-green-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'newapi',
+                  name: 'NewAPI'
+                }))}
+              >
+                <div className="text-xl">🆕</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">NewAPI</div>
+                  <div className="text-xs opacity-80 mt-1">通用接口</div>
+                </div>
+              </Button>
+
+              {/* 第三行：其他适配器 */}
+              <Button
+                type="button"
+                variant={formData.adapter === 'oneapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'oneapi'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
+                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'oneapi',
+                  name: 'OneAPI'
+                }))}
+              >
+                <div className="text-xl">1️⃣</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">OneAPI</div>
+                  <div className="text-xs opacity-80 mt-1">统一接口</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'yourapi' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'yourapi'
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-700'
+                    : 'hover:bg-orange-50 dark:hover:bg-orange-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ 
+                  ...prev, 
+                  adapter: 'yourapi',
+                  name: 'YourAPI'
+                }))}
+              >
+                <div className="text-xl">👤</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">YourAPI</div>
+                  <div className="text-xs opacity-80 mt-1">个人接口</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'custom' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'custom'
+                    ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({ ...prev, adapter: 'custom' }))}
+              >
+                <div className="text-xl">⚙️</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
+                  <div className="text-xs opacity-80 mt-1">自定义</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* 仅在选择 Custom 时显示名称输入框 */}
+        {formData.adapter === 'custom' && (
           <div className="space-y-2">
-            <Label htmlFor="edit-name">{t('relayStation.name')} *</Label>
+            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
             <Input
-              id="edit-name"
+              id="custom-name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder={t('relayStation.namePlaceholder')}
               className="w-full"
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-adapter">{t('relayStation.adapterType')}</Label>
-            <Select
-              value={formData.adapter}
-              onValueChange={(value: RelayStationAdapter) =>
-                setFormData(prev => ({ ...prev, adapter: value }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="packycode">PackyCode</SelectItem>
-                <SelectItem value="newapi">NewAPI</SelectItem>
-                <SelectItem value="oneapi">OneAPI</SelectItem>
-                <SelectItem value="yourapi">YourAPI</SelectItem>
-                <SelectItem value="custom">{t('relayStation.custom')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        )}
 
         {formData.adapter === 'packycode' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <Label className="text-base font-medium">{t('relayStation.serviceType')}</Label>
+              <Label className="text-sm font-medium">{t('relayStation.serviceType')}</Label>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <Button
                   type="button"
                   variant={packycodeService === 'taxi' ? 'default' : 'outline'}
-                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                     packycodeService === 'taxi' 
                       ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                       : 'hover:bg-blue-50 dark:hover:bg-blue-950'
@@ -1145,9 +1755,9 @@ const EditStationDialog: React.FC<{
                     }));
                   }}
                 >
-                  <div className="text-2xl">🚗</div>
+                  <div className="text-xl">🚗</div>
                   <div className="text-center">
-                    <div className="font-semibold">{t('relayStation.taxiService')}</div>
+                    <div className="font-semibold text-sm">{t('relayStation.taxiService')}</div>
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
                   </div>
                 </Button>
@@ -1155,7 +1765,7 @@ const EditStationDialog: React.FC<{
                 <Button
                   type="button"
                   variant={packycodeService === 'bus' ? 'default' : 'outline'}
-                  className={`p-4 h-auto flex flex-col items-center space-y-2 transition-all ${
+                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                     packycodeService === 'bus' 
                       ? 'bg-green-600 hover:bg-green-700 text-white' 
                       : 'hover:bg-green-50 dark:hover:bg-green-950'
@@ -1164,9 +1774,9 @@ const EditStationDialog: React.FC<{
                     setPackycodeService('bus');
                   }}
                 >
-                  <div className="text-2xl">🚌</div>
+                  <div className="text-xl">🚌</div>
                   <div className="text-center">
-                    <div className="font-semibold">{t('relayStation.busService')}</div>
+                    <div className="font-semibold text-sm">{t('relayStation.busService')}</div>
                     <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
                   </div>
                 </Button>
@@ -1262,7 +1872,7 @@ const EditStationDialog: React.FC<{
 
         {formData.adapter !== 'packycode' && (
           <div className="space-y-2">
-            <Label htmlFor="edit-api_url">{t('relayStation.apiUrl')} *</Label>
+            <Label htmlFor="edit-api_url">{t('relayStation.apiUrl')}</Label>
             <Input
               id="edit-api_url"
               type="url"
@@ -1278,7 +1888,24 @@ const EditStationDialog: React.FC<{
           {formData.adapter === 'packycode' ? (
             // PackyCode 固定使用 API Key，不显示选择器
             <div className="space-y-2">
-              <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+                {getApiKeyUrl(formData.adapter, packycodeService) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      const url = getApiKeyUrl(formData.adapter, packycodeService);
+                      if (url) await openExternalLink(url);
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t('relayStation.getApiKey')}
+                  </Button>
+                )}
+              </div>
               <Input
                 id="edit-system_token"
                 type="password"
@@ -1314,7 +1941,24 @@ const EditStationDialog: React.FC<{
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+                  {getApiKeyUrl(formData.adapter) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={async () => {
+                        const url = getApiKeyUrl(formData.adapter);
+                        if (url) await openExternalLink(url);
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      {t('relayStation.getApiKey')}
+                    </Button>
+                  )}
+                </div>
                 <Input
                   id="edit-system_token"
                   type="password"
@@ -1341,7 +1985,7 @@ const EditStationDialog: React.FC<{
           </div>
         )}
 
-        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
           <div className="flex items-center space-x-3">
             <Switch
               id="edit-enabled"
@@ -1351,7 +1995,7 @@ const EditStationDialog: React.FC<{
               }
             />
             <div>
-              <Label htmlFor="edit-enabled" className="text-base font-medium cursor-pointer">
+              <Label htmlFor="edit-enabled" className="text-sm font-medium cursor-pointer">
                 {t('relayStation.enabled')}
               </Label>
               <p className="text-xs text-muted-foreground">
@@ -1361,7 +2005,21 @@ const EditStationDialog: React.FC<{
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        {/* 仅在选择 Custom 时显示名称输入框 */}
+        {formData.adapter === 'custom' && (
+          <div className="space-y-2">
+            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
+            <Input
+              id="custom-name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder={t('relayStation.namePlaceholder')}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-3 pt-3 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
