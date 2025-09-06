@@ -33,6 +33,12 @@ i18n
             zh: {
                 common: zh,
             },
+            'zh-CN': {
+                common: zh,
+            },
+            'zh-TW': {
+                common: zh,
+            },
         },
 
         // 命名空间配置
@@ -48,7 +54,7 @@ i18n
         },
 
         // 白名单支持的语言
-        supportedLngs: ['en', 'zh'],
+        supportedLngs: ['en', 'zh', 'zh-CN', 'zh-TW'],
 
         // 非显式支持的语言回退到en
         nonExplicitSupportedLngs: true,

@@ -48,10 +48,30 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                 ) {
                     info!("Found stored claude path in database: {}", stored_path);
                     
-                    // Check if the path still exists
-                    let path_buf = PathBuf::from(&stored_path);
+                    // Check if the path still exists and works
+                    let mut final_path = stored_path.clone();
+                    let mut path_buf = PathBuf::from(&stored_path);
+                    
+                    // On Windows, if stored path exists but is not executable (shell script), try .cmd version
+                    #[cfg(target_os = "windows")]
+                    if path_buf.exists() && !stored_path.ends_with(".cmd") && !stored_path.ends_with(".exe") {
+                        // Test if the current path works by trying to get version
+                        if let Err(_) = get_claude_version(&stored_path) {
+                            // If it fails, try the .cmd version
+                            let cmd_path = format!("{}.cmd", stored_path);
+                            let cmd_path_buf = PathBuf::from(&cmd_path);
+                            if cmd_path_buf.exists() {
+                                if let Ok(_) = get_claude_version(&cmd_path) {
+                                    final_path = cmd_path.clone();
+                                    path_buf = cmd_path_buf;
+                                    info!("Using .cmd version instead of shell script: {}", cmd_path);
+                                }
+                            }
+                        }
+                    }
+                    
                     if path_buf.exists() && path_buf.is_file() {
-                        return Ok(stored_path);
+                        return Ok(final_path);
                     } else {
                         warn!("Stored claude path no longer exists: {}", stored_path);
                     }
@@ -146,10 +166,8 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
 fn discover_system_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
-    // 1. Try 'which' command first (now works in production)
-    if let Some(installation) = try_which_command() {
-        installations.push(installation);
-    }
+    // 1. Try system command first (now works in production and can return multiple installations)
+    installations.extend(find_which_installations());
 
     // 2. Check NVM paths
     installations.extend(find_nvm_installations());
@@ -164,48 +182,111 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
     installations
 }
 
-/// Try using the 'which' command to find Claude
-fn try_which_command() -> Option<ClaudeInstallation> {
-    debug!("Trying 'which claude' to find binary...");
+/// Try using the command to find Claude installations
+/// Returns multiple installations if found (Windows 'where' can return multiple paths)
+fn find_which_installations() -> Vec<ClaudeInstallation> {
+    debug!("Trying to find claude binary...");
 
-    match Command::new("which").arg("claude").output() {
+    // Use 'where' on Windows, 'which' on Unix
+    #[cfg(target_os = "windows")]
+    let command_name = "where";
+    #[cfg(not(target_os = "windows"))]
+    let command_name = "which";
+
+    let mut installations = Vec::new();
+
+    match Command::new(command_name).arg("claude").output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
             if output_str.is_empty() {
-                return None;
+                return installations;
             }
 
-            // Parse aliased output: "claude: aliased to /path/to/claude"
-            let path = if output_str.starts_with("claude:") && output_str.contains("aliased to") {
-                output_str
-                    .split("aliased to")
-                    .nth(1)
-                    .map(|s| s.trim().to_string())
-            } else {
-                Some(output_str)
-            }?;
+            // Process each line (Windows 'where' can return multiple paths)
+            for line in output_str.lines() {
+                let mut path = line.trim().to_string();
+                
+                if path.is_empty() {
+                    continue;
+                }
 
-            debug!("'which' found claude at: {}", path);
+                // Parse aliased output: "claude: aliased to /path/to/claude"
+                if path.starts_with("claude:") && path.contains("aliased to") {
+                    if let Some(aliased_path) = path.split("aliased to").nth(1) {
+                        path = aliased_path.trim().to_string();
+                    } else {
+                        continue;
+                    }
+                }
 
-            // Verify the path exists
-            if !PathBuf::from(&path).exists() {
-                warn!("Path from 'which' does not exist: {}", path);
-                return None;
+                // Convert Unix-style path to Windows path if needed
+                #[cfg(target_os = "windows")]
+                let path = {
+                    if path.starts_with("/c/") {
+                        // Convert /c/path to C:\path
+                        let windows_path = path.replace("/c/", "C:\\").replace("/", "\\");
+                        windows_path
+                    } else if path.starts_with("/") && path.len() > 3 && path.chars().nth(2) == Some('/') {
+                        // Convert /X/path to X:\path where X is drive letter
+                        let drive = path.chars().nth(1).unwrap();
+                        let rest = &path[3..];
+                        format!("{}:\\{}", drive.to_uppercase(), rest.replace("/", "\\"))
+                    } else {
+                        path
+                    }
+                };
+
+                #[cfg(not(target_os = "windows"))]
+                let path = path;
+
+                debug!("'{}' found claude at: {}", command_name, path);
+
+                // On Windows, prefer .cmd files over shell scripts
+                #[cfg(target_os = "windows")]
+                let final_path = {
+                    if !path.ends_with(".cmd") && !path.ends_with(".exe") {
+                        // Check if there's a .cmd file alongside
+                        let cmd_path = format!("{}.cmd", path);
+                        if PathBuf::from(&cmd_path).exists() {
+                            // Only use .cmd if the original doesn't work
+                            if let Err(_) = get_claude_version(&path) {
+                                cmd_path
+                            } else {
+                                path
+                            }
+                        } else {
+                            path
+                        }
+                    } else {
+                        path
+                    }
+                };
+
+                #[cfg(not(target_os = "windows"))]
+                let final_path = path;
+
+                // Verify the path exists
+                if !PathBuf::from(&final_path).exists() {
+                    warn!("Path from '{}' does not exist: {}", command_name, final_path);
+                    continue;
+                }
+
+                // Get version
+                let version = get_claude_version(&final_path).ok().flatten();
+
+                installations.push(ClaudeInstallation {
+                    path: final_path,
+                    version,
+                    source: command_name.to_string(),
+                    installation_type: InstallationType::System,
+                });
             }
-
-            // Get version
-            let version = get_claude_version(&path).ok().flatten();
-
-            Some(ClaudeInstallation {
-                path,
-                version,
-                source: "which".to_string(),
-                installation_type: InstallationType::System,
-            })
         }
-        _ => None,
+        _ => {}
     }
+
+    installations
 }
 
 /// Find Claude installations in NVM directories
