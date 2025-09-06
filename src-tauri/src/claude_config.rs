@@ -204,15 +204,6 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
         "packycode" => {
             // PackyCode 使用原始配置，不做特殊处理
         }
-        "newapi" | "oneapi" => {
-            // NewAPI 和 OneAPI 兼容 OpenAI 格式，不需要特殊处理
-        }
-        "yourapi" => {
-            // YourAPI 可能需要特殊的路径格式
-            if !station.api_url.ends_with("/v1") {
-                config.env.anthropic_base_url = Some(format!("{}/v1", station.api_url));
-            }
-        }
         "custom" => {
             // 自定义适配器，使用原始配置
         }

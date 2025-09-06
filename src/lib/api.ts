@@ -457,9 +457,6 @@ export type RelayStationAdapter =
   | 'glm'       // 智谱GLM
   | 'qwen'      // 千问Qwen
   | 'kimi'      // Kimi k2
-  | 'newapi'    // NewAPI 兼容平台
-  | 'oneapi'    // OneAPI 兼容平台
-  | 'yourapi'   // YourAPI 特定平台
   | 'custom';   // 自定义简单配置
 
 /** 认证方式 */
@@ -477,7 +474,7 @@ export interface RelayStation {
   adapter: RelayStationAdapter; // 适配器类型
   auth_method: AuthMethod;      // 认证方式
   system_token: string;         // 系统令牌
-  user_id?: string;             // 用户 ID（NewAPI 必需）
+  user_id?: string;             // 用户 ID（可选）
   adapter_config?: Record<string, any>; // 适配器特定配置
   enabled: boolean;             // 启用状态
   created_at: number;          // 创建时间
@@ -589,17 +586,17 @@ export interface NodeSpeedTestResult {
 
 /** PackyCode 用户额度信息 */
 export interface PackycodeUserQuota {
-  daily_budget_usd: string | number;       // 日预算（美元）
-  daily_spent_usd: string | number | null; // 日已使用（美元）
-  monthly_budget_usd: string | number;     // 月预算（美元）
-  monthly_spent_usd: string | number | null; // 月已使用（美元）
-  balance_usd: string | number;            // 账户余额（美元）
-  total_spent_usd: string | number;        // 总消费（美元）
-  plan_type: string;                       // 计划类型 (pro, basic, etc.)
-  plan_expires_at: string;                  // 计划过期时间
-  username?: string;                       // 用户名
-  email?: string;                          // 邮箱
-  opus_enabled?: boolean;                  // 是否启用Opus模型
+  daily_budget_usd: number;              // 日预算（美元）
+  daily_spent_usd: number;               // 日已使用（美元）
+  monthly_budget_usd: number;            // 月预算（美元）
+  monthly_spent_usd: number;             // 月已使用（美元）
+  balance_usd: number;                   // 账户余额（美元）
+  total_spent_usd: number;               // 总消费（美元）
+  plan_type: string;                     // 计划类型 (pro, basic, etc.)
+  plan_expires_at?: string;              // 计划过期时间
+  username?: string;                     // 用户名
+  email?: string;                        // 邮箱
+  opus_enabled?: boolean;                // 是否启用Opus模型
 }
 
 /**

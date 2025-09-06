@@ -19,9 +19,6 @@ pub enum RelayStationAdapter {
     Glm,       // 智谱GLM
     Qwen,      // 千问Qwen
     Kimi,      // Kimi k2
-    Newapi,    // NewAPI 兼容平台
-    Oneapi,    // OneAPI 兼容平台
-    Yourapi,   // YourAPI 特定平台
     Custom,    // 自定义简单配置
 }
 
@@ -33,9 +30,6 @@ impl RelayStationAdapter {
             RelayStationAdapter::Glm => "glm",
             RelayStationAdapter::Qwen => "qwen",
             RelayStationAdapter::Kimi => "kimi",
-            RelayStationAdapter::Newapi => "newapi",
-            RelayStationAdapter::Oneapi => "oneapi",
-            RelayStationAdapter::Yourapi => "yourapi",
             RelayStationAdapter::Custom => "custom",
         }
     }
@@ -60,7 +54,7 @@ pub struct RelayStation {
     pub adapter: RelayStationAdapter, // 适配器类型
     pub auth_method: AuthMethod,      // 认证方式
     pub system_token: String,         // 系统令牌
-    pub user_id: Option<String>,      // 用户 ID（NewAPI 必需）
+    pub user_id: Option<String>,      // 用户 ID（可选）
     pub adapter_config: Option<HashMap<String, serde_json::Value>>, // 适配器特定配置
     pub enabled: bool,                // 启用状态
     pub created_at: i64,             // 创建时间

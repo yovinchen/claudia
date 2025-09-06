@@ -73,6 +73,17 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
 
   const { t } = useTranslation();
 
+  // Token 脱敏函数
+  const maskToken = (token: string): string => {
+    if (!token || token.length <= 8) {
+      return '*'.repeat(token?.length || 0);
+    }
+    const start = token.substring(0, 4);
+    const end = token.substring(token.length - 4);
+    const middleLength = Math.max(token.length - 8, 8);
+    return `${start}${'*'.repeat(middleLength)}${end}`;
+  };
+
   // 显示Toast
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -98,13 +109,13 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setLoadingConfig(true);
       // 读取完整的 ~/.claude/settings.json 文件
       const settings = await api.getClaudeSettings();
-      
+
       // 保存配置用于简单视图显示
       setCurrentConfig({
         api_url: settings.env?.ANTHROPIC_BASE_URL || '',
         api_token: settings.env?.ANTHROPIC_AUTH_TOKEN || ''
       });
-      
+
       // 格式化完整的JSON字符串
       setConfigJson(JSON.stringify(settings, null, 2));
     } catch (error) {
@@ -140,10 +151,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setSavingConfig(true);
       // 验证JSON格式
       const parsedConfig = JSON.parse(configJson);
-      
+
       // 保存配置到 ~/.claude/settings.json
       await api.saveClaudeSettings(parsedConfig);
-      
+
       showToast(t('relayStation.configSaved'), "success");
       setEditingConfig(false);
       loadCurrentConfig();
@@ -218,9 +229,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       case 'glm': return '智谱GLM';
       case 'qwen': return '千问Qwen';
       case 'kimi': return 'Kimi k2';
-      case 'newapi': return 'NewAPI';
-      case 'oneapi': return 'OneAPI';
-      case 'yourapi': return 'YourAPI';
       case 'custom': return t('relayStation.custom');
       default: return adapter;
     }
@@ -322,27 +330,9 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       {/* 当前配置状态 */}
       <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
         <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <CardTitle className="text-lg">{t('relayStation.currentConfig')}</CardTitle>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                loadCurrentConfig();
-                syncConfig();
-              }}
-              disabled={loadingConfig}
-            >
-              {loadingConfig ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              <span className="ml-2">{t('relayStation.syncConfig')}</span>
-            </Button>
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-lg">{t('relayStation.currentConfig')}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -422,49 +412,71 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium">{t('relayStation.configPreview')}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setJsonConfigView(true)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    {t('relayStation.viewJson')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleFlushDns}
-                    disabled={flushingDns}
-                  >
-                    {flushingDns ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-1" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                    )}
-                    {t('relayStation.flushDns')}
-                  </Button>
+            <div className="flex gap-4">
+              {/* 左侧数据展示 */}
+              <div className="flex-1 space-y-2">
+                <div className="text-sm font-medium mb-2">{t('relayStation.configPreview')}</div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground min-w-[80px]">API URL:</span>
+                    <span className="font-mono text-xs break-all">
+                      {currentConfig.api_url || t('relayStation.notConfigured')}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground min-w-[80px]">API Token:</span>
+                    <span className="font-mono text-xs">
+                      {currentConfig.api_token ? maskToken(currentConfig.api_token) : t('relayStation.notConfigured')}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    {t('relayStation.configLocation')}: ~/.claude/settings.json
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <span className="font-medium text-muted-foreground min-w-[100px]">API URL:</span>
-                  <span className="font-mono text-xs break-all">
-                    {currentConfig.api_url || t('relayStation.notConfigured')}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-medium text-muted-foreground min-w-[100px]">API Token:</span>
-                  <span className="font-mono text-xs">
-                    {currentConfig.api_token || t('relayStation.notConfigured')}
-                  </span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-3">
-                  {t('relayStation.configLocation')}: ~/.claude/settings.json
-                </div>
+
+              {/* 右侧按钮区域 */}
+              <div className="flex flex-col gap-2 min-w-[100px]">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    loadCurrentConfig();
+                    syncConfig();
+                  }}
+                  disabled={loadingConfig}
+                  className="w-full h-9 justify-start"
+                >
+                  {loadingConfig ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  <span className="text-xs">{t('relayStation.syncConfig')}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFlushDns}
+                  disabled={flushingDns}
+                  className="w-full h-9 justify-start"
+                >
+                  {flushingDns ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  <span className="text-xs">{t('relayStation.flushDns')}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setJsonConfigView(true)}
+                  className="w-full h-9 justify-start"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  <span className="text-xs">{t('relayStation.viewJson')}</span>
+                </Button>
               </div>
             </div>
           )}
@@ -542,7 +554,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                             </div>
                             {quotaData[station.id].plan_expires_at && (
                               <span className="text-muted-foreground">
-                                到期: {new Date(quotaData[station.id].plan_expires_at).toLocaleDateString()}
+                                到期: {new Date(quotaData[station.id].plan_expires_at!).toLocaleDateString()}
                               </span>
                             )}
                           </div>
@@ -561,7 +573,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               <span className="text-muted-foreground">日额度:</span>
                               <div className="flex items-center gap-2">
                                 {(() => {
-                                  const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                  const daily_spent = Number(quotaData[station.id].daily_spent_usd);
                                   const daily_budget = Number(quotaData[station.id].daily_budget_usd);
                                   return (
                                     <>
@@ -579,14 +591,14 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               <div
                                 className={`h-full transition-all ${
                                   (() => {
-                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd);
                                     const daily_budget = Number(quotaData[station.id].daily_budget_usd);
                                     return daily_spent / daily_budget > 0.8;
                                   })() ? 'bg-orange-500' : 'bg-green-500'
                                 }`}
                                 style={{ width: `${Math.min(
                                   (() => {
-                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd || 0);
+                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd);
                                     const daily_budget = Number(quotaData[station.id].daily_budget_usd);
                                     return (daily_spent / daily_budget) * 100;
                                   })(), 100)}%` }}
@@ -600,7 +612,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               <span className="text-muted-foreground">月额度:</span>
                               <div className="flex items-center gap-2">
                                 {(() => {
-                                  const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                  const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
                                   const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
                                   return (
                                     <>
@@ -618,14 +630,14 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                               <div
                                 className={`h-full transition-all ${
                                   (() => {
-                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
                                     const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
                                     return monthly_spent / monthly_budget > 0.8;
                                   })() ? 'bg-orange-500' : 'bg-green-500'
                                 }`}
                                 style={{ width: `${Math.min(
                                   (() => {
-                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd || 0);
+                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
                                     const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
                                     return (monthly_spent / monthly_budget) * 100;
                                   })(), 100)}%` }}
@@ -786,7 +798,7 @@ const CreateStationDialog: React.FC<{
   const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
   const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
   const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com'); // 滴滴车节点
-  
+
   // 测速弹出框状态
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
   const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
@@ -828,7 +840,7 @@ const CreateStationDialog: React.FC<{
   const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
     setShowSpeedTestModal(true);
     setSpeedTestInProgress(true);
-    
+
     // 初始化测速结果
     const initialResults = nodes.map(node => ({
       url: node.url,
@@ -837,42 +849,41 @@ const CreateStationDialog: React.FC<{
       status: 'testing' as const
     }));
     setSpeedTestResults(initialResults);
-    
+
     let bestNode = nodes[0];
     let minTime = Infinity;
-    
+
     // 并行测试所有节点
     const testPromises = nodes.map(async (node, index) => {
       try {
         const startTime = Date.now();
-        await fetch(node.url, { 
+        await fetch(node.url, {
           method: 'HEAD',
-          timeout: 5000,
           mode: 'no-cors'
         });
         const responseTime = Date.now() - startTime;
-        
+
         // 更新单个节点的测试结果
-        setSpeedTestResults(prev => prev.map((result, i) => 
+        setSpeedTestResults(prev => prev.map((result, i) =>
           i === index ? { ...result, responseTime, status: 'success' } : result
         ));
-        
+
         if (responseTime < minTime) {
           minTime = responseTime;
           bestNode = node;
         }
-        
+
         return { node, responseTime };
       } catch (error) {
         console.log(`Node ${node.url} failed:`, error);
         // 标记节点为失败
-        setSpeedTestResults(prev => prev.map((result, i) => 
+        setSpeedTestResults(prev => prev.map((result, i) =>
           i === index ? { ...result, responseTime: null, status: 'failed' } : result
         ));
         return { node, responseTime: null };
       }
     });
-    
+
     try {
       await Promise.all(testPromises);
       // 测试完成后等待2秒让用户看到结果
@@ -898,10 +909,7 @@ const CreateStationDialog: React.FC<{
     if (formData.adapter === 'packycode') {
       setFormData(prev => ({
         ...prev,
-        auth_method: 'api_key', // PackyCode 固定使用 API Key
-        api_url: packycodeService === 'taxi'
-          ? packycodeTaxiNode
-          : packycodeNode
+        auth_method: 'api_key' // PackyCode 固定使用 API Key
       }));
     } else if (formData.adapter === 'custom') {
       setFormData(prev => ({
@@ -914,7 +922,7 @@ const CreateStationDialog: React.FC<{
         auth_method: 'bearer_token'
       }));
     }
-  }, [formData.adapter, packycodeService, packycodeNode, packycodeTaxiNode]);
+  }, [formData.adapter]);
 
   // 自动填充中转站名称
   const fillStationName = (serviceType: string) => {
@@ -979,8 +987,8 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
                     : 'hover:bg-blue-50 dark:hover:bg-blue-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'packycode',
                   name: 'PackyCode',
                   api_url: 'https://api.packycode.com'
@@ -1001,8 +1009,8 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
                     : 'hover:bg-indigo-50 dark:hover:bg-indigo-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'deepseek',
                   name: 'DeepSeek v3.1',
                   api_url: 'https://api.deepseek.com/anthropic'
@@ -1023,8 +1031,8 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
                     : 'hover:bg-cyan-50 dark:hover:bg-cyan-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'glm',
                   name: '智谱GLM',
                   api_url: 'https://open.bigmodel.cn/api/anthropic'
@@ -1046,8 +1054,8 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
                     : 'hover:bg-amber-50 dark:hover:bg-amber-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'qwen',
                   name: '千问Qwen',
                   api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
@@ -1068,8 +1076,8 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
                     : 'hover:bg-violet-50 dark:hover:bg-violet-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'kimi',
                   name: 'Kimi k2',
                   api_url: 'https://api.moonshot.cn/anthropic'
@@ -1082,69 +1090,6 @@ const CreateStationDialog: React.FC<{
                 </div>
               </Button>
 
-              <Button
-                type="button"
-                variant={formData.adapter === 'newapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'newapi'
-                    ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-700'
-                    : 'hover:bg-green-50 dark:hover:bg-green-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'newapi',
-                  name: 'NewAPI'
-                }))}
-              >
-                <div className="text-xl">🆕</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">NewAPI</div>
-                  <div className="text-xs opacity-80 mt-1">通用接口</div>
-                </div>
-              </Button>
-
-              {/* 第三行：其他适配器 */}
-              <Button
-                type="button"
-                variant={formData.adapter === 'oneapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'oneapi'
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
-                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'oneapi',
-                  name: 'OneAPI'
-                }))}
-              >
-                <div className="text-xl">1️⃣</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">OneAPI</div>
-                  <div className="text-xs opacity-80 mt-1">统一接口</div>
-                </div>
-              </Button>
-
-              <Button
-                type="button"
-                variant={formData.adapter === 'yourapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'yourapi'
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-700'
-                    : 'hover:bg-orange-50 dark:hover:bg-orange-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'yourapi',
-                  name: 'YourAPI'
-                }))}
-              >
-                <div className="text-xl">👤</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">YourAPI</div>
-                  <div className="text-xs opacity-80 mt-1">个人接口</div>
-                </div>
-              </Button>
 
               <Button
                 type="button"
@@ -1196,6 +1141,7 @@ const CreateStationDialog: React.FC<{
                   onClick={() => {
                     setPackycodeService('taxi');
                     fillStationName('taxi');
+                    setFormData(prev => ({ ...prev, api_url: packycodeTaxiNode }));
                   }}
                 >
                   <div className="text-xl">🚗</div>
@@ -1216,6 +1162,7 @@ const CreateStationDialog: React.FC<{
                   onClick={() => {
                     setPackycodeService('bus');
                     fillStationName('bus');
+                    setFormData(prev => ({ ...prev, api_url: packycodeNode }));
                   }}
                 >
                   <div className="text-xl">🚌</div>
@@ -1243,7 +1190,10 @@ const CreateStationDialog: React.FC<{
                 <div className="flex-1">
                   <Select
                     value={packycodeNode}
-                    onValueChange={(value: string) => setPackycodeNode(value)}
+                    onValueChange={(value: string) => {
+                      setPackycodeNode(value);
+                      setFormData(prev => ({ ...prev, api_url: value }));
+                    }}
                   >
                   <SelectTrigger>
                     <SelectValue placeholder={t('relayStation.selectNode')} />
@@ -1291,7 +1241,7 @@ const CreateStationDialog: React.FC<{
                       { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
                       { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
                     ];
-                    
+
                     await performSpeedTest(busNodes, (bestNode) => {
                       setPackycodeNode(bestNode.url);
                     });
@@ -1316,7 +1266,10 @@ const CreateStationDialog: React.FC<{
                 <div className="flex-1">
                   <Select
                     value={packycodeTaxiNode}
-                    onValueChange={(value: string) => setPackycodeTaxiNode(value)}
+                    onValueChange={(value: string) => {
+                      setPackycodeTaxiNode(value);
+                      setFormData(prev => ({ ...prev, api_url: value }));
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('relayStation.selectNode')} />
@@ -1343,7 +1296,7 @@ const CreateStationDialog: React.FC<{
                       { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 备用1 (CF-Pro)" },
                       { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 备用2 (HK-CN2)" }
                     ];
-                    
+
                     await performSpeedTest(taxiNodes, (bestNode) => {
                       setPackycodeTaxiNode(bestNode.url);
                     });
@@ -1474,18 +1427,6 @@ const CreateStationDialog: React.FC<{
           )}
         </div>
 
-        {(formData.adapter === 'newapi' || formData.adapter === 'oneapi') && (
-          <div className="space-y-2">
-            <Label htmlFor="user_id">{t('relayStation.userId')}</Label>
-            <Input
-              id="user_id"
-              value={formData.user_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
-              placeholder={t('relayStation.userIdPlaceholder')}
-              className="w-full"
-            />
-          </div>
-        )}
 
 
         <div className="flex justify-end space-x-3 pt-3">
@@ -1601,15 +1542,9 @@ const EditStationDialog: React.FC<{
     }
     return 'https://api.packycode.com';
   });
-  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>(() => {
-    // 如果是PackyCode滴滴车服务，使用当前的API URL
-    if (station.adapter === 'packycode' && station.api_url.includes('share-api')) {
-      return station.api_url;
-    }
-    return 'https://share-api.packycode.com';
-  });
 
-  // 测速弹出框状态
+  // 滴滴车服务的节点
+  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com');
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
   const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
   const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
@@ -1650,7 +1585,7 @@ const EditStationDialog: React.FC<{
   const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
     setShowSpeedTestModal(true);
     setSpeedTestInProgress(true);
-    
+
     // 初始化测速结果
     const initialResults = nodes.map(node => ({
       url: node.url,
@@ -1659,42 +1594,41 @@ const EditStationDialog: React.FC<{
       status: 'testing' as const
     }));
     setSpeedTestResults(initialResults);
-    
+
     let bestNode = nodes[0];
     let minTime = Infinity;
-    
+
     // 并行测试所有节点
     const testPromises = nodes.map(async (node, index) => {
       try {
         const startTime = Date.now();
-        await fetch(node.url, { 
+        await fetch(node.url, {
           method: 'HEAD',
-          timeout: 5000,
           mode: 'no-cors'
         });
         const responseTime = Date.now() - startTime;
-        
+
         // 更新单个节点的测试结果
-        setSpeedTestResults(prev => prev.map((result, i) => 
+        setSpeedTestResults(prev => prev.map((result, i) =>
           i === index ? { ...result, responseTime, status: 'success' } : result
         ));
-        
+
         if (responseTime < minTime) {
           minTime = responseTime;
           bestNode = node;
         }
-        
+
         return { node, responseTime };
       } catch (error) {
         console.log(`Node ${node.url} failed:`, error);
         // 标记节点为失败
-        setSpeedTestResults(prev => prev.map((result, i) => 
+        setSpeedTestResults(prev => prev.map((result, i) =>
           i === index ? { ...result, responseTime: null, status: 'failed' } : result
         ));
         return { node, responseTime: null };
       }
     });
-    
+
     try {
       await Promise.all(testPromises);
       // 测试完成后等待2秒让用户看到结果
@@ -1720,10 +1654,7 @@ const EditStationDialog: React.FC<{
     if (formData.adapter === 'packycode') {
       setFormData(prev => ({
         ...prev,
-        auth_method: 'api_key', // PackyCode 固定使用 API Key
-        api_url: packycodeService === 'taxi'
-          ? packycodeTaxiNode
-          : packycodeNode
+        auth_method: 'api_key' // PackyCode 固定使用 API Key
       }));
     } else if (formData.adapter === 'custom') {
       setFormData(prev => ({
@@ -1736,7 +1667,7 @@ const EditStationDialog: React.FC<{
         auth_method: 'bearer_token'
       }));
     }
-  }, [formData.adapter, packycodeService, packycodeNode, packycodeTaxiNode]);
+  }, [formData.adapter]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1788,8 +1719,8 @@ const EditStationDialog: React.FC<{
                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
                     : 'hover:bg-blue-50 dark:hover:bg-blue-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'packycode',
                   name: 'PackyCode',
                   api_url: 'https://api.packycode.com'
@@ -1810,8 +1741,8 @@ const EditStationDialog: React.FC<{
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
                     : 'hover:bg-indigo-50 dark:hover:bg-indigo-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'deepseek',
                   name: 'DeepSeek v3.1',
                   api_url: 'https://api.deepseek.com/anthropic'
@@ -1832,8 +1763,8 @@ const EditStationDialog: React.FC<{
                     ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
                     : 'hover:bg-cyan-50 dark:hover:bg-cyan-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'glm',
                   name: '智谱GLM',
                   api_url: 'https://open.bigmodel.cn/api/anthropic'
@@ -1855,8 +1786,8 @@ const EditStationDialog: React.FC<{
                     ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
                     : 'hover:bg-amber-50 dark:hover:bg-amber-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'qwen',
                   name: '千问Qwen',
                   api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
@@ -1877,8 +1808,8 @@ const EditStationDialog: React.FC<{
                     ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
                     : 'hover:bg-violet-50 dark:hover:bg-violet-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
+                onClick={() => setFormData(prev => ({
+                  ...prev,
                   adapter: 'kimi',
                   name: 'Kimi k2',
                   api_url: 'https://api.moonshot.cn/anthropic'
@@ -1891,69 +1822,6 @@ const EditStationDialog: React.FC<{
                 </div>
               </Button>
 
-              <Button
-                type="button"
-                variant={formData.adapter === 'newapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'newapi'
-                    ? 'bg-green-600 hover:bg-green-700 text-white border-2 border-green-700'
-                    : 'hover:bg-green-50 dark:hover:bg-green-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'newapi',
-                  name: 'NewAPI'
-                }))}
-              >
-                <div className="text-xl">🆕</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">NewAPI</div>
-                  <div className="text-xs opacity-80 mt-1">通用接口</div>
-                </div>
-              </Button>
-
-              {/* 第三行：其他适配器 */}
-              <Button
-                type="button"
-                variant={formData.adapter === 'oneapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'oneapi'
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
-                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'oneapi',
-                  name: 'OneAPI'
-                }))}
-              >
-                <div className="text-xl">1️⃣</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">OneAPI</div>
-                  <div className="text-xs opacity-80 mt-1">统一接口</div>
-                </div>
-              </Button>
-
-              <Button
-                type="button"
-                variant={formData.adapter === 'yourapi' ? 'default' : 'outline'}
-                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                  formData.adapter === 'yourapi'
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-700'
-                    : 'hover:bg-orange-50 dark:hover:bg-orange-950 border-2 border-transparent'
-                }`}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  adapter: 'yourapi',
-                  name: 'YourAPI'
-                }))}
-              >
-                <div className="text-xl">👤</div>
-                <div className="text-center">
-                  <div className="font-semibold text-sm">YourAPI</div>
-                  <div className="text-xs opacity-80 mt-1">个人接口</div>
-                </div>
-              </Button>
 
               <Button
                 type="button"
@@ -2006,7 +1874,7 @@ const EditStationDialog: React.FC<{
                     setPackycodeService('taxi');
                     setFormData(prev => ({
                       ...prev,
-                      api_url: 'https://share-api.packycode.com'
+                      api_url: packycodeTaxiNode
                     }));
                   }}
                 >
@@ -2027,6 +1895,7 @@ const EditStationDialog: React.FC<{
                   }`}
                   onClick={() => {
                     setPackycodeService('bus');
+                    setFormData(prev => ({ ...prev, api_url: packycodeNode }));
                   }}
                 >
                   <div className="text-xl">🚌</div>
@@ -2096,7 +1965,7 @@ const EditStationDialog: React.FC<{
                       { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
                       { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
                     ];
-                    
+
                     await performSpeedTest(busNodes, (bestNode) => {
                       setPackycodeNode(bestNode.url);
                     });
@@ -2227,18 +2096,6 @@ const EditStationDialog: React.FC<{
           )}
         </div>
 
-        {(formData.adapter === 'newapi' || formData.adapter === 'oneapi') && (
-          <div className="space-y-2">
-            <Label htmlFor="edit-user_id">{t('relayStation.userId')}</Label>
-            <Input
-              id="edit-user_id"
-              value={formData.user_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
-              placeholder={t('relayStation.userIdPlaceholder')}
-              className="w-full"
-            />
-          </div>
-        )}
 
         <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
           <div className="flex items-center space-x-3">

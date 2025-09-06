@@ -867,7 +867,7 @@
     "tokenPlaceholder": "Enter your API token",
     "tokenRequired": "System token is required",
     "userId": "User ID",
-    "userIdPlaceholder": "Required for NewAPI/OneAPI",
+    "userIdPlaceholder": "Optional",
     "enabled": "Enabled",
     "testConnection": "Test Connection",
     "connectionSuccess": "Connection successful",

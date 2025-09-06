@@ -794,7 +794,7 @@
     "tokenPlaceholder": "输入您的 API 令牌",
     "tokenRequired": "系统令牌必填",
     "userId": "用户 ID",
-    "userIdPlaceholder": "NewAPI/OneAPI 必需",
+    "userIdPlaceholder": "可选",
     "enabled": "启用",
     "testConnection": "测试连接",
     "connectionSuccess": "连接成功",
