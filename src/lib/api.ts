@@ -538,6 +538,15 @@ export interface ConnectionTestResult {
   error?: string;                 // 错误信息
 }
 
+/** 导入结果统计 */
+export interface ImportResult {
+  total: number;      // 总数
+  imported: number;   // 成功导入数
+  skipped: number;    // 跳过数（重复）
+  failed: number;     // 失败数
+  message: string;    // 结果消息
+}
+
 /** Token 信息 */
 export interface TokenInfo {
   id: string;
@@ -2267,6 +2276,39 @@ export const api = {
       return await invoke<Record<string, string | null>>("relay_station_get_current_config");
     } catch (error) {
       console.error("Failed to get current config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Exports all relay stations configuration
+   * @returns Promise resolving to array of relay stations
+   */
+  async relayStationsExport(): Promise<RelayStation[]> {
+    try {
+      return await invoke<RelayStation[]>("relay_stations_export");
+    } catch (error) {
+      console.error("Failed to export relay stations:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports relay stations configuration
+   * @param stations - Array of relay stations to import
+   * @param clearExisting - Whether to clear existing stations before import
+   * @returns Promise resolving to success message
+   */
+  async relayStationsImport(stations: CreateRelayStationRequest[], clearExisting: boolean = false): Promise<ImportResult> {
+    try {
+      return await invoke<ImportResult>("relay_stations_import", {
+        request: {
+          stations,
+          clear_existing: clearExisting
+        }
+      });
+    } catch (error) {
+      console.error("Failed to import relay stations:", error);
       throw error;
     }
   },

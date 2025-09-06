@@ -848,7 +848,20 @@
     "autoSelectFailed": "自动选择节点失败",
     "selectingBestNode": "正在测试节点以寻找最快的...",
     "packycodeTokenNote": "PackyCode 仅支持 API Key 认证方式",
-    "enabledNote": "启用此中转站以使其可用"
+    "enabledNote": "启用此中转站以使其可用",
+    "export": "导出配置",
+    "import": "导入配置",
+    "exportSuccess": "中转站配置已导出",
+    "exportFailed": "导出失败",
+    "importSuccess": "中转站配置已导入",
+    "importFailed": "导入失败",
+    "importConfirm": "确认导入 {{count}} 个中转站配置？这不会删除现有配置。",
+    "importing": "正在导入...",
+    "importTotal": "总计",
+    "importSuccess": "成功",
+    "importSkipped": "跳过（重复）",
+    "importFailed": "失败",
+    "allDuplicate": "所有配置都已存在，未导入任何新配置"
   },
   "status": {
     "connected": "已连接",

@@ -700,3 +700,211 @@ pub async fn relay_station_get_current_config() -> Result<HashMap<String, Option
     
     Ok(config)
 }
+
+/// 导出所有中转站配置
+#[command]
+pub async fn relay_stations_export(db: State<'_, AgentDb>) -> Result<Vec<RelayStation>, String> {
+    let conn = db.0.lock().map_err(|e| {
+        log::error!("Failed to acquire database lock: {}", e);
+        i18n::t("database.lock_failed")
+    })?;
+
+    // 确保表存在
+    init_relay_stations_tables(&conn).map_err(|e| {
+        log::error!("Failed to initialize relay stations tables: {}", e);
+        i18n::t("database.init_failed")
+    })?;
+
+    let mut stmt = conn.prepare("SELECT * FROM relay_stations ORDER BY created_at DESC")
+        .map_err(|e| {
+            log::error!("Failed to prepare statement: {}", e);
+            i18n::t("database.query_failed")
+        })?;
+
+    let stations = stmt.query_map([], |row| RelayStation::from_row(row))
+        .map_err(|e| {
+            log::error!("Failed to query relay stations: {}", e);
+            i18n::t("database.query_failed")
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to collect relay stations: {}", e);
+            i18n::t("database.query_failed")
+        })?;
+
+    log::info!("Exported {} relay stations", stations.len());
+    Ok(stations)
+}
+
+/// 导入结果统计
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportResult {
+    pub total: usize,         // 总数
+    pub imported: usize,      // 成功导入数
+    pub skipped: usize,       // 跳过数（重复）
+    pub failed: usize,        // 失败数
+    pub message: String,      // 结果消息
+}
+
+/// 导入中转站配置
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportRelayStationsRequest {
+    pub stations: Vec<CreateRelayStationRequest>,
+    pub clear_existing: bool,  // 是否清除现有配置
+}
+
+#[command]
+pub async fn relay_stations_import(
+    request: ImportRelayStationsRequest,
+    db: State<'_, AgentDb>
+) -> Result<ImportResult, String> {
+    let mut conn = db.0.lock().map_err(|e| {
+        log::error!("Failed to acquire database lock: {}", e);
+        i18n::t("database.lock_failed")
+    })?;
+
+    // 确保表存在
+    init_relay_stations_tables(&conn).map_err(|e| {
+        log::error!("Failed to initialize relay stations tables: {}", e);
+        i18n::t("database.init_failed")
+    })?;
+
+    // 开始事务
+    let tx = conn.transaction().map_err(|e| {
+        log::error!("Failed to start transaction: {}", e);
+        i18n::t("database.transaction_failed")
+    })?;
+
+    // 如果需要清除现有配置
+    if request.clear_existing {
+        tx.execute("DELETE FROM relay_stations", [])
+            .map_err(|e| {
+                log::error!("Failed to clear existing relay stations: {}", e);
+                i18n::t("relay_station.clear_failed")
+            })?;
+        log::info!("Cleared existing relay stations");
+    }
+
+    // 获取现有的中转站列表（用于重复检查）
+    let existing_stations: Vec<(String, String)> = if !request.clear_existing {
+        let mut stmt = tx.prepare("SELECT api_url, system_token FROM relay_stations")
+            .map_err(|e| {
+                log::error!("Failed to prepare statement: {}", e);
+                i18n::t("database.query_failed")
+            })?;
+        
+        let stations_iter = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| {
+            log::error!("Failed to query existing stations: {}", e);
+            i18n::t("database.query_failed")
+        })?;
+        
+        // 立即收集结果，避免生命周期问题
+        let mut existing = Vec::new();
+        for station_result in stations_iter {
+            match station_result {
+                Ok(station) => existing.push(station),
+                Err(e) => {
+                    log::error!("Failed to read existing station: {}", e);
+                    return Err(i18n::t("database.query_failed"));
+                }
+            }
+        }
+        existing
+    } else {
+        Vec::new()
+    };
+
+    // 导入新的中转站
+    let total = request.stations.len();
+    let mut imported_count = 0;
+    let mut skipped_count = 0;
+    let mut failed_count = 0;
+    let now = Utc::now().timestamp();
+
+    for station_request in request.stations {
+        // 验证输入
+        if let Err(e) = validate_relay_station_request(&station_request.name, &station_request.api_url, &station_request.system_token) {
+            log::warn!("Skipping invalid station {}: {}", station_request.name, e);
+            failed_count += 1;
+            continue;
+        }
+
+        // 检查是否重复（同时匹配 api_url 和 system_token）
+        let is_duplicate = existing_stations.iter().any(|(url, token)| {
+            url == &station_request.api_url && token == &station_request.system_token
+        });
+
+        if is_duplicate {
+            log::info!("Skipping duplicate station: {} ({})", station_request.name, station_request.api_url);
+            skipped_count += 1;
+            continue;
+        }
+
+        let id = Uuid::new_v4().to_string();
+        
+        let adapter_str = serde_json::to_string(&station_request.adapter)
+            .map_err(|_| i18n::t("relay_station.invalid_adapter"))?
+            .trim_matches('"').to_string();
+
+        let auth_method_str = serde_json::to_string(&station_request.auth_method)
+            .map_err(|_| i18n::t("relay_station.invalid_auth_method"))?
+            .trim_matches('"').to_string();
+
+        let adapter_config_str = station_request.adapter_config.as_ref()
+            .map(|config| serde_json::to_string(config))
+            .transpose()
+            .map_err(|_| i18n::t("relay_station.invalid_config"))?;
+
+        match tx.execute(
+            r#"
+            INSERT INTO relay_stations 
+            (id, name, description, api_url, adapter, auth_method, system_token, user_id, adapter_config, enabled, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+            "#,
+            params![
+                id,
+                station_request.name,
+                station_request.description,
+                station_request.api_url,
+                adapter_str,
+                auth_method_str,
+                station_request.system_token,
+                station_request.user_id,
+                adapter_config_str,
+                if station_request.enabled { 1 } else { 0 },
+                now,
+                now
+            ],
+        ) {
+            Ok(_) => imported_count += 1,
+            Err(e) => {
+                log::error!("Failed to import relay station: {}", e);
+                failed_count += 1;
+            }
+        }
+    }
+
+    // 提交事务
+    tx.commit().map_err(|e| {
+        log::error!("Failed to commit transaction: {}", e);
+        i18n::t("database.transaction_failed")
+    })?;
+
+    let message = format!(
+        "导入完成：总计 {} 个，成功 {} 个，跳过 {} 个（重复），失败 {} 个",
+        total, imported_count, skipped_count, failed_count
+    );
+    
+    log::info!("{}", message);
+    
+    Ok(ImportResult {
+        total,
+        imported: imported_count,
+        skipped: skipped_count,
+        failed: failed_count,
+        message,
+    })
+}

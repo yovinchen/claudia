@@ -58,6 +58,7 @@ use commands::relay_stations::{
     relay_stations_list, relay_station_get, relay_station_create, relay_station_update,
     relay_station_delete, relay_station_toggle_enable, relay_station_sync_config,
     relay_station_restore_config, relay_station_get_current_config,
+    relay_stations_export, relay_stations_import,
 };
 use commands::relay_adapters::{
     relay_station_get_info, relay_station_get_user_info,
@@ -97,6 +98,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_log::Builder::new()
             .level(log::LevelFilter::Debug)
@@ -382,6 +384,8 @@ fn main() {
             relay_station_sync_config,
             relay_station_restore_config,
             relay_station_get_current_config,
+            relay_stations_export,
+            relay_stations_import,
             relay_station_get_info,
             relay_station_get_user_info,
             relay_station_test_connection,

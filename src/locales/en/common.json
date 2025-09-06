@@ -921,7 +921,20 @@
     "autoSelectFailed": "Failed to auto-select node",
     "selectingBestNode": "Testing nodes to find the fastest...",
     "packycodeTokenNote": "PackyCode uses API Key authentication only",
-    "enabledNote": "Enable this station to make it available for use"
+    "enabledNote": "Enable this station to make it available for use",
+    "export": "Export Config",
+    "import": "Import Config",
+    "exportSuccess": "Relay stations exported successfully",
+    "exportFailed": "Failed to export",
+    "importSuccess": "Relay stations imported successfully",
+    "importFailed": "Failed to import",
+    "importConfirm": "Import {{count}} relay station(s)? This will not delete existing stations.",
+    "importing": "Importing...",
+    "importTotal": "Total",
+    "importSuccess": "Success",
+    "importSkipped": "Skipped (duplicate)",
+    "importFailed": "Failed",
+    "allDuplicate": "All configurations already exist, nothing imported"
   },
   "status": {
     "connected": "Connected",

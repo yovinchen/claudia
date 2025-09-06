@@ -4,6 +4,8 @@ import MonacoEditor from '@monaco-editor/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,7 @@ import {
   RelayStationAdapter,
   AuthMethod,
   PackycodeUserQuota,
+  ImportResult,
   api
 } from '@/lib/api';
 import {
@@ -42,7 +45,9 @@ import {
   Eye,
   Edit3,
   Save,
-  X
+  X,
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface RelayStationManagerProps {
@@ -66,6 +71,11 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [savingConfig, setSavingConfig] = useState(false);
   const [flushingDns, setFlushingDns] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  
+  // 导入进度相关状态
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   // PackyCode 额度相关状态
   const [quotaData, setQuotaData] = useState<Record<string, PackycodeUserQuota>>({});
@@ -199,6 +209,124 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     }
   };
 
+  // 导出中转站配置
+  const handleExportStations = async () => {
+    try {
+      const stations = await api.relayStationsExport();
+      const jsonData = JSON.stringify(stations, null, 2);
+      
+      // 使用 Tauri 的保存文件对话框
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const filePath = await save({
+        defaultPath: `relay-stations-${new Date().toISOString().slice(0, 10)}.json`,
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }]
+      });
+      
+      if (filePath) {
+        // 使用 Tauri 的文件系统 API 写入文件
+        const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+        await writeTextFile(filePath, jsonData);
+        showToast(t('relayStation.exportSuccess'), 'success');
+      }
+    } catch (error) {
+      console.error('Failed to export stations:', error);
+      showToast(t('relayStation.exportFailed'), 'error');
+    }
+  };
+
+  // 导入中转站配置
+  const handleImportStations = async () => {
+    try {
+      setImporting(true);
+      setImportProgress(0);
+      setImportResult(null);
+      
+      // 使用 Tauri 的文件选择对话框
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({
+        multiple: false,
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }]
+      });
+      
+      if (!selected) {
+        setImporting(false);
+        return;
+      }
+      
+      setImportProgress(20);
+      
+      // 使用 Tauri 的文件系统 API 读取文件
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
+      const text = await readTextFile(selected as string);
+      const stations = JSON.parse(text) as RelayStation[];
+      
+      setImportProgress(40);
+      
+      // 转换为 CreateRelayStationRequest 格式
+      const importRequests: CreateRelayStationRequest[] = stations.map(station => ({
+        name: station.name,
+        description: station.description,
+        api_url: station.api_url,
+        adapter: station.adapter,
+        auth_method: station.auth_method,
+        system_token: station.system_token,
+        user_id: station.user_id,
+        adapter_config: station.adapter_config,
+        enabled: station.enabled
+      }));
+
+      setImportProgress(60);
+
+      // 显示确认对话框
+      const confirmed = await new Promise<boolean>((resolve) => {
+        if (window.confirm(t('relayStation.importConfirm', { count: stations.length }))) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+
+      if (confirmed) {
+        setImportProgress(80);
+        const result = await api.relayStationsImport(importRequests, false);
+        setImportProgress(100);
+        setImportResult(result);
+        
+        // 显示结果
+        if (result.imported > 0) {
+          showToast(result.message, 'success');
+          loadStations();
+        } else if (result.skipped === result.total) {
+          showToast(t('relayStation.allDuplicate'), 'error');
+        } else {
+          showToast(result.message, 'success');
+        }
+        
+        // 3秒后清除结果
+        setTimeout(() => {
+          setImportResult(null);
+          setImporting(false);
+          setImportProgress(0);
+        }, 3000);
+      } else {
+        setImporting(false);
+        setImportProgress(0);
+      }
+    } catch (error) {
+      console.error('Failed to import stations:', error);
+      showToast(t('relayStation.importFailed'), 'error');
+      setImporting(false);
+      setImportProgress(0);
+      setImportResult(null);
+    }
+  };
+
   // 删除中转站
   const deleteStation = async () => {
     if (!stationToDelete) return;
@@ -308,25 +436,85 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             <p className="text-muted-foreground">{t('relayStation.description')}</p>
           </div>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('relayStation.create')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <CreateStationDialog
-              onSuccess={() => {
-                setShowCreateDialog(false);
-                loadStations();
-                showToast(t('relayStation.createSuccess'), "success");
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportStations}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {t('relayStation.export')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleImportStations}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t('relayStation.import')}
+          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('relayStation.create')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+              <CreateStationDialog
+                onSuccess={() => {
+                  setShowCreateDialog(false);
+                  loadStations();
+                  showToast(t('relayStation.createSuccess'), "success");
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
+      {/* 导入进度 */}
+      {importing && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium">{t('relayStation.importing')}</span>
+                  <span className="text-sm text-muted-foreground">{importProgress}%</span>
+                </div>
+                <Progress value={importProgress} className="w-full" />
+              </div>
+              {importResult && (
+                <Alert>
+                  <AlertDescription className="space-y-2">
+                    <div className="font-medium">{importResult.message}</div>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('relayStation.importTotal')}:</span>
+                        <span>{importResult.total}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('relayStation.importSuccess')}:</span>
+                        <span className="text-green-600">{importResult.imported}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('relayStation.importSkipped')}:</span>
+                        <span className="text-yellow-600">{importResult.skipped}</span>
+                      </div>
+                      {importResult.failed > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{t('relayStation.importFailed')}:</span>
+                          <span className="text-red-600">{importResult.failed}</span>
+                        </div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* 当前配置状态 */}
       <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
         <CardHeader className="pb-3">
@@ -737,12 +925,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             <DialogTitle>{t('relayStation.confirmDeleteTitle')}</DialogTitle>
             <DialogDescription>
               {t('relayStation.deleteConfirm')}
-              {stationToDelete && (
-                <div className="mt-2 p-2 bg-muted rounded">
-                  <strong>{stationToDelete.name}</strong>
-                </div>
-              )}
             </DialogDescription>
+            {stationToDelete && (
+              <div className="mt-2 p-2 bg-muted rounded">
+                <strong>{stationToDelete.name}</strong>
+              </div>
+            )}
           </DialogHeader>
           <DialogFooter>
             <Button
