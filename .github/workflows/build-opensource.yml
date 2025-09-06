@@ -16,7 +16,7 @@ jobs:
         include:
           # macOS 通用版本
           - platform: 'macos-latest'
-            target: 'universal-apple-darwin'
+            target: ''
             name: 'macOS'
 
           # Linux x64
