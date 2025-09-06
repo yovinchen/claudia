@@ -816,6 +816,9 @@
     "configSaved": "配置已保存",
     "invalidJson": "JSON 格式无效",
     "saveFailed": "保存失败",
+    "flushDns": "刷新 DNS",
+    "flushDnsSuccess": "DNS 缓存已刷新",
+    "flushDnsFailed": "DNS 刷新失败",
     "syncFailed": "同步配置失败",
     "currentConfig": "当前配置",
     "notConfigured": "未配置",
@@ -825,14 +828,17 @@
     "busService": "公交车",
     "taxiServiceDesc": "高速稳定 (share.packycode.com)",
     "busServiceDesc": "共享经济 (packycode.com)",
-    "selectService": "选择服务类型",
-    "fixedUrl": "固定地址",
+    "taxiServiceNote": "选择节点或使用自动选择以获得最佳性能",
     "busServiceNote": "选择节点或使用自动选择以获得最佳性能",
     "nodeSelection": "节点选择",
     "selectNode": "选择节点",
     "autoSelect": "自动选择最快",
     "autoSelectDesc": "将自动测试并选择最快的节点",
     "selectedNode": "已选择",
+    "speedTest": "节点测速",
+    "testingNodes": "正在测试节点速度...",
+    "testing": "测试中",
+    "bestNodeSelected": "已选择最快节点",
     "testSpeed": "测速",
     "testResults": "测速结果",
     "failed": "失败",
@@ -870,4 +876,3 @@
     "title": "警告"
   }
 }
-

@@ -64,6 +64,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [editingConfig, setEditingConfig] = useState(false);
   const [configJson, setConfigJson] = useState<string>('');
   const [savingConfig, setSavingConfig] = useState(false);
+  const [flushingDns, setFlushingDns] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // PackyCode 额度相关状态
@@ -155,6 +156,20 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       }
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  // 刷新 DNS 缓存
+  const handleFlushDns = async () => {
+    try {
+      setFlushingDns(true);
+      await api.flushDns();
+      showToast(t('relayStation.flushDnsSuccess'), 'success');
+    } catch (error) {
+      console.error('Failed to flush DNS:', error);
+      showToast(t('relayStation.flushDnsFailed'), 'error');
+    } finally {
+      setFlushingDns(false);
     }
   };
 
@@ -410,14 +425,29 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             <div className="space-y-2">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">{t('relayStation.configPreview')}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setJsonConfigView(true)}
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  {t('relayStation.viewJson')}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setJsonConfigView(true)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    {t('relayStation.viewJson')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFlushDns}
+                    disabled={flushingDns}
+                  >
+                    {flushingDns ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-1" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                    )}
+                    {t('relayStation.flushDns')}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">
@@ -755,6 +785,12 @@ const CreateStationDialog: React.FC<{
   const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
   const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
+  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com'); // 滴滴车节点
+  
+  // 测速弹出框状态
+  const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
+  const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
+  const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
 
   const { t } = useTranslation();
 
@@ -788,6 +824,75 @@ const CreateStationDialog: React.FC<{
     }
   };
 
+  // 通用测速函数
+  const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
+    setShowSpeedTestModal(true);
+    setSpeedTestInProgress(true);
+    
+    // 初始化测速结果
+    const initialResults = nodes.map(node => ({
+      url: node.url,
+      name: node.name,
+      responseTime: null,
+      status: 'testing' as const
+    }));
+    setSpeedTestResults(initialResults);
+    
+    let bestNode = nodes[0];
+    let minTime = Infinity;
+    
+    // 并行测试所有节点
+    const testPromises = nodes.map(async (node, index) => {
+      try {
+        const startTime = Date.now();
+        await fetch(node.url, { 
+          method: 'HEAD',
+          timeout: 5000,
+          mode: 'no-cors'
+        });
+        const responseTime = Date.now() - startTime;
+        
+        // 更新单个节点的测试结果
+        setSpeedTestResults(prev => prev.map((result, i) => 
+          i === index ? { ...result, responseTime, status: 'success' } : result
+        ));
+        
+        if (responseTime < minTime) {
+          minTime = responseTime;
+          bestNode = node;
+        }
+        
+        return { node, responseTime };
+      } catch (error) {
+        console.log(`Node ${node.url} failed:`, error);
+        // 标记节点为失败
+        setSpeedTestResults(prev => prev.map((result, i) => 
+          i === index ? { ...result, responseTime: null, status: 'failed' } : result
+        ));
+        return { node, responseTime: null };
+      }
+    });
+    
+    try {
+      await Promise.all(testPromises);
+      // 测试完成后等待2秒让用户看到结果
+      setTimeout(() => {
+        setSpeedTestInProgress(false);
+        onComplete(bestNode);
+        // 再等1秒后关闭弹框
+        setTimeout(() => {
+          setShowSpeedTestModal(false);
+        }, 1000);
+      }, 2000);
+    } catch (error) {
+      console.error('Speed test failed:', error);
+      setSpeedTestInProgress(false);
+      setTimeout(() => {
+        setShowSpeedTestModal(false);
+      }, 1000);
+    }
+  };
+
   // 当适配器改变时更新认证方式和 URL
   useEffect(() => {
     if (formData.adapter === 'packycode') {
@@ -795,7 +900,7 @@ const CreateStationDialog: React.FC<{
         ...prev,
         auth_method: 'api_key', // PackyCode 固定使用 API Key
         api_url: packycodeService === 'taxi'
-          ? 'https://share-api.packycode.com'
+          ? packycodeTaxiNode
           : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
@@ -809,7 +914,7 @@ const CreateStationDialog: React.FC<{
         auth_method: 'bearer_token'
       }));
     }
-  }, [formData.adapter, packycodeService, packycodeNode]);
+  }, [formData.adapter, packycodeService, packycodeNode, packycodeTaxiNode]);
 
   // 自动填充中转站名称
   const fillStationName = (serviceType: string) => {
@@ -1122,7 +1227,7 @@ const CreateStationDialog: React.FC<{
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 {packycodeService === 'taxi'
-                  ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
+                  ? t('relayStation.taxiServiceNote')
                   : t('relayStation.busServiceNote')
                 }
               </p>
@@ -1178,18 +1283,18 @@ const CreateStationDialog: React.FC<{
                   type="button"
                   variant="outline"
                   onClick={async () => {
-                    setFormToast({ message: "正在测速，请稍候...", type: "success" });
-                    try {
-                      const best = await api.autoSelectBestNode();
-                      setPackycodeNode(best.url);
-                      setFormData(prev => ({ ...prev, api_url: best.url }));
-                      setFormToast({
-                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`,
-                        type: "success"
-                      });
-                    } catch (error) {
-                      setFormToast({ message: "节点测速失败", type: "error" });
-                    }
+                    const busNodes = [
+                      { url: "https://api.packycode.com", name: "🚌 直连1（默认公交车）" },
+                      { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 直连2 (HK-CN2)" },
+                      { url: "https://api-us-cmin2.packycode.com", name: "🇺🇸 直连3 (US-CMIN2)" },
+                      { url: "https://api-us-4837.packycode.com", name: "🇺🇸 直连4 (US-4837)" },
+                      { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
+                      { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
+                    ];
+                    
+                    await performSpeedTest(busNodes, (bestNode) => {
+                      setPackycodeNode(bestNode.url);
+                    });
                   }}
                 >
                   自动选择
@@ -1198,6 +1303,58 @@ const CreateStationDialog: React.FC<{
 
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.selectedNode') + ': ' + packycodeNode}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {formData.adapter === 'packycode' && packycodeService === 'taxi' && (
+          <div className="space-y-2">
+            <Label>{t('relayStation.nodeSelection')}</Label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={packycodeTaxiNode}
+                    onValueChange={(value: string) => setPackycodeTaxiNode(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('relayStation.selectNode')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="https://share-api.packycode.com">
+                        🚗 直连1（默认滴滴车）
+                      </SelectItem>
+                      <SelectItem value="https://share-api-cf-pro.packycode.com">
+                        ☁️ 备用1 (CF-Pro)
+                      </SelectItem>
+                      <SelectItem value="https://share-api-hk-cn2.packycode.com">
+                        🇭🇰 备用2 (HK-CN2)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const taxiNodes = [
+                      { url: "https://share-api.packycode.com", name: "🚗 直连1（默认滴滴车）" },
+                      { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 备用1 (CF-Pro)" },
+                      { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 备用2 (HK-CN2)" }
+                    ];
+                    
+                    await performSpeedTest(taxiNodes, (bestNode) => {
+                      setPackycodeTaxiNode(bestNode.url);
+                    });
+                  }}
+                >
+                  自动选择
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.selectedNode') + ': ' + packycodeTaxiNode}
               </p>
             </div>
           </div>
@@ -1330,41 +1487,8 @@ const CreateStationDialog: React.FC<{
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <Switch
-              id="enabled"
-              checked={formData.enabled}
-              onCheckedChange={(checked) =>
-                setFormData(prev => ({ ...prev, enabled: checked }))
-              }
-            />
-            <div>
-              <Label htmlFor="enabled" className="text-sm font-medium cursor-pointer">
-                {t('relayStation.enabled')}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.enabledNote')}
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* 仅在选择 Custom 时显示名称输入框 */}
-        {formData.adapter === 'custom' && (
-          <div className="space-y-2">
-            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
-            <Input
-              id="custom-name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder={t('relayStation.namePlaceholder')}
-              className="w-full"
-            />
-          </div>
-        )}
-
-        <div className="flex justify-end space-x-3 pt-3 border-t">
+        <div className="flex justify-end space-x-3 pt-3">
           <Button type="button" variant="outline" onClick={() => {}}>
             {t('common.cancel')}
           </Button>
@@ -1388,6 +1512,56 @@ const CreateStationDialog: React.FC<{
           onDismiss={() => setFormToast(null)}
         />
       )}
+
+      {/* 测速弹出框 */}
+      <Dialog open={showSpeedTestModal} onOpenChange={setShowSpeedTestModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
+            </div>
+            <div className="space-y-3">
+              {speedTestResults.map((result, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium">{result.name}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.status === 'testing' && (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                        <span className="text-sm text-blue-600">{t('relayStation.testing')}</span>
+                      </>
+                    )}
+                    {result.status === 'success' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <span className="text-sm text-green-600">{result.responseTime}ms</span>
+                      </>
+                    )}
+                    {result.status === 'failed' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                        <span className="text-sm text-red-600">{t('relayStation.failed')}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!speedTestInProgress && speedTestResults.length > 0 && (
+              <div className="pt-2 text-center">
+                <div className="text-sm text-green-600">
+                  {t('relayStation.bestNodeSelected')}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -1427,6 +1601,18 @@ const EditStationDialog: React.FC<{
     }
     return 'https://api.packycode.com';
   });
+  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>(() => {
+    // 如果是PackyCode滴滴车服务，使用当前的API URL
+    if (station.adapter === 'packycode' && station.api_url.includes('share-api')) {
+      return station.api_url;
+    }
+    return 'https://share-api.packycode.com';
+  });
+
+  // 测速弹出框状态
+  const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
+  const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
+  const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
 
   const { t } = useTranslation();
 
@@ -1460,6 +1646,75 @@ const EditStationDialog: React.FC<{
     }
   };
 
+  // 通用测速函数
+  const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
+    setShowSpeedTestModal(true);
+    setSpeedTestInProgress(true);
+    
+    // 初始化测速结果
+    const initialResults = nodes.map(node => ({
+      url: node.url,
+      name: node.name,
+      responseTime: null,
+      status: 'testing' as const
+    }));
+    setSpeedTestResults(initialResults);
+    
+    let bestNode = nodes[0];
+    let minTime = Infinity;
+    
+    // 并行测试所有节点
+    const testPromises = nodes.map(async (node, index) => {
+      try {
+        const startTime = Date.now();
+        await fetch(node.url, { 
+          method: 'HEAD',
+          timeout: 5000,
+          mode: 'no-cors'
+        });
+        const responseTime = Date.now() - startTime;
+        
+        // 更新单个节点的测试结果
+        setSpeedTestResults(prev => prev.map((result, i) => 
+          i === index ? { ...result, responseTime, status: 'success' } : result
+        ));
+        
+        if (responseTime < minTime) {
+          minTime = responseTime;
+          bestNode = node;
+        }
+        
+        return { node, responseTime };
+      } catch (error) {
+        console.log(`Node ${node.url} failed:`, error);
+        // 标记节点为失败
+        setSpeedTestResults(prev => prev.map((result, i) => 
+          i === index ? { ...result, responseTime: null, status: 'failed' } : result
+        ));
+        return { node, responseTime: null };
+      }
+    });
+    
+    try {
+      await Promise.all(testPromises);
+      // 测试完成后等待2秒让用户看到结果
+      setTimeout(() => {
+        setSpeedTestInProgress(false);
+        onComplete(bestNode);
+        // 再等1秒后关闭弹框
+        setTimeout(() => {
+          setShowSpeedTestModal(false);
+        }, 1000);
+      }, 2000);
+    } catch (error) {
+      console.error('Speed test failed:', error);
+      setSpeedTestInProgress(false);
+      setTimeout(() => {
+        setShowSpeedTestModal(false);
+      }, 1000);
+    }
+  };
+
   // 当适配器改变时更新认证方式和 URL
   useEffect(() => {
     if (formData.adapter === 'packycode') {
@@ -1467,7 +1722,7 @@ const EditStationDialog: React.FC<{
         ...prev,
         auth_method: 'api_key', // PackyCode 固定使用 API Key
         api_url: packycodeService === 'taxi'
-          ? 'https://share-api.packycode.com'
+          ? packycodeTaxiNode
           : packycodeNode
       }));
     } else if (formData.adapter === 'custom') {
@@ -1481,7 +1736,7 @@ const EditStationDialog: React.FC<{
         auth_method: 'bearer_token'
       }));
     }
-  }, [formData.adapter, packycodeService, packycodeNode]);
+  }, [formData.adapter, packycodeService, packycodeNode, packycodeTaxiNode]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1783,7 +2038,7 @@ const EditStationDialog: React.FC<{
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 {packycodeService === 'taxi'
-                  ? `${t('relayStation.fixedUrl')}: https://share-api.packycode.com`
+                  ? t('relayStation.taxiServiceNote')
                   : t('relayStation.busServiceNote')
                 }
               </p>
@@ -1833,18 +2088,18 @@ const EditStationDialog: React.FC<{
                   type="button"
                   variant="outline"
                   onClick={async () => {
-                    setFormToast({ message: "正在测速，请稍候...", type: "success" });
-                    try {
-                      const best = await api.autoSelectBestNode();
-                      setPackycodeNode(best.url);
-                      setFormData(prev => ({ ...prev, api_url: best.url }));
-                      setFormToast({
-                        message: `已选择最快节点: ${best.name} (延迟: ${best.response_time}ms)`,
-                        type: "success"
-                      });
-                    } catch (error) {
-                      setFormToast({ message: "节点测速失败", type: "error" });
-                    }
+                    const busNodes = [
+                      { url: "https://api.packycode.com", name: "🚌 直连1（默认公交车）" },
+                      { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 直连2 (HK-CN2)" },
+                      { url: "https://api-us-cmin2.packycode.com", name: "🇺🇸 直连3 (US-CMIN2)" },
+                      { url: "https://api-us-4837.packycode.com", name: "🇺🇸 直连4 (US-4837)" },
+                      { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
+                      { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
+                    ];
+                    
+                    await performSpeedTest(busNodes, (bestNode) => {
+                      setPackycodeNode(bestNode.url);
+                    });
                   }}
                 >
                   自动选择
@@ -2005,19 +2260,6 @@ const EditStationDialog: React.FC<{
           </div>
         </div>
 
-        {/* 仅在选择 Custom 时显示名称输入框 */}
-        {formData.adapter === 'custom' && (
-          <div className="space-y-2">
-            <Label htmlFor="custom-name">{t('relayStation.name')} *</Label>
-            <Input
-              id="custom-name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder={t('relayStation.namePlaceholder')}
-              className="w-full"
-            />
-          </div>
-        )}
 
         <div className="flex justify-end space-x-3 pt-3 border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
@@ -2043,6 +2285,56 @@ const EditStationDialog: React.FC<{
           onDismiss={() => setFormToast(null)}
         />
       )}
+
+      {/* 测速弹出框 */}
+      <Dialog open={showSpeedTestModal} onOpenChange={setShowSpeedTestModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
+            </div>
+            <div className="space-y-3">
+              {speedTestResults.map((result, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium">{result.name}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.status === 'testing' && (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                        <span className="text-sm text-blue-600">{t('relayStation.testing')}</span>
+                      </>
+                    )}
+                    {result.status === 'success' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <span className="text-sm text-green-600">{result.responseTime}ms</span>
+                      </>
+                    )}
+                    {result.status === 'failed' && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                        <span className="text-sm text-red-600">{t('relayStation.failed')}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!speedTestInProgress && speedTestResults.length > 0 && (
+              <div className="pt-2 text-center">
+                <div className="text-sm text-green-600">
+                  {t('relayStation.bestNodeSelected')}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

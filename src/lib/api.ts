@@ -2249,6 +2249,19 @@ export const api = {
   },
 
   /**
+   * Flush system DNS cache
+   * @returns Promise resolving to success message
+   */
+  async flushDns(): Promise<string> {
+    try {
+      return await invoke<string>("flush_dns");
+    } catch (error) {
+      console.error("Failed to flush DNS:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Gets current API config from Claude settings
    * @returns Promise resolving to current config info
    */

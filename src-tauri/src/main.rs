@@ -83,6 +83,7 @@ use commands::ccr::{
     check_ccr_installation, get_ccr_version, get_ccr_service_status, start_ccr_service,
     stop_ccr_service, restart_ccr_service, open_ccr_ui, get_ccr_config_path,
 };
+use commands::system::flush_dns;
 use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
@@ -431,6 +432,9 @@ fn main() {
             restart_ccr_service,
             open_ccr_ui,
             get_ccr_config_path,
+            
+            // System utilities
+            flush_dns,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
