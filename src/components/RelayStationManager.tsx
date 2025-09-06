@@ -1542,9 +1542,7 @@ const EditStationDialog: React.FC<{
     }
     return 'https://api.packycode.com';
   });
-
-  // 滴滴车服务的节点
-  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com');
+  
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
   const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
   const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
@@ -1874,7 +1872,7 @@ const EditStationDialog: React.FC<{
                     setPackycodeService('taxi');
                     setFormData(prev => ({
                       ...prev,
-                      api_url: packycodeTaxiNode
+                      api_url: 'https://share-api.packycode.com'
                     }));
                   }}
                 >
