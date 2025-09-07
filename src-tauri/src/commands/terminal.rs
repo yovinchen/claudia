@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use anyhow::Result;
-use portable_pty::{native_pty_system, CommandBuilder, PtySize, PtyPair, Child, MasterPty};
+use portable_pty::{native_pty_system, CommandBuilder, PtySize, Child, MasterPty};
 use std::io::{Read, Write};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

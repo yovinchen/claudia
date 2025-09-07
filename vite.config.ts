@@ -51,10 +51,17 @@ export default defineConfig(async () => ({
           'react-vendor': ['react', 'react-dom'],
           'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-switch', '@radix-ui/react-popover'],
           'editor-vendor': ['@uiw/react-md-editor'],
+          'monaco-editor': ['monaco-editor', '@monaco-editor/react'],
           'syntax-vendor': ['react-syntax-highlighter'],
+          // Animation and motion
+          'framer-motion': ['framer-motion'],
           // Tauri and other utilities
-          'tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog', '@tauri-apps/plugin-shell'],
+          'tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog', '@tauri-apps/plugin-shell', '@tauri-apps/plugin-fs', '@tauri-apps/plugin-clipboard-manager'],
           'utils': ['date-fns', 'clsx', 'tailwind-merge'],
+          // Charts and visualization
+          'recharts': ['recharts'],
+          // Virtual scrolling
+          'virtual': ['@tanstack/react-virtual'],
         },
       },
     },

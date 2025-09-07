@@ -45,7 +45,8 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import { FileExplorerPanelEnhanced } from "./FileExplorerPanelEnhanced";
 import { GitPanelEnhanced } from "./GitPanelEnhanced";
-import { FileEditorEnhanced } from "./FileEditorEnhanced";
+// 动态导入 FileEditorEnhanced 以减少初始包大小
+const FileEditorEnhanced = React.lazy(() => import("./FileEditorEnhanced"));
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -1904,11 +1905,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   <div className={cn("h-full w-full", layout.activeView === 'terminal' ? 'hidden' : 'block')}>
                     {layout.activeView === 'editor' && layout.editingFile ? (
                       // 文件编辑器视图
-                      <FileEditorEnhanced
-                        filePath={layout.editingFile}
-                        onClose={closeFileEditor}
-                        className="h-full"
-                      />
+                      <React.Suspense fallback={
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      }>
+                        <FileEditorEnhanced
+                          filePath={layout.editingFile}
+                          onClose={closeFileEditor}
+                          className="h-full"
+                        />
+                      </React.Suspense>
                     ) : layout.activeView === 'preview' && layout.previewUrl ? (
                     // 预览视图
                     <SplitPane

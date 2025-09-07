@@ -47,11 +47,18 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     |row| row.get::<_, String>(0),
                 ) {
                     info!("Found stored claude path in database: {}", stored_path);
-                    
+
                     // Check if the path still exists and works
+                    #[cfg(not(target_os = "windows"))]
+                    let final_path = stored_path.clone();
+                    #[cfg(not(target_os = "windows"))]
+                    let path_buf = PathBuf::from(&stored_path);
+
+                    #[cfg(target_os = "windows")]
                     let mut final_path = stored_path.clone();
+                    #[cfg(target_os = "windows")]
                     let mut path_buf = PathBuf::from(&stored_path);
-                    
+
                     // On Windows, if stored path exists but is not executable (shell script), try .cmd version
                     #[cfg(target_os = "windows")]
                     if path_buf.exists() && !stored_path.ends_with(".cmd") && !stored_path.ends_with(".exe") {
@@ -62,28 +69,28 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                             let cmd_path_buf = PathBuf::from(&cmd_path);
                             if cmd_path_buf.exists() {
                                 if let Ok(_) = get_claude_version(&cmd_path) {
-                                    final_path = cmd_path.clone();
+                                    final_path = cmd_path;
                                     path_buf = cmd_path_buf;
-                                    info!("Using .cmd version instead of shell script: {}", cmd_path);
+                                    info!("Using .cmd version instead of shell script: {}", final_path);
                                 }
                             }
                         }
                     }
-                    
+
                     if path_buf.exists() && path_buf.is_file() {
                         return Ok(final_path);
                     } else {
                         warn!("Stored claude path no longer exists: {}", stored_path);
                     }
                 }
-                
+
                 // Check user preference
                 let preference = conn.query_row(
                     "SELECT value FROM app_settings WHERE key = 'claude_installation_preference'",
                     [],
                     |row| row.get::<_, String>(0),
                 ).unwrap_or_else(|_| "system".to_string());
-                
+
                 info!("User preference for Claude installation: {}", preference);
             }
         }
@@ -206,7 +213,7 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
             // Process each line (Windows 'where' can return multiple paths)
             for line in output_str.lines() {
                 let mut path = line.trim().to_string();
-                
+
                 if path.is_empty() {
                     continue;
                 }
@@ -445,10 +452,10 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
 /// Extract version string from command output
 fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     let output_str = String::from_utf8_lossy(stdout);
-    
+
     // Debug log the raw output
     debug!("Raw version output: {:?}", output_str);
-    
+
     // Use regex to directly extract version pattern (e.g., "1.0.41")
     // This pattern matches:
     // - One or more digits, followed by
@@ -458,7 +465,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     // - One or more digits
     // - Optionally followed by pre-release/build metadata
     let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
-    
+
     if let Some(captures) = version_regex.captures(&output_str) {
         if let Some(version_match) = captures.get(1) {
             let version = version_match.as_str().to_string();
@@ -466,7 +473,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
             return Some(version);
         }
     }
-    
+
     debug!("No version found in output");
     None
 }
@@ -546,7 +553,7 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
     let mut cmd = Command::new(program);
-    
+
     info!("Creating command for: {}", program);
 
     // Inherit essential environment variables from parent process
@@ -574,7 +581,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             cmd.env(&key, &value);
         }
     }
-    
+
     // Log proxy-related environment variables for debugging
     info!("Command will use proxy settings:");
     if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
