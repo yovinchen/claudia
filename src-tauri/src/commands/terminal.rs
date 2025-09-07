@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use anyhow::Result;
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, CommandBuilder, PtySize, PtyPair, Child, MasterPty};
 use std::io::{Read, Write};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +19,8 @@ pub struct TerminalSession {
 /// Terminal child process wrapper
 pub struct TerminalChild {
     writer: Arc<Mutex<Box<dyn Write + Send>>>,
+    _master: Box<dyn MasterPty + Send>,  // Keep master PTY alive
+    _child: Box<dyn Child + Send + Sync>,  // Keep child process alive
 }
 
 /// State for managing terminal sessions
@@ -60,35 +62,68 @@ pub async fn create_terminal_session(
     
     // Get shell command
     let shell = get_default_shell();
+    log::info!("Using shell: {}", shell);
     let mut cmd = CommandBuilder::new(&shell);
     
-    // Set as login interactive shell
-    if shell.contains("bash") || shell.contains("zsh") {
-        cmd.arg("-il"); // Interactive login shell
-    } else if shell.contains("fish") {
-        cmd.arg("-il");
+    // Set shell-specific arguments
+    if cfg!(target_os = "windows") {
+        if shell.contains("pwsh") {
+            // PowerShell Core - stay interactive
+            cmd.arg("-NoLogo");
+            cmd.arg("-NoExit");
+        } else if shell.contains("powershell") {
+            // Windows PowerShell - stay interactive  
+            cmd.arg("-NoLogo");
+            cmd.arg("-NoExit");
+        } else {
+            // cmd.exe - use /K to keep session open
+            cmd.arg("/K");
+        }
+    } else {
+        // Unix shells: Set as login interactive shell
+        if shell.contains("bash") || shell.contains("zsh") {
+            cmd.arg("-il"); // Interactive login shell
+        } else if shell.contains("fish") {
+            cmd.arg("-il");
+        }
     }
     
     // Set working directory
     cmd.cwd(working_directory.clone());
     
-    // Set environment variables
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
-    cmd.env("LANG", std::env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
-    cmd.env("LC_ALL", std::env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
-    cmd.env("LC_CTYPE", std::env::var("LC_CTYPE").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
-    
-    // 继承其他环境变量
-    for (key, value) in std::env::vars() {
-        if !key.starts_with("TERM") && !key.starts_with("COLORTERM") && !key.starts_with("LC_") && !key.starts_with("LANG") {
-            cmd.env(&key, &value);
+    // Set environment variables based on platform
+    if cfg!(target_os = "windows") {
+        // Windows-specific environment
+        cmd.env("TERM", "xterm-256color");
+        // Keep PATH and other essential Windows environment variables
+        for (key, value) in std::env::vars() {
+            if !key.starts_with("TAURI_") && !key.starts_with("VITE_") {
+                cmd.env(&key, &value);
+            }
+        }
+    } else {
+        // Unix-specific environment
+        cmd.env("TERM", "xterm-256color");
+        cmd.env("COLORTERM", "truecolor");
+        cmd.env("LANG", std::env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+        cmd.env("LC_ALL", std::env::var("LC_ALL").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+        cmd.env("LC_CTYPE", std::env::var("LC_CTYPE").unwrap_or_else(|_| "en_US.UTF-8".to_string()));
+        
+        // Inherit other Unix environment variables
+        for (key, value) in std::env::vars() {
+            if !key.starts_with("TERM") && !key.starts_with("COLORTERM") && 
+               !key.starts_with("LC_") && !key.starts_with("LANG") &&
+               !key.starts_with("TAURI_") && !key.starts_with("VITE_") {
+                cmd.env(&key, &value);
+            }
         }
     }
     
     // Spawn the shell process
-    let _child = pty_pair.slave.spawn_command(cmd)
+    let child = pty_pair.slave.spawn_command(cmd)
         .map_err(|e| format!("Failed to spawn shell: {}", e))?;
+    
+    log::info!("Shell process spawned successfully for session: {}", session_id);
     
     // Get writer for stdin
     let writer = pty_pair.master.take_writer()
@@ -103,15 +138,20 @@ pub async fn create_terminal_session(
     // Spawn reader thread
     std::thread::spawn(move || {
         let mut buffer = [0u8; 4096];
+        log::info!("PTY reader thread started for session: {}", session_id_clone);
         loop {
             match reader.read(&mut buffer) {
-                Ok(0) => break, // EOF
+                Ok(0) => {
+                    log::warn!("PTY reader got EOF for session: {}", session_id_clone);
+                    break; // EOF
+                }
                 Ok(n) => {
                     let data = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    log::debug!("PTY reader got {} bytes for session {}: {:?}", n, session_id_clone, data);
                     let _ = app_handle_clone.emit(&format!("terminal-output:{}", session_id_clone), &data);
                 }
                 Err(e) => {
-                    log::error!("Error reading PTY output: {}", e);
+                    log::error!("Error reading PTY output for session {}: {}", session_id_clone, e);
                     break;
                 }
             }
@@ -119,9 +159,11 @@ pub async fn create_terminal_session(
         log::debug!("PTY reader thread finished for session: {}", session_id_clone);
     });
     
-    // Store the session with PTY writer
+    // Store the session with PTY writer, master PTY and child process
     let terminal_child = TerminalChild {
         writer: Arc::new(Mutex::new(writer)),
+        _master: pty_pair.master,
+        _child: child,
     };
     
     {
@@ -245,13 +287,13 @@ pub async fn cleanup_terminal_sessions(
 /// Get the default shell for the current platform
 fn get_default_shell() -> String {
     if cfg!(target_os = "windows") {
-        // Try PowerShell first, fallback to cmd
+        // Try PowerShell Core (pwsh) first, then Windows PowerShell, fallback to cmd
         if std::process::Command::new("pwsh").arg("--version").output().is_ok() {
             "pwsh".to_string()
         } else if std::process::Command::new("powershell").arg("-Version").output().is_ok() {
             "powershell".to_string()
         } else {
-            "cmd".to_string()
+            "cmd.exe".to_string()
         }
     } else {
         // Unix-like systems: try zsh, bash, then sh
