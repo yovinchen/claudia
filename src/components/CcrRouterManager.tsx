@@ -28,6 +28,8 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     try {
       setLoading(true);
       const status = await ccrApi.getServiceStatus();
+      console.log("CCR service status:", status);
+      console.log("CCR raw output:", status.raw_output);
       setServiceStatus(status);
     } catch (error) {
       console.error("Failed to load CCR service status:", error);
@@ -411,7 +413,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                     需要先安装 Claude Code Router 才能使用此功能
                   </p>
                   <Button
-                    onClick={() => open("https://www.npmjs.com/package/@musistudio/claude-code-router")}
+                    onClick={() => open("https://github.com/musistudio/claude-code-router/tree/main")}
                     className="gap-2"
                   >
                     <Download className="w-4 h-4" />
@@ -443,6 +445,29 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                 <li>Web UI 管理界面，方便配置和监控</li>
                 <li>无需 Anthropic 账户即可使用 Claude Code</li>
               </ul>
+              
+              {!serviceStatus?.has_ccr_binary && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                    安装说明：
+                  </p>
+                  <code className="block p-2 bg-black/5 dark:bg-white/5 rounded text-xs">
+                    npm install -g @musistudio/claude-code-router
+                  </code>
+                  <p className="text-xs mt-2 text-muted-foreground">
+                    或访问 <a 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        open("https://github.com/musistudio/claude-code-router/tree/main");
+                      }}
+                      className="text-blue-600 hover:underline"
+                    >
+                      GitHub 仓库
+                    </a> 了解更多安装方式
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

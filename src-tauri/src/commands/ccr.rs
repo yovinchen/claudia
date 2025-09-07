@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Stdio};
 use log::{debug, error, info};
+use std::net::TcpStream;
+use std::time::Duration;
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+
+// 全局变量存储找到的 CCR 路径
+static CCR_PATH: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CcrServiceStatus {
@@ -10,6 +17,7 @@ pub struct CcrServiceStatus {
     pub has_ccr_binary: bool,
     pub ccr_version: Option<String>,
     pub process_id: Option<u32>,
+    pub raw_output: Option<String>, // 添加原始输出用于调试
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,35 +26,128 @@ pub struct CcrServiceInfo {
     pub message: String,
 }
 
-/// 检查 CCR 是否已安装
-#[tauri::command]
-pub async fn check_ccr_installation() -> Result<bool, String> {
-    // 直接尝试执行 ccr --version 命令来检测是否安装
-    // 这比使用 which 命令更可靠，特别是在打包后的应用中
-    let output = Command::new("ccr")
-        .arg("--version")
+/// 获取可能的 CCR 路径列表
+fn get_possible_ccr_paths() -> Vec<String> {
+    let mut paths = vec!["ccr".to_string()]; // PATH 中的 ccr
+    
+    // 获取用户主目录
+    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
+    
+    #[cfg(target_os = "macos")]
+    {
+        // macOS 特定路径
+        paths.extend(vec![
+            "/usr/local/bin/ccr".to_string(),
+            "/opt/homebrew/bin/ccr".to_string(),
+            format!("{}/.nvm/versions/node/*/bin/ccr", home), // 通配符路径需要特殊处理
+            "/usr/local/lib/node_modules/.bin/ccr".to_string(),
+            "/opt/homebrew/lib/node_modules/.bin/ccr".to_string(),
+        ]);
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        // Windows 特定路径
+        let program_files = std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+        let program_files_x86 = std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
+        let appdata = std::env::var("APPDATA").unwrap_or_else(|_| format!("{}\\AppData\\Roaming", home));
+        
+        paths.extend(vec![
+            "ccr.exe".to_string(),
+            "ccr.cmd".to_string(),
+            format!("{}\\npm\\ccr.cmd", appdata),
+            format!("{}\\npm\\ccr.exe", appdata),
+            format!("{}\\nodejs\\ccr.cmd", program_files),
+            format!("{}\\nodejs\\ccr.exe", program_files),
+            format!("{}\\nodejs\\ccr.cmd", program_files_x86),
+            format!("{}\\nodejs\\ccr.exe", program_files_x86),
+            format!("{}\\AppData\\Roaming\\npm\\ccr.cmd", home),
+            format!("{}\\AppData\\Roaming\\npm\\ccr.exe", home),
+        ]);
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        // Linux 特定路径
+        paths.extend(vec![
+            "/usr/bin/ccr".to_string(),
+            "/usr/local/bin/ccr".to_string(),
+            format!("{}/.local/bin/ccr", home),
+            format!("{}/.npm-global/bin/ccr", home),
+            "/usr/lib/node_modules/.bin/ccr".to_string(),
+        ]);
+    }
+    
+    paths
+}
+
+/// 查找实际的 CCR 路径
+fn find_ccr_path() -> Option<String> {
+    // 先检查缓存
+    if let Ok(cached) = CCR_PATH.lock() {
+        if cached.is_some() {
+            return cached.clone();
+        }
+    }
+    
+    let possible_paths = get_possible_ccr_paths();
+    
+    for path in &possible_paths {
+        // 处理通配符路径 (仅限 Unix-like 系统)
+        if path.contains('*') {
+            #[cfg(not(target_os = "windows"))]
+            {
+                if let Ok(entries) = glob::glob(path) {
+                    for entry in entries.flatten() {
+                        let path_str = entry.to_string_lossy().to_string();
+                        if test_ccr_command(&path_str) {
+                            if let Ok(mut cached) = CCR_PATH.lock() {
+                                *cached = Some(path_str.clone());
+                            }
+                            info!("Found ccr at: {}", path_str);
+                            return Some(path_str);
+                        }
+                    }
+                }
+            }
+        } else if test_ccr_command(path) {
+            if let Ok(mut cached) = CCR_PATH.lock() {
+                *cached = Some(path.clone());
+            }
+            info!("Found ccr at: {}", path);
+            return Some(path.clone());
+        }
+    }
+    
+    None
+}
+
+/// 测试给定路径的 CCR 命令是否可用
+fn test_ccr_command(path: &str) -> bool {
+    let output = Command::new(path)
+        .arg("version")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output();
     
-    match output {
-        Ok(result) => Ok(result.status.success()),
-        Err(e) => {
-            // 如果命令执行失败，可能是因为 ccr 未安装或不在 PATH 中
-            debug!("CCR installation check failed: {}", e);
-            Ok(false)
-        }
-    }
+    matches!(output, Ok(result) if result.status.success())
+}
+/// 检查 CCR 是否已安装
+#[tauri::command]
+pub async fn check_ccr_installation() -> Result<bool, String> {
+    Ok(find_ccr_path().is_some())
 }
 
 /// 获取 CCR 版本信息
 #[tauri::command]
 pub async fn get_ccr_version() -> Result<String, String> {
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
+    
     // 尝试多个版本命令参数
     let version_args = vec!["--version", "-v", "version"];
     
     for arg in version_args {
-        let output = Command::new("ccr")
+        let output = Command::new(&ccr_path)
             .arg(arg)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -81,19 +182,31 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
             has_ccr_binary: false,
             ccr_version: None,
             process_id: None,
+            raw_output: None,
         });
     }
 
     // 获取版本信息
     let ccr_version = get_ccr_version().await.ok();
     debug!("CCR version: {:?}", ccr_version);
+    
+    // 获取 CCR 路径
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
 
-    // 检查服务状态
-    let output = Command::new("ccr")
-        .arg("status")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output();
+    // 检查服务状态 - 设置环境变量和工作目录
+    let mut cmd = Command::new(&ccr_path);
+    cmd.arg("status")
+       .stdout(Stdio::piped())
+       .stderr(Stdio::piped());
+    
+    // 继承环境变量
+    cmd.env_clear();
+    for (key, value) in std::env::vars() {
+        cmd.env(key, value);
+    }
+    
+    info!("Executing ccr status command");
+    let output = cmd.output();
     
     let output = match output {
         Ok(o) => o,
@@ -106,6 +219,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
                 has_ccr_binary: true,
                 ccr_version,
                 process_id: None,
+                raw_output: None,
             });
         }
     };
@@ -113,15 +227,27 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
     let status_output = String::from_utf8_lossy(&output.stdout);
     let stderr_output = String::from_utf8_lossy(&output.stderr);
     
-    debug!("CCR status stdout: {}", status_output);
-    debug!("CCR status stderr: {}", stderr_output);
+    info!("CCR status command exit code: {:?}", output.status.code());
+    info!("CCR status stdout length: {}", status_output.len());
+    info!("CCR status stdout: {}", status_output);
+    info!("CCR status stderr: {}", stderr_output);
     
-    // 更宽松的运行状态检测
-    let is_running = output.status.success() && 
-        (status_output.contains("Running") || 
-         status_output.contains("running") ||
-         status_output.contains("✅") ||
-         status_output.contains("Port:"));
+    // 检查状态 - 明确检测运行和停止状态
+    let is_running = if status_output.contains("❌") || status_output.contains("Status: Not Running") {
+        // 明确显示未运行
+        false
+    } else if status_output.contains("✅") || status_output.contains("Status: Running") {
+        // 明确显示运行中
+        true
+    } else if status_output.contains("Process ID:") && status_output.contains("Port:") {
+        // 包含进程ID和端口信息，可能在运行
+        true
+    } else {
+        // 默认认为未运行
+        false
+    };
+    
+    info!("CCR service running detection - is_running: {}", is_running);
     
     // 尝试从输出中提取端口、端点和进程ID信息
     let mut port = None;
@@ -131,15 +257,20 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
     if is_running {
         // 提取端口信息 - 支持多种格式
         for line in status_output.lines() {
-            if line.contains("Port:") || line.contains("port:") {
-                // 尝试提取端口号
-                if let Some(port_str) = line.split(':').last() {
-                    // 清理字符串，只保留数字
-                    let cleaned: String = port_str.chars()
-                        .filter(|c| c.is_numeric())
-                        .collect();
-                    if let Ok(port_num) = cleaned.parse::<u16>() {
+            info!("Parsing line for port: {}", line);
+            
+            // 检查是否包含端口信息
+            if line.contains("Port:") || line.contains("port:") || line.contains("端口:") || line.contains("🌐") {
+                // 查找数字
+                let numbers: String = line.chars()
+                    .skip_while(|c| !c.is_numeric())
+                    .take_while(|c| c.is_numeric())
+                    .collect();
+                
+                if !numbers.is_empty() {
+                    if let Ok(port_num) = numbers.parse::<u16>() {
                         port = Some(port_num);
+                        info!("Successfully extracted port: {}", port_num);
                         break;
                     }
                 }
@@ -148,7 +279,9 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
         
         // 提取API端点信息 - 支持多种格式
         for line in status_output.lines() {
-            if line.contains("API Endpoint:") || line.contains("Endpoint:") || line.contains("http://") || line.contains("https://") {
+            info!("Parsing line for endpoint: {}", line);
+            if line.contains("API Endpoint:") || line.contains("Endpoint:") || 
+               line.contains("http://") || line.contains("https://") || line.contains("📡") {
                 // 尝试提取URL
                 if let Some(start) = line.find("http") {
                     let url_part = &line[start..];
@@ -157,6 +290,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
                     let url = &url_part[..end];
                     if url.contains(":") && (url.contains("localhost") || url.contains("127.0.0.1")) {
                         endpoint = Some(url.to_string());
+                        info!("Successfully extracted endpoint: {}", url);
                         break;
                     }
                 }
@@ -165,15 +299,18 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
         
         // 提取进程ID信息 - 支持多种格式
         for line in status_output.lines() {
-            if line.contains("Process ID:") || line.contains("PID:") || line.contains("pid:") {
-                // 尝试提取PID
-                if let Some(pid_str) = line.split(':').last() {
-                    // 清理字符串，只保留数字
-                    let cleaned: String = pid_str.chars()
-                        .filter(|c| c.is_numeric())
-                        .collect();
-                    if let Ok(pid_num) = cleaned.parse::<u32>() {
+            info!("Parsing line for PID: {}", line);
+            if line.contains("Process ID:") || line.contains("PID:") || line.contains("pid:") || line.contains("🆔") {
+                // 查找数字
+                let numbers: String = line.chars()
+                    .skip_while(|c| !c.is_numeric())
+                    .take_while(|c| c.is_numeric())
+                    .collect();
+                
+                if !numbers.is_empty() {
+                    if let Ok(pid_num) = numbers.parse::<u32>() {
                         process_id = Some(pid_num);
+                        info!("Successfully extracted PID: {}", pid_num);
                         break;
                     }
                 }
@@ -192,6 +329,29 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
         }
     }
 
+    // 如果命令失败或无法确定状态，尝试通过端口检查
+    if !is_running {
+        info!("Status command didn't detect running service, checking port 3456...");
+        // 尝试连接默认端口
+        match TcpStream::connect_timeout(&"127.0.0.1:3456".parse().unwrap(), Duration::from_secs(1)) {
+            Ok(_) => {
+                info!("Port 3456 is open, service appears to be running");
+                return Ok(CcrServiceStatus {
+                    is_running: true,
+                    port: Some(3456),
+                    endpoint: Some("http://127.0.0.1:3456".to_string()),
+                    has_ccr_binary: true,
+                    ccr_version,
+                    process_id: None,
+                    raw_output: Some(status_output.to_string()),
+                });
+            }
+            Err(e) => {
+                info!("Port 3456 check failed: {}", e);
+            }
+        }
+    }
+    
     Ok(CcrServiceStatus {
         is_running,
         port,
@@ -199,6 +359,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
         has_ccr_binary,
         ccr_version,
         process_id,
+        raw_output: Some(status_output.to_string()),
     })
 }
 
@@ -210,6 +371,9 @@ pub async fn start_ccr_service() -> Result<CcrServiceInfo, String> {
         return Err("CCR is not installed. Please install claude-code-router first.".to_string());
     }
 
+    // 获取 CCR 路径
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
+
     // 检查当前状态
     let current_status = get_ccr_service_status().await?;
     if current_status.is_running {
@@ -220,7 +384,7 @@ pub async fn start_ccr_service() -> Result<CcrServiceInfo, String> {
     }
 
     // 启动服务
-    let _output = Command::new("ccr")
+    let _output = Command::new(&ccr_path)
         .arg("start")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -250,7 +414,10 @@ pub async fn stop_ccr_service() -> Result<CcrServiceInfo, String> {
         return Err("CCR is not installed".to_string());
     }
 
-    let output = Command::new("ccr")
+    // 获取 CCR 路径
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
+
+    let output = Command::new(&ccr_path)
         .arg("stop")
         .output()
         .map_err(|e| format!("Failed to stop ccr service: {}", e))?;
@@ -276,7 +443,10 @@ pub async fn restart_ccr_service() -> Result<CcrServiceInfo, String> {
         return Err("CCR is not installed".to_string());
     }
 
-    let output = Command::new("ccr")
+    // 获取 CCR 路径
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
+
+    let output = Command::new(&ccr_path)
         .arg("restart")
         .output()
         .map_err(|e| format!("Failed to restart ccr service: {}", e))?;
@@ -314,8 +484,11 @@ pub async fn open_ccr_ui() -> Result<String, String> {
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 
+    // 获取 CCR 路径
+    let ccr_path = find_ccr_path().ok_or("CCR not found")?;
+
     // 执行 ccr ui 命令
-    let _output = Command::new("ccr")
+    let _output = Command::new(&ccr_path)
         .arg("ui")
         .spawn()
         .map_err(|e| format!("Failed to open ccr ui: {}", e))?;

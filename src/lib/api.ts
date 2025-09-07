@@ -2686,6 +2686,7 @@ export interface CcrServiceStatus {
   has_ccr_binary: boolean;
   ccr_version?: string;
   process_id?: number;
+  raw_output?: string;
 }
 
 export interface CcrServiceInfo {
