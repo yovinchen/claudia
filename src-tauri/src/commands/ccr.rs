@@ -26,9 +26,30 @@ pub struct CcrServiceInfo {
     pub message: String,
 }
 
+/// 获取候选可执行名
+fn candidate_binaries() -> Vec<&'static str> {
+    // 覆盖常见发布名与别名
+    vec![
+        "ccr",
+        "claude-code-router",
+        // Windows 扩展
+        "ccr.exe",
+        "ccr.cmd",
+        "claude-code-router.exe",
+        "claude-code-router.cmd",
+        // Node 安装中的可能文件名
+        "ccr.js",
+        "ccr.mjs",
+        "claude-code-router.js",
+        "claude-code-router.mjs",
+    ]
+}
+
 /// 获取可能的 CCR 路径列表
 fn get_possible_ccr_paths() -> Vec<String> {
-    let mut paths = vec!["ccr".to_string()]; // PATH 中的 ccr
+    let mut paths: Vec<String> = Vec::new();
+    // PATH 中的候选名（稍后用 PATH 遍历拼接，这里仅保留可直接执行名）
+    paths.extend(candidate_binaries().into_iter().map(|s| s.to_string()));
     
     // 获取用户主目录
     let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
@@ -36,13 +57,25 @@ fn get_possible_ccr_paths() -> Vec<String> {
     #[cfg(target_os = "macos")]
     {
         // macOS 特定路径
-        paths.extend(vec![
-            "/usr/local/bin/ccr".to_string(),
-            "/opt/homebrew/bin/ccr".to_string(),
-            format!("{}/.nvm/versions/node/*/bin/ccr", home), // 通配符路径需要特殊处理
-            "/usr/local/lib/node_modules/.bin/ccr".to_string(),
-            "/opt/homebrew/lib/node_modules/.bin/ccr".to_string(),
-        ]);
+        // 常见全局 bin 目录
+        for bin in ["ccr", "claude-code-router"] {
+            paths.push(format!("/usr/local/bin/{}", bin));
+            paths.push(format!("/opt/homebrew/bin/{}", bin));
+        }
+        // NVM 全局安装的二进制（通配）
+        for bin in ["ccr", "claude-code-router"] {
+            paths.push(format!("{}/.nvm/versions/node/*/bin/{}", home, bin));
+        }
+        // 全局 node_modules/.bin
+        for bin in ["ccr", "claude-code-router"] {
+            paths.push(format!("/usr/local/lib/node_modules/.bin/{}", bin));
+            paths.push(format!("/opt/homebrew/lib/node_modules/.bin/{}", bin));
+        }
+        
+        // 添加常见的 Node.js 版本路径
+        for version in &["v16", "v18", "v20", "v21", "v22"] {
+            paths.push(format!("{}/.nvm/versions/node/{}.*/bin/ccr", home, version));
+        }
     }
     
     #[cfg(target_os = "windows")]
@@ -52,33 +85,199 @@ fn get_possible_ccr_paths() -> Vec<String> {
         let program_files_x86 = std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
         let appdata = std::env::var("APPDATA").unwrap_or_else(|_| format!("{}\\AppData\\Roaming", home));
         
-        paths.extend(vec![
-            "ccr.exe".to_string(),
-            "ccr.cmd".to_string(),
-            format!("{}\\npm\\ccr.cmd", appdata),
-            format!("{}\\npm\\ccr.exe", appdata),
-            format!("{}\\nodejs\\ccr.cmd", program_files),
-            format!("{}\\nodejs\\ccr.exe", program_files),
-            format!("{}\\nodejs\\ccr.cmd", program_files_x86),
-            format!("{}\\nodejs\\ccr.exe", program_files_x86),
-            format!("{}\\AppData\\Roaming\\npm\\ccr.cmd", home),
-            format!("{}\\AppData\\Roaming\\npm\\ccr.exe", home),
-        ]);
+        for bin in [
+            "ccr.exe", "ccr.cmd", "claude-code-router.exe", "claude-code-router.cmd",
+        ] {
+            paths.push(bin.to_string());
+            paths.push(format!("{}\\npm\\{}", appdata, bin));
+            paths.push(format!("{}\\nodejs\\{}", program_files, bin));
+            paths.push(format!("{}\\nodejs\\{}", program_files_x86, bin));
+            paths.push(format!("{}\\AppData\\Roaming\\npm\\{}", home, bin));
+        }
     }
     
     #[cfg(target_os = "linux")]
     {
         // Linux 特定路径
-        paths.extend(vec![
-            "/usr/bin/ccr".to_string(),
-            "/usr/local/bin/ccr".to_string(),
-            format!("{}/.local/bin/ccr", home),
-            format!("{}/.npm-global/bin/ccr", home),
-            "/usr/lib/node_modules/.bin/ccr".to_string(),
-        ]);
+        for bin in ["ccr", "claude-code-router"] {
+            paths.push(format!("/usr/bin/{}", bin));
+            paths.push(format!("/usr/local/bin/{}", bin));
+            paths.push(format!("{}/.local/bin/{}", home, bin));
+            paths.push(format!("{}/.npm-global/bin/{}", home, bin));
+            paths.push(format!("/usr/lib/node_modules/.bin/{}", bin));
+        }
     }
     
     paths
+}
+
+/// 获取扩展的 PATH 环境变量
+fn get_extended_path() -> String {
+    let mut extended_path = std::env::var("PATH").unwrap_or_default();
+    let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+    
+    // 添加常见的额外路径
+    let additional_paths = if cfg!(target_os = "macos") {
+        vec![
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/opt/homebrew/sbin",
+            // Node.js 相关路径
+            "/usr/local/lib/node_modules/.bin",
+            "/opt/homebrew/lib/node_modules/.bin",
+        ]
+    } else if cfg!(target_os = "windows") {
+        vec![]
+    } else {
+        vec![
+            "/usr/local/bin",
+            "/opt/bin",
+        ]
+    };
+    
+    // 添加用户特定路径
+    if let Ok(home) = std::env::var("HOME") {
+        let user_paths = if cfg!(target_os = "macos") {
+            // 动态发现 Node 版本管理工具的 bin 目录
+            let mut list = vec![
+                format!("{}/.local/bin", home),
+                format!("{}/.cargo/bin", home),
+            ];
+            // nvm: ~/.nvm/versions/node/*/bin
+            let nvm_versions_root = format!("{}/.nvm/versions/node", home);
+            if let Ok(entries) = std::fs::read_dir(&nvm_versions_root) {
+                for entry in entries.flatten() {
+                    let p = entry.path().join("bin");
+                    if p.exists() {
+                        if let Some(s) = p.to_str() { list.push(s.to_string()); }
+                    }
+                }
+            }
+            // volta
+            list.push(format!("{}/.volta/bin", home));
+            // asdf
+            let asdf_installs = format!("{}/.asdf/installs/nodejs", home);
+            if let Ok(entries) = std::fs::read_dir(&asdf_installs) {
+                for entry in entries.flatten() {
+                    let p = entry.path().join("bin");
+                    if p.exists() {
+                        if let Some(s) = p.to_str() { list.push(s.to_string()); }
+                    }
+                }
+            }
+            list.push(format!("{}/.asdf/shims", home));
+            // fnm
+            let fnm_versions = format!("{}/.fnm/node-versions", home);
+            if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+                for entry in entries.flatten() {
+                    let p = entry.path().join("installation").join("bin");
+                    if p.exists() {
+                        if let Some(s) = p.to_str() { list.push(s.to_string()); }
+                    }
+                }
+            }
+            list
+        } else if cfg!(target_os = "windows") {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                vec![
+                    format!("{}\\npm", appdata),
+                ]
+            } else {
+                vec![]
+            }
+        } else {
+            vec![
+                format!("{}/.local/bin", home),
+                format!("{}/.npm-global/bin", home),
+            ]
+        };
+        
+        for path in user_paths {
+            if std::path::Path::new(&path).exists() && !extended_path.contains(&path) {
+                extended_path.push_str(separator);
+                extended_path.push_str(&path);
+            }
+        }
+    }
+    
+    // 添加系统额外路径
+    for path in additional_paths {
+        if std::path::Path::new(path).exists() && !extended_path.contains(path) {
+            extended_path.push_str(separator);
+            extended_path.push_str(path);
+        }
+    }
+    
+    extended_path
+}
+
+/// 通过 shell 查找 CCR
+fn find_ccr_via_shell() -> Option<String> {
+    // 尝试通过 shell 获取 ccr 路径
+    let shell_cmd = if cfg!(target_os = "windows") {
+        "where ccr claude-code-router"
+    } else {
+        "command -v ccr || which ccr || command -v claude-code-router || which claude-code-router"
+    };
+    
+    let shell = if cfg!(target_os = "windows") {
+        "cmd"
+    } else {
+        "sh"
+    };
+    
+    let shell_args = if cfg!(target_os = "windows") {
+        vec!["/C", shell_cmd]
+    } else {
+        vec!["-c", shell_cmd]
+    };
+    
+    if let Ok(output) = Command::new(shell)
+        .args(&shell_args)
+        .env("PATH", get_extended_path())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output() {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string();
+            if !path.is_empty() && test_ccr_command(&path) {
+                info!("Found ccr via shell: {}", path);
+                return Some(path);
+            }
+        }
+    }
+    
+    // 如果标准方法失败，尝试加载用户的 shell 配置
+    if !cfg!(target_os = "windows") {
+        let home = std::env::var("HOME").ok()?;
+        let shell_configs = vec![
+            format!("{}/.bashrc", home),
+            format!("{}/.zshrc", home),
+            format!("{}/.profile", home),
+        ];
+        
+        for config in shell_configs {
+            if std::path::Path::new(&config).exists() {
+                let cmd = format!("source {} && (command -v ccr || command -v claude-code-router)", config);
+                if let Ok(output) = Command::new("sh")
+                    .args(&["-c", &cmd])
+                    .env("PATH", get_extended_path())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .output() {
+                    if output.status.success() {
+                        let path = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string();
+                        if !path.is_empty() && test_ccr_command(&path) {
+                            info!("Found ccr via shell config {}: {}", config, path);
+                            return Some(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    None
 }
 
 /// 查找实际的 CCR 路径
@@ -90,6 +289,97 @@ fn find_ccr_path() -> Option<String> {
         }
     }
     
+    // 硬编码检查最常见的路径（针对打包应用的特殊处理）
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut hardcoded_paths: Vec<String> = Vec::new();
+    for bin in ["ccr", "claude-code-router"] {
+        hardcoded_paths.push(format!("/usr/local/bin/{}", bin));
+        hardcoded_paths.push(format!("/opt/homebrew/bin/{}", bin));
+    }
+    
+    // 动态添加 NVM 路径
+    let nvm_base = format!("{}/.nvm/versions/node", home);
+    if std::path::Path::new(&nvm_base).exists() {
+        if let Ok(entries) = std::fs::read_dir(&nvm_base) {
+            for entry in entries.flatten() {
+                if let Ok(name) = entry.file_name().into_string() {
+                    if name.starts_with('v') {
+                        for bin in ["ccr", "claude-code-router"] {
+                            let ccr_path = format!("{}/{}/bin/{}", nvm_base, name, bin);
+                            hardcoded_paths.push(ccr_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    info!("Checking hardcoded paths: {:?}", hardcoded_paths);
+    
+    for path in &hardcoded_paths {
+        if std::path::Path::new(path).exists() {
+            // 对于打包应用，存在即认为可用，不进行执行测试
+            info!("Found ccr at hardcoded path: {}", path);
+            if let Ok(mut cached) = CCR_PATH.lock() {
+                *cached = Some(path.to_string());
+            }
+            return Some(path.to_string());
+        }
+    }
+    
+    // 获取扩展的 PATH
+    let extended_path = get_extended_path();
+    
+    // 首先尝试通过 shell 查找（最可靠）
+    if let Some(path) = find_ccr_via_shell() {
+        if let Ok(mut cached) = CCR_PATH.lock() {
+            *cached = Some(path.clone());
+        }
+        return Some(path);
+    }
+    
+    // 然后尝试使用带有扩展 PATH 的 which/command -v 命令
+    for name in ["ccr", "claude-code-router"] {
+        if let Ok(output) = Command::new("sh")
+            .env("PATH", &extended_path)
+            .arg("-c")
+            .arg(format!("command -v {} || which {}", name, name))
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string();
+                if !path.is_empty() && test_ccr_command(&path) {
+                    info!("Found {} using shell which: {}", name, path);
+                    if let Ok(mut cached) = CCR_PATH.lock() {
+                        *cached = Some(path.clone());
+                    }
+                    return Some(path);
+                }
+            }
+        }
+    }
+    
+    // 然后检查扩展后的 PATH
+    let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+    for path_dir in extended_path.split(separator) {
+        for name in candidate_binaries() {
+            let candidate = if cfg!(target_os = "windows") {
+                format!("{}\\{}", path_dir, name)
+            } else {
+                format!("{}/{}", path_dir, name)
+            };
+            if test_ccr_command(&candidate) {
+                info!("Found CCR in PATH: {}", candidate);
+                if let Ok(mut cached) = CCR_PATH.lock() {
+                    *cached = Some(candidate.clone());
+                }
+                return Some(candidate);
+            }
+        }
+    }
+    
+    // 最后尝试预定义的路径列表
     let possible_paths = get_possible_ccr_paths();
     
     for path in &possible_paths {
@@ -119,23 +409,102 @@ fn find_ccr_path() -> Option<String> {
         }
     }
     
+    error!("CCR not found in any location. Original PATH: {:?}", std::env::var("PATH"));
+    error!("Extended PATH: {}", extended_path);
+    error!("Searched paths: {:?}", possible_paths);
     None
 }
 
 /// 测试给定路径的 CCR 命令是否可用
 fn test_ccr_command(path: &str) -> bool {
-    let output = Command::new(path)
-        .arg("version")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output();
+    // 首先检查文件是否存在
+    let path_obj = std::path::Path::new(path);
+    if !path_obj.exists() {
+        debug!("CCR path does not exist: {}", path);
+        return false;
+    }
     
-    matches!(output, Ok(result) if result.status.success())
+    // 如果是符号链接，解析真实路径
+    let real_path = if path_obj.is_symlink() {
+        match std::fs::read_link(path) {
+            Ok(target) => {
+                // 如果是相对路径，需要基于符号链接的目录来解析
+                if target.is_relative() {
+                    if let Some(parent) = path_obj.parent() {
+                        parent.join(target).to_string_lossy().to_string()
+                    } else {
+                        target.to_string_lossy().to_string()
+                    }
+                } else {
+                    target.to_string_lossy().to_string()
+                }
+            }
+            Err(e) => {
+                debug!("Failed to read symlink {}: {}", path, e);
+                return false;
+            }
+        }
+    } else {
+        path.to_string()
+    };
+    
+    debug!("Testing CCR command at: {} (real path: {})", path, real_path);
+    
+    // 如果是 .js 文件，使用 node 来执行
+    if real_path.ends_with(".js") {
+        let output = Command::new("node")
+            .arg(&real_path)
+            .arg("version")
+            .env("PATH", get_extended_path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output();
+        
+        match output {
+            Ok(result) => {
+                let success = result.status.success();
+                if !success {
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    debug!("CCR command (via node) failed at {}: {}", real_path, stderr);
+                }
+                success
+            }
+            Err(e) => {
+                debug!("Failed to execute CCR via node at {}: {}", real_path, e);
+                false
+            }
+        }
+    } else {
+        // 直接执行，尝试多种版本参数
+        for arg in ["version", "-v", "--version"] {
+            let output = Command::new(path)
+                .arg(arg)
+                .env("PATH", get_extended_path())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output();
+
+            match output {
+                Ok(result) => {
+                    if result.status.success() {
+                        return true;
+                    }
+                }
+                Err(_) => {
+                    // 尝试下一个参数
+                }
+            }
+        }
+        debug!("CCR command did not respond to version flags at {}", path);
+        false
+    }
 }
 /// 检查 CCR 是否已安装
 #[tauri::command]
 pub async fn check_ccr_installation() -> Result<bool, String> {
-    Ok(find_ccr_path().is_some())
+    let path = find_ccr_path();
+    info!("CCR installation check result: {:?}", path);
+    Ok(path.is_some())
 }
 
 /// 获取 CCR 版本信息
@@ -147,11 +516,22 @@ pub async fn get_ccr_version() -> Result<String, String> {
     let version_args = vec!["--version", "-v", "version"];
     
     for arg in version_args {
-        let output = Command::new(&ccr_path)
-            .arg(arg)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output();
+        let output = if ccr_path.contains("node_modules") || ccr_path.contains(".nvm") {
+            Command::new("sh")
+                .arg("-c")
+                .arg(format!("{} {}", ccr_path, arg))
+                .env("PATH", get_extended_path())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+        } else {
+            Command::new(&ccr_path)
+                .arg(arg)
+                .env("PATH", get_extended_path())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+        };
         
         if let Ok(result) = output {
             if result.status.success() {
@@ -175,6 +555,114 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
     
     if !has_ccr_binary {
         info!("CCR binary not found in PATH");
+        let original_path = std::env::var("PATH").unwrap_or_else(|_| "PATH not found".to_string());
+        let extended_path = get_extended_path();
+
+        // 动态扫描多个 Node 版本管理器目录以进行诊断
+        let home = std::env::var("HOME").unwrap_or_default();
+        let mut scan_dirs: Vec<String> = Vec::new();
+        // nvm
+        let nvm_versions_root = format!("{}/.nvm/versions/node", home);
+        if let Ok(entries) = std::fs::read_dir(&nvm_versions_root) {
+            for entry in entries.flatten() {
+                let p = entry.path().join("bin");
+                if p.exists() {
+                    if let Some(s) = p.to_str() { scan_dirs.push(s.to_string()); }
+                }
+            }
+        }
+        // volta
+        scan_dirs.push(format!("{}/.volta/bin", home));
+        // asdf
+        scan_dirs.push(format!("{}/.asdf/shims", home));
+        let asdf_installs = format!("{}/.asdf/installs/nodejs", home);
+        if let Ok(entries) = std::fs::read_dir(&asdf_installs) {
+            for entry in entries.flatten() {
+                let p = entry.path().join("bin");
+                if p.exists() {
+                    if let Some(s) = p.to_str() { scan_dirs.push(s.to_string()); }
+                }
+            }
+        }
+        // fnm
+        let fnm_versions = format!("{}/.fnm/node-versions", home);
+        if let Ok(entries) = std::fs::read_dir(&fnm_versions) {
+            for entry in entries.flatten() {
+                let p = entry.path().join("installation").join("bin");
+                if p.exists() {
+                    if let Some(s) = p.to_str() { scan_dirs.push(s.to_string()); }
+                }
+            }
+        }
+
+        // 查找候选可执行
+        let mut found_candidates: Vec<String> = Vec::new();
+        for dir in &scan_dirs {
+            for name in ["ccr", "claude-code-router"] {
+                let p = format!("{}/{}", dir, name);
+                if std::path::Path::new(&p).exists() {
+                    found_candidates.push(p);
+                }
+            }
+        }
+
+        // 直接尝试第一个候选
+        let direct_test = if let Some(first) = found_candidates.first() {
+            match Command::new(first)
+                .arg("-v")
+                .env("PATH", get_extended_path())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output() {
+                Ok(output) => {
+                    if output.status.success() {
+                        let version = String::from_utf8_lossy(&output.stdout);
+                        format!("Direct execution SUCCESS: {}", version.trim())
+                    } else {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        format!("Direct execution FAILED: {}", stderr.trim())
+                    }
+                }
+                Err(e) => format!("Direct execution ERROR: {}", e)
+            }
+        } else {
+            "No candidate binary found in Node manager dirs".to_string()
+        };
+
+        // 为诊断展示每个扫描目录里的相关二进制
+        let mut scan_summary: Vec<String> = Vec::new();
+        for dir in &scan_dirs {
+            if std::path::Path::new(dir).exists() {
+                match std::fs::read_dir(dir) {
+                    Ok(entries) => {
+                        let files: Vec<String> = entries
+                            .filter_map(|e| e.ok())
+                            .filter_map(|e| e.file_name().to_str().map(|s| s.to_string()))
+                            .filter(|name| name.contains("ccr") || name.contains("claude-code-router"))
+                            .collect();
+                        if !files.is_empty() {
+                            scan_summary.push(format!("{} -> {:?}", dir, files));
+                        }
+                    }
+                    Err(_) => {}
+                }
+            }
+        }
+
+        let debug_info = format!(
+            "CCR not found.\n\
+            Original PATH: {}\n\
+            Extended PATH: {}\n\
+            Candidates in Node manager dirs: {:?}\n\
+            Direct test: {}\n\
+            Scan details: {}",
+            original_path,
+            extended_path,
+            found_candidates,
+            direct_test,
+            scan_summary.join("; ")
+        );
+        
         return Ok(CcrServiceStatus {
             is_running: false,
             port: None,
@@ -182,7 +670,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
             has_ccr_binary: false,
             ccr_version: None,
             process_id: None,
-            raw_output: None,
+            raw_output: Some(debug_info),
         });
     }
 
@@ -193,19 +681,26 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
     // 获取 CCR 路径
     let ccr_path = find_ccr_path().ok_or("CCR not found")?;
 
-    // 检查服务状态 - 设置环境变量和工作目录
-    let mut cmd = Command::new(&ccr_path);
-    cmd.arg("status")
-       .stdout(Stdio::piped())
-       .stderr(Stdio::piped());
+    // 检查服务状态
+    let mut cmd = if ccr_path.contains("node_modules") || ccr_path.contains(".nvm") {
+        // 如果是 Node.js 安装的路径，可能需要使用 node 来执行
+        let mut c = Command::new("sh");
+        c.arg("-c")
+         .arg(format!("{} status", ccr_path))
+         .env("PATH", get_extended_path())
+         .stdout(Stdio::piped())
+         .stderr(Stdio::piped());
+        c
+    } else {
+        let mut c = Command::new(&ccr_path);
+        c.arg("status")
+         .env("PATH", get_extended_path())
+         .stdout(Stdio::piped())
+         .stderr(Stdio::piped());
+        c
+    };
     
-    // 继承环境变量
-    cmd.env_clear();
-    for (key, value) in std::env::vars() {
-        cmd.env(key, value);
-    }
-    
-    info!("Executing ccr status command");
+    info!("Executing ccr status command at path: {}", ccr_path);
     let output = cmd.output();
     
     let output = match output {
@@ -386,6 +881,7 @@ pub async fn start_ccr_service() -> Result<CcrServiceInfo, String> {
     // 启动服务
     let _output = Command::new(&ccr_path)
         .arg("start")
+        .env("PATH", get_extended_path())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -419,6 +915,7 @@ pub async fn stop_ccr_service() -> Result<CcrServiceInfo, String> {
 
     let output = Command::new(&ccr_path)
         .arg("stop")
+        .env("PATH", get_extended_path())
         .output()
         .map_err(|e| format!("Failed to stop ccr service: {}", e))?;
 
@@ -448,6 +945,7 @@ pub async fn restart_ccr_service() -> Result<CcrServiceInfo, String> {
 
     let output = Command::new(&ccr_path)
         .arg("restart")
+        .env("PATH", get_extended_path())
         .output()
         .map_err(|e| format!("Failed to restart ccr service: {}", e))?;
 
@@ -490,6 +988,7 @@ pub async fn open_ccr_ui() -> Result<String, String> {
     // 执行 ccr ui 命令
     let _output = Command::new(&ccr_path)
         .arg("ui")
+        .env("PATH", get_extended_path())
         .spawn()
         .map_err(|e| format!("Failed to open ccr ui: {}", e))?;
 
