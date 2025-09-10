@@ -385,21 +385,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     const isToggling = togglingEnable[station.id];
 
     return (
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={enabled}
-          disabled={isToggling}
-          onCheckedChange={() => toggleEnableStatus(station.id, enabled)}
-          className="data-[state=checked]:bg-green-500"
-        />
-        {isToggling ? (
-          <Badge variant="secondary" className="animate-pulse">{t('common.updating')}</Badge>
-        ) : enabled ? (
-          <Badge variant="default" className="bg-green-500">{t('status.enabled')}</Badge>
-        ) : (
-          <Badge variant="secondary">{t('status.disabled')}</Badge>
-        )}
-      </div>
+      <Switch
+        checked={enabled}
+        disabled={isToggling}
+        onCheckedChange={() => toggleEnableStatus(station.id, enabled)}
+        className="data-[state=checked]:bg-green-500"
+      />
     );
   };
 
@@ -691,75 +682,95 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
         ) : (
           stations.map((station) => (
             <Card key={station.id} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{station.name}</CardTitle>
-                    <CardDescription className="mt-1">
+              <CardHeader className="pb-2 pt-3 px-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1 min-w-0 mr-2">
+                    <CardTitle className="text-sm font-medium">{station.name}</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
                       {getAdapterDisplayName(station.adapter)}
                     </CardDescription>
                   </div>
-                  {getStatusBadge(station)}
+                  <div className="flex items-center gap-1">
+                    {getStatusBadge(station)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedStation(station);
+                        setShowEditDialog(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteDialog(station);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Globe className="mr-2 h-4 w-4" />
-                    {station.api_url}
+              <CardContent className="pt-1 pb-3 px-3">
+                <div className="space-y-2">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Globe className="mr-1.5 h-3 w-3" />
+                    <span className="truncate">{station.api_url}</span>
                   </div>
 
                   {station.description && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground line-clamp-2">
                       {station.description}
                     </p>
                   )}
 
                   {/* PackyCode 额度显示 */}
                   {station.adapter === 'packycode' && (
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
                       {loadingQuota[station.id] ? (
-                        <div className="flex items-center justify-center py-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                          <span className="ml-2 text-sm text-muted-foreground">加载额度中...</span>
+                        <div className="flex items-center justify-center py-1">
+                          <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                          <span className="ml-2 text-xs text-muted-foreground">加载中...</span>
                         </div>
                       ) : quotaData[station.id] ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {/* 用户信息和计划 */}
                           <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               {quotaData[station.id].username && (
                                 <span className="text-muted-foreground">{quotaData[station.id].username}</span>
                               )}
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs h-5 px-1.5">
                                 {quotaData[station.id].plan_type.toUpperCase()}
                               </Badge>
                               {quotaData[station.id].opus_enabled && (
-                                <Badge variant="default" className="text-xs bg-purple-600">
+                                <Badge variant="default" className="text-xs h-5 px-1.5 bg-purple-600">
                                   Opus
                                 </Badge>
                               )}
                             </div>
-                            {quotaData[station.id].plan_expires_at && (
-                              <span className="text-muted-foreground">
-                                到期: {new Date(quotaData[station.id].plan_expires_at!).toLocaleDateString()}
-                              </span>
-                            )}
                           </div>
 
                           {/* 账户余额 */}
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">账户余额:</span>
-                            <span className="font-semibold text-blue-600">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">余额:</span>
+                            <span className="font-medium text-blue-600">
                               ${Number(quotaData[station.id].balance_usd).toFixed(2)}
                             </span>
                           </div>
 
                           {/* 日额度 */}
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">日额度:</span>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
                                 {(() => {
                                   const daily_spent = Number(quotaData[station.id].daily_spent_usd);
                                   const daily_budget = Number(quotaData[station.id].daily_budget_usd);
@@ -768,8 +779,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                                       <span className={daily_spent > daily_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
                                         ${daily_spent.toFixed(2)}
                                       </span>
-                                      <span className="text-muted-foreground">/</span>
-                                      <span className="text-muted-foreground">${daily_budget.toFixed(2)}</span>
+                                      <span className="text-muted-foreground">/ ${daily_budget.toFixed(2)}</span>
                                     </>
                                   );
                                 })()}
@@ -839,7 +849,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-5 px-2 text-xs"
+                              className="h-6 px-2 text-xs"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 fetchPackycodeQuota(station.id);
@@ -850,14 +860,15 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-2">
+                        <div className="text-center py-1">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               fetchPackycodeQuota(station.id);
                             }}
+                            className="h-7 text-xs px-2"
                           >
                             查询额度
                           </Button>
@@ -866,30 +877,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     </div>
                   )}
 
-                  <div className="flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStation(station);
-                          setShowEditDialog(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openDeleteDialog(station);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
                 </div>
               </CardContent>
             </Card>
