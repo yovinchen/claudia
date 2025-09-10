@@ -494,6 +494,7 @@
     "importFromClaudeDesktop": "从 Claude Desktop 导入",
     "importFromClaudeDesktopDescription": "自动导入 Claude Desktop 中的所有 MCP 服务器。安装到用户范围（所有项目可用）。",
     "importing": "导入中...",
+    "exporting": "导出中...",
     "importFromJSON": "从 JSON 导入",
     "importFromJSONDescription": "从 JSON 文件导入服务器配置",
     "chooseJSONFile": "选择 JSON 文件",

@@ -512,6 +512,7 @@
     "importFromClaudeDesktop": "Import from Claude Desktop",
     "importFromClaudeDesktopDescription": "Automatically imports all MCP servers from Claude Desktop. Installs to user scope (available across all projects).",
     "importing": "Importing...",
+    "exporting": "Exporting...",
     "importFromJSON": "Import from JSON",
     "importFromJSONDescription": "Import server configuration from a JSON file",
     "chooseJSONFile": "Choose JSON File",

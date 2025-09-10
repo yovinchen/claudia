@@ -1145,7 +1145,53 @@ const CreateStationDialog: React.FC<{
 
     try {
       setSubmitting(true);
-      await api.relayStationCreate(formData);
+      
+      // PackyCode 保存时自动选择最佳节点
+      if (formData.adapter === 'packycode') {
+        let finalApiUrl = formData.api_url;
+        
+        if (packycodeService === 'bus') {
+          // 公交车自动选择
+          const busNodes = [
+            { url: "https://api.packycode.com", name: "🚌 直连1（默认公交车）" },
+            { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 直连2 (HK-CN2)" },
+            { url: "https://api-us-cmin2.packycode.com", name: "🇺🇸 直连3 (US-CMIN2)" },
+            { url: "https://api-us-4837.packycode.com", name: "🇺🇸 直连4 (US-4837)" },
+            { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
+            { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
+          ];
+          
+          await performSpeedTest(busNodes, (bestNode) => {
+            finalApiUrl = bestNode.url;
+            setPackycodeNode(bestNode.url);
+          });
+        } else if (packycodeService === 'taxi') {
+          // 滴滴车自动选择
+          const taxiNodes = [
+            { url: "https://share-api.packycode.com", name: "🚗 直连1（默认滴滴车）" },
+            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 备用1 (CF-Pro)" },
+            { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 备用2 (HK-CN2)" }
+          ];
+          
+          await performSpeedTest(taxiNodes, (bestNode) => {
+            finalApiUrl = bestNode.url;
+            setPackycodeTaxiNode(bestNode.url);
+          });
+        }
+        
+        // 使用选择的最佳节点创建中转站
+        await api.relayStationCreate({
+          ...formData,
+          api_url: finalApiUrl,
+          adapter_config: {
+            service_type: packycodeService
+          }
+        });
+      } else {
+        // 非 PackyCode 适配器直接创建
+        await api.relayStationCreate(formData);
+      }
+      
       onSuccess();
     } catch (error) {
       console.error('Failed to create station:', error);
@@ -1718,7 +1764,7 @@ const EditStationDialog: React.FC<{
   // PackyCode 特定状态
   const [packycodeService, setPackycodeService] = useState<string>(() => {
     // 从API URL判断服务类型
-    if (station.adapter === 'packycode' && station.api_url.includes('share-api')) {
+    if (station.adapter === 'packycode' && (station.api_url.includes('share-api') || station.api_url.includes('codex-api'))) {
       return 'taxi';
     }
     return 'bus';
@@ -1729,6 +1775,13 @@ const EditStationDialog: React.FC<{
       return station.api_url;
     }
     return 'https://api.packycode.com';
+  });
+  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>(() => {
+    // 如果是PackyCode滴滴车，使用当前的API URL
+    if (station.adapter === 'packycode' && (station.api_url.includes('share-api') || station.api_url.includes('codex-api'))) {
+      return station.api_url;
+    }
+    return 'https://share-api.packycode.com';
   });
   
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
@@ -1876,7 +1929,158 @@ const EditStationDialog: React.FC<{
 
     try {
       setSubmitting(true);
-      await api.relayStationUpdate(formData);
+      
+      // PackyCode 保存时自动选择最佳节点
+      if (formData.adapter === 'packycode') {
+        let finalApiUrl = formData.api_url;
+        
+        if (packycodeService === 'bus') {
+          // 公交车自动选择
+          const busNodes = [
+            { url: "https://api.packycode.com", name: "🚌 直连1（默认公交车）" },
+            { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 直连2 (HK-CN2)" },
+            { url: "https://api-us-cmin2.packycode.com", name: "🇺🇸 直连3 (US-CMIN2)" },
+            { url: "https://api-us-4837.packycode.com", name: "🇺🇸 直连4 (US-4837)" },
+            { url: "https://api-us-cn2.packycode.com", name: "🔄 备用1 (US-CN2)" },
+            { url: "https://api-cf-pro.packycode.com", name: "☁️ 备用2 (CF-Pro)" }
+          ];
+          
+          await new Promise<void>((resolve) => {
+            // 内联的测速逻辑
+            setShowSpeedTestModal(true);
+            setSpeedTestInProgress(true);
+
+            const initialResults = busNodes.map(node => ({
+              url: node.url,
+              name: node.name,
+              responseTime: null,
+              status: 'testing' as const
+            }));
+            setSpeedTestResults(initialResults);
+
+            let bestNode = busNodes[0];
+            let minTime = Infinity;
+
+            const testPromises = busNodes.map(async (node, index) => {
+              try {
+                const startTime = Date.now();
+                await fetch(node.url, {
+                  method: 'HEAD',
+                  mode: 'no-cors'
+                });
+                const responseTime = Date.now() - startTime;
+
+                setSpeedTestResults(prev => prev.map((result, i) =>
+                  i === index ? { ...result, responseTime, status: 'success' } : result
+                ));
+
+                if (responseTime < minTime) {
+                  minTime = responseTime;
+                  bestNode = node;
+                }
+
+                return { node, responseTime };
+              } catch (error) {
+                console.log(`Node ${node.url} failed:`, error);
+                setSpeedTestResults(prev => prev.map((result, i) =>
+                  i === index ? { ...result, responseTime: null, status: 'failed' } : result
+                ));
+                return { node, responseTime: null };
+              }
+            });
+
+            Promise.all(testPromises).then(() => {
+              setTimeout(() => {
+                setSpeedTestInProgress(false);
+                finalApiUrl = bestNode.url;
+                setPackycodeNode(bestNode.url);
+                setTimeout(() => {
+                  setShowSpeedTestModal(false);
+                  resolve();
+                }, 1000);
+              }, 2000);
+            });
+          });
+        } else if (packycodeService === 'taxi') {
+          // 滴滴车自动选择
+          const taxiNodes = [
+            { url: "https://share-api.packycode.com", name: "🚗 直连1（默认滴滴车）" },
+            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 备用1 (CF-Pro)" },
+            { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 备用2 (HK-CN2)" }
+          ];
+          
+          await new Promise<void>((resolve) => {
+            // 内联的测速逻辑
+            setShowSpeedTestModal(true);
+            setSpeedTestInProgress(true);
+
+            const initialResults = taxiNodes.map(node => ({
+              url: node.url,
+              name: node.name,
+              responseTime: null,
+              status: 'testing' as const
+            }));
+            setSpeedTestResults(initialResults);
+
+            let bestNode = taxiNodes[0];
+            let minTime = Infinity;
+
+            const testPromises = taxiNodes.map(async (node, index) => {
+              try {
+                const startTime = Date.now();
+                await fetch(node.url, {
+                  method: 'HEAD',
+                  mode: 'no-cors'
+                });
+                const responseTime = Date.now() - startTime;
+
+                setSpeedTestResults(prev => prev.map((result, i) =>
+                  i === index ? { ...result, responseTime, status: 'success' } : result
+                ));
+
+                if (responseTime < minTime) {
+                  minTime = responseTime;
+                  bestNode = node;
+                }
+
+                return { node, responseTime };
+              } catch (error) {
+                console.log(`Node ${node.url} failed:`, error);
+                setSpeedTestResults(prev => prev.map((result, i) =>
+                  i === index ? { ...result, responseTime: null, status: 'failed' } : result
+                ));
+                return { node, responseTime: null };
+              }
+            });
+
+            Promise.all(testPromises).then(() => {
+              setTimeout(() => {
+                setSpeedTestInProgress(false);
+                finalApiUrl = bestNode.url;
+                setPackycodeTaxiNode(bestNode.url);
+                setFormData(prev => ({ ...prev, api_url: bestNode.url }));
+                setTimeout(() => {
+                  setShowSpeedTestModal(false);
+                  resolve();
+                }, 1000);
+              }, 2000);
+            });
+          });
+        }
+        
+        // 使用选择的最佳节点更新中转站
+        await api.relayStationUpdate({
+          ...formData,
+          api_url: finalApiUrl,
+          adapter_config: {
+            service_type: packycodeService
+          }
+        });
+      } else {
+        // 非 PackyCode 适配器直接更新
+        await api.relayStationUpdate(formData);
+      }
+      
       onSuccess();
     } catch (error) {
       console.error('Failed to update station:', error);
@@ -2163,6 +2367,118 @@ const EditStationDialog: React.FC<{
 
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.selectedNode') + ': ' + packycodeNode}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {formData.adapter === 'packycode' && packycodeService === 'taxi' && (
+          <div className="space-y-2">
+            <Label>{t('relayStation.nodeSelection')}</Label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={packycodeTaxiNode}
+                    onValueChange={(value: string) => {
+                      setPackycodeTaxiNode(value);
+                      setFormData(prev => ({ ...prev, api_url: value }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('relayStation.selectNode')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="https://share-api.packycode.com">
+                        🚗 直连1（默认滴滴车）
+                      </SelectItem>
+                      <SelectItem value="https://share-api-cf-pro.packycode.com">
+                        ☁️ 备用1 (CF-Pro)
+                      </SelectItem>
+                      <SelectItem value="https://share-api-hk-cn2.packycode.com">
+                        🇭🇰 备用2 (HK-CN2)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const taxiNodes = [
+                      { url: "https://share-api.packycode.com", name: "🚗 直连1（默认滴滴车）" },
+                      { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 备用1 (CF-Pro)" },
+                      { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 备用2 (HK-CN2)" }
+                    ];
+
+                    // 复制 performSpeedTest 逻辑，因为它在这个作用域中不可用
+                    setShowSpeedTestModal(true);
+                    setSpeedTestInProgress(true);
+
+                    const initialResults = taxiNodes.map(node => ({
+                      url: node.url,
+                      name: node.name,
+                      responseTime: null,
+                      status: 'testing' as const
+                    }));
+                    setSpeedTestResults(initialResults);
+
+                    let bestNode = taxiNodes[0];
+                    let minTime = Infinity;
+
+                    const testPromises = taxiNodes.map(async (node, index) => {
+                      try {
+                        const startTime = Date.now();
+                        await fetch(node.url, {
+                          method: 'HEAD',
+                          mode: 'no-cors'
+                        });
+                        const responseTime = Date.now() - startTime;
+
+                        setSpeedTestResults(prev => prev.map((result, i) =>
+                          i === index ? { ...result, responseTime, status: 'success' } : result
+                        ));
+
+                        if (responseTime < minTime) {
+                          minTime = responseTime;
+                          bestNode = node;
+                        }
+
+                        return { node, responseTime };
+                      } catch (error) {
+                        console.log(`Node ${node.url} failed:`, error);
+                        setSpeedTestResults(prev => prev.map((result, i) =>
+                          i === index ? { ...result, responseTime: null, status: 'failed' } : result
+                        ));
+                        return { node, responseTime: null };
+                      }
+                    });
+
+                    try {
+                      await Promise.all(testPromises);
+                      setTimeout(() => {
+                        setSpeedTestInProgress(false);
+                        setPackycodeTaxiNode(bestNode.url);
+                        setFormData(prev => ({ ...prev, api_url: bestNode.url }));
+                        setTimeout(() => {
+                          setShowSpeedTestModal(false);
+                        }, 1000);
+                      }, 2000);
+                    } catch (error) {
+                      console.error('Speed test failed:', error);
+                      setSpeedTestInProgress(false);
+                      setTimeout(() => {
+                        setShowSpeedTestModal(false);
+                      }, 1000);
+                    }
+                  }}
+                >
+                  自动选择
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {t('relayStation.selectedNode') + ': ' + packycodeTaxiNode}
               </p>
             </div>
           </div>

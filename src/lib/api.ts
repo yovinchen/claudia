@@ -1726,6 +1726,29 @@ export const api = {
   },
 
   /**
+   * Export configuration for MCP server
+   */
+  async mcpExportServers(): Promise<{
+    servers: Array<{
+      name: string;
+      transport: string;
+      command?: string;
+      args: string[];
+      env: Record<string, string>;
+      url?: string;
+      scope: string;
+    }>;
+    format: string;
+  }> {
+    try {
+      return await invoke("mcp_export_servers");
+    } catch (error) {
+      console.error("Failed to export MCP servers:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Get the stored Claude binary path from settings
    * @returns Promise resolving to the path if set, null otherwise
    */

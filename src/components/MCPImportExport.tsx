@@ -29,6 +29,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
   const [importScope, setImportScope] = useState("local");
+  const [exporting, setExporting] = useState(false);
 
   /**
    * Imports servers from Claude Desktop
@@ -142,11 +143,84 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   };
 
   /**
-   * Handles exporting servers (placeholder)
+   * Handles exporting servers
    */
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    onError("Export functionality coming soon!");
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const result = await api.mcpExportServers();
+      
+      if (result.servers.length === 0) {
+        onError("No MCP servers configured to export");
+        return;
+      }
+
+      let jsonContent: string;
+      let defaultFileName: string;
+
+      if (result.format === "single" && result.servers.length === 1) {
+        // Single server format
+        const server = result.servers[0];
+        const exportData: any = {
+          type: server.transport,
+        };
+
+        if (server.transport === "stdio") {
+          exportData.command = server.command;
+          exportData.args = server.args;
+          exportData.env = server.env;
+        } else if (server.transport === "sse") {
+          exportData.url = server.url;
+        }
+
+        jsonContent = JSON.stringify(exportData, null, 2);
+        defaultFileName = `mcp-server-${server.name}.json`;
+      } else {
+        // Multiple servers format
+        const exportData: any = {
+          mcpServers: {}
+        };
+
+        for (const server of result.servers) {
+          const serverConfig: any = {
+            command: server.command || "",
+            args: server.args,
+            env: server.env
+          };
+
+          if (server.transport === "sse") {
+            serverConfig.url = server.url;
+          }
+
+          exportData.mcpServers[server.name] = serverConfig;
+        }
+
+        jsonContent = JSON.stringify(exportData, null, 2);
+        defaultFileName = "mcp-servers.json";
+      }
+
+      // Use Tauri's save dialog
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const filePath = await save({
+        defaultPath: defaultFileName,
+        filters: [{
+          name: 'JSON',
+          extensions: ['json']
+        }]
+      });
+
+      if (filePath) {
+        // Use Tauri's file system API to write the file
+        const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+        await writeTextFile(filePath, jsonContent);
+        onError(`Successfully exported ${result.servers.length} server(s) to ${filePath}`);
+      }
+    } catch (error: any) {
+      console.error("Failed to export servers:", error);
+      onError(error.toString() || "Failed to export servers");
+    } finally {
+      setExporting(false);
+    }
   };
 
   /**
@@ -273,12 +347,12 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
           </div>
         </Card>
 
-        {/* Export (Coming Soon) */}
-        <Card className="p-4 opacity-60">
+        {/* Export Configuration */}
+        <Card className="p-4 hover:bg-accent/5 transition-colors">
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-muted rounded-lg">
-                <Upload className="h-5 w-5 text-muted-foreground" />
+              <div className="p-2.5 bg-green-500/10 rounded-lg">
+                <Upload className="h-5 w-5 text-green-500" />
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-medium">{t('mcp.exportConfiguration')}</h4>
@@ -289,12 +363,21 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             </div>
             <Button
               onClick={handleExport}
-              disabled={true}
-              variant="secondary"
+              disabled={exporting}
+              variant="outline"
               className="w-full gap-2"
             >
-              <Upload className="h-4 w-4" />
-              {t('mcp.exportComingSoon')}
+              {exporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('mcp.exporting')}
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  {t('mcp.exportConfiguration')}
+                </>
+              )}
             </Button>
           </div>
         </Card>

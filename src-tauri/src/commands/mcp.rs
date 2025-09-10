@@ -724,3 +724,75 @@ pub async fn mcp_save_project_config(
 
     Ok("Project MCP configuration saved".to_string())
 }
+
+/// Export configuration for MCP server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MCPExportConfig {
+    pub name: String,
+    pub transport: String,
+    pub command: Option<String>,
+    pub args: Vec<String>,
+    pub env: HashMap<String, String>,
+    pub url: Option<String>,
+    pub scope: String,
+}
+
+/// Export result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MCPExportResult {
+    pub servers: Vec<MCPExportConfig>,
+    pub format: String, // "single" or "multiple"
+}
+
+/// Exports all MCP servers configuration
+#[tauri::command]
+pub async fn mcp_export_servers(app: AppHandle) -> Result<MCPExportResult, String> {
+    info!("Exporting MCP servers configuration");
+
+    // Get all servers
+    let servers = mcp_list(app.clone()).await?;
+    
+    if servers.is_empty() {
+        return Ok(MCPExportResult {
+            servers: vec![],
+            format: "multiple".to_string(),
+        });
+    }
+
+    // Get detailed information for each server
+    let mut export_configs = Vec::new();
+    
+    for server in &servers {
+        match mcp_get(app.clone(), server.name.clone()).await {
+            Ok(detailed_server) => {
+                export_configs.push(MCPExportConfig {
+                    name: detailed_server.name,
+                    transport: detailed_server.transport,
+                    command: detailed_server.command,
+                    args: detailed_server.args,
+                    env: detailed_server.env,
+                    url: detailed_server.url,
+                    scope: detailed_server.scope,
+                });
+            }
+            Err(e) => {
+                error!("Failed to get details for server {}: {}", server.name, e);
+                // Still include basic information
+                export_configs.push(MCPExportConfig {
+                    name: server.name.clone(),
+                    transport: server.transport.clone(),
+                    command: server.command.clone(),
+                    args: server.args.clone(),
+                    env: server.env.clone(),
+                    url: server.url.clone(),
+                    scope: server.scope.clone(),
+                });
+            }
+        }
+    }
+
+    Ok(MCPExportResult {
+        format: if export_configs.len() == 1 { "single" } else { "multiple" }.to_string(),
+        servers: export_configs,
+    })
+}

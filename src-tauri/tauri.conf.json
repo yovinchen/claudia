@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline' blob: data: asset: https://asset.localhost; style-src-elem 'self' 'unsafe-inline' blob: data: asset: https://asset.localhost; style-src-attr 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.assets.i.posthog.com; worker-src 'self' blob: asset: https://asset.localhost; font-src 'self' data: blob: asset: https://asset.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://app.posthog.com https://*.posthog.com https://*.i.posthog.com",
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline' blob: data: asset: https://asset.localhost; style-src-elem 'self' 'unsafe-inline' blob: data: asset: https://asset.localhost; style-src-attr 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.assets.i.posthog.com; worker-src 'self' blob: asset: https://asset.localhost; font-src 'self' data: blob: asset: https://asset.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://api.packycode.com https://api-hk-cn2.packycode.com https://api-us-cmin2.packycode.com https://api-us-4837.packycode.com https://api-us-cn2.packycode.com https://api-cf-pro.packycode.com https://share-api.packycode.com https://share-api-cf-pro.packycode.com https://share-api-hk-cn2.packycode.com",
       "assetProtocol": {
         "enable": true,
         "scope": [
