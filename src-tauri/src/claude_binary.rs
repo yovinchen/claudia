@@ -202,7 +202,16 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
 
     let mut installations = Vec::new();
 
-    match Command::new(command_name).arg("claude").output() {
+    // Create command with enhanced PATH for production environments
+    let mut cmd = Command::new(command_name);
+    cmd.arg("claude");
+    
+    // In production (DMG), we need to ensure proper PATH is set
+    let enhanced_path = build_enhanced_path();
+    debug!("Using enhanced PATH for {}: {}", command_name, enhanced_path);
+    cmd.env("PATH", enhanced_path);
+
+    match cmd.output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -401,7 +410,11 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     }
 
     // Also check if claude is available in PATH (without full path)
-    if let Ok(output) = Command::new("claude").arg("--version").output() {
+    let mut path_cmd = Command::new("claude");
+    path_cmd.arg("--version");
+    path_cmd.env("PATH", build_enhanced_path());
+    
+    if let Ok(output) = path_cmd.output() {
         if output.status.success() {
             debug!("claude is available in PATH");
             // Combine stdout and stderr for robust version extraction
@@ -427,7 +440,11 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
 /// Get Claude version by running --version command
 fn get_claude_version(path: &str) -> Result<Option<String>, String> {
-    match Command::new(path).arg("--version").output() {
+    // Use the helper function to create command with proper environment
+    let mut cmd = create_command_with_env(path);
+    cmd.arg("--version");
+    
+    match cmd.output() {
         Ok(output) => {
             if output.status.success() {
                 // Combine stdout and stderr for robust version extraction
@@ -556,11 +573,15 @@ pub fn create_command_with_env(program: &str) -> Command {
 
     info!("Creating command for: {}", program);
 
+    // Build enhanced PATH for production environments (DMG/App Bundle)
+    let enhanced_path = build_enhanced_path();
+    debug!("Enhanced PATH: {}", enhanced_path);
+    cmd.env("PATH", enhanced_path.clone());
+
     // Inherit essential environment variables from parent process
     for (key, value) in std::env::vars() {
-        // Pass through PATH and other essential environment variables
-        if key == "PATH"
-            || key == "HOME"
+        // Pass through essential environment variables (excluding PATH which we set above)
+        if key == "HOME"
             || key == "USER"
             || key == "SHELL"
             || key == "LANG"
@@ -595,7 +616,12 @@ pub fn create_command_with_env(program: &str) -> Command {
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             // Ensure the Node.js bin directory is in PATH
-            let current_path = std::env::var("PATH").unwrap_or_default();
+            let current_path = cmd.get_envs()
+                .find(|(k, _)| k.to_str() == Some("PATH"))
+                .and_then(|(_, v)| v)
+                .and_then(|v| v.to_str())
+                .unwrap_or(&enhanced_path)
+                .to_string();
             let node_bin_str = node_bin_dir.to_string_lossy();
             if !current_path.contains(&node_bin_str.as_ref()) {
                 let new_path = format!("{}:{}", node_bin_str, current_path);
@@ -606,4 +632,74 @@ pub fn create_command_with_env(program: &str) -> Command {
     }
 
     cmd
+}
+
+/// Build an enhanced PATH that includes all possible Claude installation locations
+/// This is especially important for DMG/packaged applications where PATH may be limited
+fn build_enhanced_path() -> String {
+    let mut paths = Vec::new();
+    
+    // Start with current PATH
+    if let Ok(current_path) = std::env::var("PATH") {
+        paths.push(current_path);
+    }
+    
+    // Add standard system paths that might be missing in packaged apps
+    let system_paths = vec![
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+    ];
+    
+    for path in system_paths {
+        if PathBuf::from(path).exists() {
+            paths.push(path.to_string());
+        }
+    }
+    
+    // Add user-specific paths
+    if let Ok(home) = std::env::var("HOME") {
+        let user_paths = vec![
+            format!("{}/.local/bin", home),
+            format!("{}/.claude/local", home),
+            format!("{}/.npm-global/bin", home),
+            format!("{}/.yarn/bin", home),
+            format!("{}/.bun/bin", home),
+            format!("{}/bin", home),
+            format!("{}/.config/yarn/global/node_modules/.bin", home),
+            format!("{}/node_modules/.bin", home),
+        ];
+        
+        for path in user_paths {
+            if PathBuf::from(&path).exists() {
+                paths.push(path);
+            }
+        }
+        
+        // Add all NVM node versions
+        let nvm_dir = PathBuf::from(&home).join(".nvm/versions/node");
+        if nvm_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+                for entry in entries.flatten() {
+                    if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                        let bin_path = entry.path().join("bin");
+                        if bin_path.exists() {
+                            paths.push(bin_path.to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Remove duplicates while preserving order
+    let mut seen = std::collections::HashSet::new();
+    let unique_paths: Vec<String> = paths
+        .into_iter()
+        .filter(|path| seen.insert(path.clone()))
+        .collect();
+    
+    unique_paths.join(":")
 }

@@ -623,102 +623,40 @@ pub async fn get_system_prompt() -> Result<String, String> {
 
 /// Checks if Claude Code is installed and gets its version
 #[tauri::command]
-pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus, String> {
+pub async fn check_claude_version(_app: AppHandle) -> Result<ClaudeVersionStatus, String> {
     log::info!("Checking Claude Code version");
 
-    let claude_path = match find_claude_binary(&app) {
-        Ok(path) => path,
-        Err(e) => {
-            return Ok(ClaudeVersionStatus {
-                is_installed: false,
-                version: None,
-                output: e,
-            });
-        }
-    };
-
-    use log::debug;debug!("Claude path: {}", claude_path);
-
-    // In production builds, we can't check the version directly
-    #[cfg(not(debug_assertions))]
-    {
-        log::warn!("Cannot check claude version in production build");
-        // If we found a path (either stored or in common locations), assume it's installed
-        if claude_path != "claude" && PathBuf::from(&claude_path).exists() {
-            return Ok(ClaudeVersionStatus {
-                is_installed: true,
-                version: None,
-                output: "Claude binary found at: ".to_string() + &claude_path,
-            });
-        } else {
-            return Ok(ClaudeVersionStatus {
-                is_installed: false,
-                version: None,
-                output: "Cannot verify Claude installation in production build. Please ensure Claude Code is installed.".to_string(),
-            });
-        }
+    // Try to find Claude installations with versions
+    let installations = crate::claude_binary::discover_claude_installations();
+    
+    if installations.is_empty() {
+        return Ok(ClaudeVersionStatus {
+            is_installed: false,
+            version: None,
+            output: "Claude Code not found. Please ensure it's installed.".to_string(),
+        });
     }
 
-    #[cfg(debug_assertions)]
-    {
-        let output = std::process::Command::new(claude_path)
-            .arg("--version")
-            .output();
-
-        match output {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                
-                // Use regex to directly extract version pattern (e.g., "1.0.41")
-                let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-
-                // Combine stdout and stderr for version extraction (some tools write version to stderr)
-                let mut version_src = stdout.clone();
-                if !stderr.is_empty() {
-                    version_src.push('\n');
-                    version_src.push_str(&stderr);
-                }
-
-                let version = if let Some(regex) = version_regex {
-                    regex
-                        .captures(&version_src)
-                        .and_then(|captures| captures.get(1))
-                        .map(|m| m.as_str().to_string())
-                } else {
-                    None
-                };
-                
-                let full_output = if stderr.is_empty() {
-                    stdout.clone()
-                } else {
-                    format!("{}\n{}", stdout, stderr)
-                };
-
-                // Check if the output matches the expected format
-                // Expected format: "1.0.17 (Claude Code)" or similar
-                let is_valid =
-                    stdout.contains("(Claude Code)")
-                    || stdout.contains("Claude Code")
-                    || stderr.contains("(Claude Code)")
-                    || stderr.contains("Claude Code");
-
-                Ok(ClaudeVersionStatus {
-                    is_installed: is_valid && output.status.success(),
-                    version,
-                    output: full_output.trim().to_string(),
-                })
+    // Find the best installation (highest version or first found)
+    let best_installation = installations
+        .into_iter()
+        .max_by(|a, b| {
+            match (&a.version, &b.version) {
+                (Some(v1), Some(v2)) => v1.cmp(v2),
+                (Some(_), None) => std::cmp::Ordering::Greater,
+                (None, Some(_)) => std::cmp::Ordering::Less,
+                (None, None) => std::cmp::Ordering::Equal,
             }
-            Err(e) => {
-                log::error!("Failed to run claude command: {}", e);
-                Ok(ClaudeVersionStatus {
-                    is_installed: false,
-                    version: None,
-                    output: format!("Command not found: {}", e),
-                })
-            }
-        }
-    }
+        })
+        .unwrap(); // Safe because we checked is_empty() above
+
+    log::info!("Found Claude installation: {:?}", best_installation);
+
+    Ok(ClaudeVersionStatus {
+        is_installed: true,
+        version: best_installation.version,
+        output: format!("Claude binary found at: {}", best_installation.path),
+    })
 }
 
 /// Saves the CLAUDE.md system prompt file
