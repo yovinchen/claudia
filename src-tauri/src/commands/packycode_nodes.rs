@@ -69,6 +69,14 @@ pub fn get_all_nodes() -> Vec<PackycodeNode> {
             response_time: None,
             available: None,
         },
+        PackycodeNode {
+            name: "公交车 US-CN2".to_string(),
+            url: "https://api-us-cn2.packycode.com".to_string(),
+            node_type: NodeType::Direct,
+            description: "美国 CN2 线路（公交车）".to_string(),
+            response_time: None,
+            available: None,
+        },
         // 滴滴车节点 (Taxi Service)
         PackycodeNode {
             name: "滴滴车默认节点".to_string(),
@@ -99,6 +107,14 @@ pub fn get_all_nodes() -> Vec<PackycodeNode> {
             url: "https://share-api-cf-pro.packycode.com".to_string(),
             node_type: NodeType::Direct,
             description: "CloudFlare Pro 线路（滴滴车）".to_string(),
+            response_time: None,
+            available: None,
+        },
+        PackycodeNode {
+            name: "滴滴车 US-CN2".to_string(),
+            url: "https://share-api-us-cn2.packycode.com".to_string(),
+            node_type: NodeType::Direct,
+            description: "美国 CN2 线路（滴滴车）".to_string(),
             response_time: None,
             available: None,
         },

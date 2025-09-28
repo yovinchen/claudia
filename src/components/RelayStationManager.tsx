@@ -1143,7 +1143,8 @@ const CreateStationDialog: React.FC<{
             { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
             { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
             { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" }
+            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
+            { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
           ];
           
           await performSpeedTest(busNodes, (bestNode) => {
@@ -1156,7 +1157,8 @@ const CreateStationDialog: React.FC<{
             { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
             { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
             { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" }
+            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
+            { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
           ];
           
           await performSpeedTest(taxiNodes, (bestNode) => {
@@ -1431,6 +1433,9 @@ const CreateStationDialog: React.FC<{
                     <SelectItem value="https://api-cf-pro.packycode.com">
                       ☁️ 公交车 CF-Pro
                     </SelectItem>
+                    <SelectItem value="https://api-us-cn2.packycode.com">
+                      🇺🇸 公交车 US-CN2
+                    </SelectItem>
                   </SelectContent>
                   </Select>
                 </div>
@@ -1489,6 +1494,9 @@ const CreateStationDialog: React.FC<{
                       </SelectItem>
                       <SelectItem value="https://share-api-cf-pro.packycode.com">
                         ☁️ 滴滴车 CF-Pro
+                      </SelectItem>
+                      <SelectItem value="https://share-api-us-cn2.packycode.com">
+                        🇺🇸 滴滴车 US-CN2
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1913,7 +1921,8 @@ const EditStationDialog: React.FC<{
             { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
             { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
             { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" }
+            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
+            { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
           ];
           
           await new Promise<void>((resolve) => {
@@ -1978,7 +1987,8 @@ const EditStationDialog: React.FC<{
             { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
             { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
             { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" }
+            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
+            { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
           ];
           
           await new Promise<void>((resolve) => {
@@ -2295,22 +2305,19 @@ const EditStationDialog: React.FC<{
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="https://api.packycode.com">
-                        🚌 直连1（默认公交车）
+                        🚌 公交车默认节点
                       </SelectItem>
                       <SelectItem value="https://api-hk-cn2.packycode.com">
-                        🇭🇰 直连2 (HK-CN2)
+                        🇭🇰 公交车 HK-CN2
                       </SelectItem>
-                      <SelectItem value="https://api-us-cmin2.packycode.com">
-                        🇺🇸 直连3 (US-CMIN2)
-                      </SelectItem>
-                      <SelectItem value="https://api-us-4837.packycode.com">
-                        🇺🇸 直连4 (US-4837)
+                      <SelectItem value="https://api-hk-g.packycode.com">
+                        🇭🇰 公交车 HK-G
                       </SelectItem>
                       <SelectItem value="https://api-us-cn2.packycode.com">
-                        🔄 备用1 (US-CN2)
+                        🇺🇸 公交车 US-CN2
                       </SelectItem>
                       <SelectItem value="https://api-cf-pro.packycode.com">
-                        ☁️ 备用2 (CF-Pro)
+                        ☁️ 公交车 CF-Pro
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -2370,6 +2377,9 @@ const EditStationDialog: React.FC<{
                       </SelectItem>
                       <SelectItem value="https://share-api-cf-pro.packycode.com">
                         ☁️ 滴滴车 CF-Pro
+                      </SelectItem>
+                      <SelectItem value="https://share-api-us-cn2.packycode.com">
+                        🇺🇸 滴滴车 US-CN2
                       </SelectItem>
                     </SelectContent>
                   </Select>
