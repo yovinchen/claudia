@@ -18,6 +18,7 @@ use commands::agents::{
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
     list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    get_model_mappings, update_model_mapping,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
@@ -316,6 +317,8 @@ fn main() {
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
+            get_model_mappings,
+            update_model_mapping,
             
             // Usage & Analytics
             get_usage_stats,
