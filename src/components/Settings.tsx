@@ -132,6 +132,7 @@ export const Settings: React.FC<SettingsProps> = ({
     try {
       setLoadingMappings(true);
       const mappings = await api.getModelMappings();
+      console.log("Loaded model mappings:", mappings);
       setModelMappings(mappings);
     } catch (err) {
       console.error("Failed to load model mappings:", err);
@@ -716,11 +717,22 @@ export const Settings: React.FC<SettingsProps> = ({
                                 id={`model-${mapping.alias}`}
                                 value={mapping.model_name}
                                 onChange={(e) => updateModelMapping(mapping.alias, e.target.value)}
-                                placeholder={`claude-${mapping.alias}-4-...`}
                                 className="font-mono text-sm"
                               />
+                              <p className="text-xs text-muted-foreground">
+                                {mapping.alias === 'sonnet' && '平衡性能与成本的主力模型'}
+                                {mapping.alias === 'opus' && '最强大的旗舰模型，适合复杂任务'}
+                                {mapping.alias === 'haiku' && '快速响应的轻量级模型'}
+                              </p>
                             </div>
                           ))}
+                          
+                          {modelMappings.length === 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <p className="text-sm">暂无模型映射配置</p>
+                              <p className="text-xs mt-2">数据库初始化可能未完成，请尝试重启应用</p>
+                            </div>
+                          )}
                           
                           {modelMappingsChanged && (
                             <p className="text-xs text-amber-600 dark:text-amber-400">
