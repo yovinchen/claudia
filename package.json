@@ -11,7 +11,11 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "check": "tsc --noEmit && cd src-tauri && cargo check",
-    "postinstall": "node ./scripts/copy-monaco.mjs"
+    "postinstall": "node ./scripts/copy-monaco.mjs",
+    "create-todo": "bash ./scripts/create-todo.sh",
+    "archive-todo": "bash ./scripts/archive-todo.sh",
+    "todo-report": "bash ./scripts/todo-report.sh",
+    "pre-commit": "bash ./scripts/pre-commit-check.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

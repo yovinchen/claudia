@@ -283,24 +283,30 @@ function AppContent() {
 
       case "relay-stations":
         return (
-          <RelayStationManager onBack={() => handleViewChange("welcome")} />
+          <div className="h-full overflow-hidden">
+            <RelayStationManager onBack={() => handleViewChange("welcome")} />
+          </div>
         );
 
       case "ccr-router":
         return (
-          <CcrRouterManager onBack={() => handleViewChange("welcome")} />
+          <div className="h-full overflow-hidden">
+            <CcrRouterManager onBack={() => handleViewChange("welcome")} />
+          </div>
         );
 
       case "cc-agents":
         return (
-          <CCAgents 
-            onBack={() => handleViewChange("welcome")} 
-          />
+          <div className="h-full overflow-hidden">
+            <CCAgents 
+              onBack={() => handleViewChange("welcome")} 
+            />
+          </div>
         );
 
       case "editor":
         return (
-          <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-hidden">
             <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
               <MarkdownEditor onBack={() => handleViewChange("welcome")} />
             </Suspense>
@@ -309,7 +315,7 @@ function AppContent() {
       
       case "settings":
         return (
-          <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
+          <div className="h-full overflow-hidden">
             <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
               <Settings onBack={() => handleViewChange("welcome")} />
             </Suspense>
@@ -447,10 +453,12 @@ function AppContent() {
       
       case "claude-file-editor":
         return editingClaudeFile ? (
-          <ClaudeFileEditor
-            file={editingClaudeFile}
-            onBack={handleBackFromClaudeFileEditor}
-          />
+          <div className="h-full overflow-hidden">
+            <ClaudeFileEditor
+              file={editingClaudeFile}
+              onBack={handleBackFromClaudeFileEditor}
+            />
+          </div>
         ) : null;
       
       case "tabs":
@@ -465,28 +473,34 @@ function AppContent() {
       
       case "usage-dashboard":
         return (
-          <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
-            <UsageDashboard onBack={() => handleViewChange("welcome")} />
-          </Suspense>
+          <div className="h-full overflow-hidden">
+            <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+              <UsageDashboard onBack={() => handleViewChange("welcome")} />
+            </Suspense>
+          </div>
         );
       
       case "mcp":
         return (
-          <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
-            <MCPManager onBack={() => handleViewChange("welcome")} />
-          </Suspense>
+          <div className="h-full overflow-hidden">
+            <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+              <MCPManager onBack={() => handleViewChange("welcome")} />
+            </Suspense>
+          </div>
         );
       
       case "project-settings":
         if (projectForSettings) {
           return (
-            <ProjectSettings
-              project={projectForSettings}
-              onBack={() => {
-                setProjectForSettings(null);
-                handleViewChange(previousView || "projects");
-              }}
-            />
+            <div className="h-full overflow-hidden">
+              <ProjectSettings
+                project={projectForSettings}
+                onBack={() => {
+                  setProjectForSettings(null);
+                  handleViewChange(previousView || "projects");
+                }}
+              />
+            </div>
           );
         }
         break;

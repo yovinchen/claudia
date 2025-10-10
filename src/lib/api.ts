@@ -2698,6 +2698,32 @@ export const api = {
       console.error("Failed to cleanup terminal sessions:", error);
       throw error;
     }
+  },
+
+  /**
+   * Get all model mappings
+   * @author yovinchen
+   */
+  async getModelMappings(): Promise<ModelMapping[]> {
+    try {
+      return await invoke<ModelMapping[]>("get_model_mappings");
+    } catch (error) {
+      console.error("Failed to get model mappings:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update a model mapping
+   * @author yovinchen
+   */
+  async updateModelMapping(alias: string, modelName: string): Promise<void> {
+    try {
+      await invoke("update_model_mapping", { alias, modelName });
+    } catch (error) {
+      console.error("Failed to update model mapping:", error);
+      throw error;
+    }
   }
 };
 
@@ -2815,3 +2841,13 @@ export const ccrApi = {
     }
   }
 };
+
+/**
+ * Model mapping structure
+ * @author yovinchen
+ */
+export interface ModelMapping {
+  alias: string;
+  model_name: string;
+  updated_at: string;
+}

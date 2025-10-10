@@ -409,9 +409,11 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   }, [stations]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="container mx-auto p-6 space-y-6">
+          {/* 页面标题 */}
+          <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -950,6 +952,8 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
           />
         </ToastContainer>
       )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -21,7 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   api, 
   type ClaudeSettings,
-  type ClaudeInstallation
+  type ClaudeInstallation,
+  type ModelMapping
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -99,11 +100,17 @@ export const Settings: React.FC<SettingsProps> = ({
   const [showAnalyticsConsent, setShowAnalyticsConsent] = useState(false);
   const trackEvent = useTrackEvent();
   
+  // Model mappings state
+  const [modelMappings, setModelMappings] = useState<ModelMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(false);
+  const [modelMappingsChanged, setModelMappingsChanged] = useState(false);
+  
   // Load settings on mount
   useEffect(() => {
     loadSettings();
     loadClaudeBinaryPath();
     loadAnalyticsSettings();
+    loadModelMappings();
   }, []);
 
   /**
@@ -114,6 +121,51 @@ export const Settings: React.FC<SettingsProps> = ({
     if (settings) {
       setAnalyticsEnabled(settings.enabled);
       setAnalyticsConsented(settings.hasConsented);
+    }
+  };
+
+  /**
+   * Loads model mappings
+   * @author yovinchen
+   */
+  const loadModelMappings = async () => {
+    try {
+      setLoadingMappings(true);
+      const mappings = await api.getModelMappings();
+      setModelMappings(mappings);
+    } catch (err) {
+      console.error("Failed to load model mappings:", err);
+      setToast({ message: "加载模型映射失败", type: "error" });
+    } finally {
+      setLoadingMappings(false);
+    }
+  };
+
+  /**
+   * Updates a model mapping
+   * @author yovinchen
+   */
+  const updateModelMapping = (alias: string, modelName: string) => {
+    setModelMappings(prev =>
+      prev.map(m => (m.alias === alias ? { ...m, model_name: modelName } : m))
+    );
+    setModelMappingsChanged(true);
+  };
+
+  /**
+   * Saves model mappings
+   * @author yovinchen
+   */
+  const saveModelMappings = async () => {
+    try {
+      for (const mapping of modelMappings) {
+        await api.updateModelMapping(mapping.alias, mapping.model_name);
+      }
+      setModelMappingsChanged(false);
+      setToast({ message: "模型映射已保存", type: "success" });
+    } catch (err) {
+      console.error("Failed to save model mappings:", err);
+      setToast({ message: "保存模型映射失败", type: "error" });
     }
   };
 
@@ -231,6 +283,11 @@ export const Settings: React.FC<SettingsProps> = ({
       if (proxySettingsChanged && saveProxySettings.current) {
         await saveProxySettings.current();
         setProxySettingsChanged(false);
+      }
+
+      // Save model mappings if changed
+      if (modelMappingsChanged) {
+        await saveModelMappings();
       }
 
       setToast({ message: t('settings.saveButton.settingsSavedSuccess'), type: "success" });
@@ -396,22 +453,23 @@ export const Settings: React.FC<SettingsProps> = ({
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-9 w-full">
-              <TabsTrigger value="general">{t('settings.general')}</TabsTrigger>
-              <TabsTrigger value="permissions">{t('settings.permissionsTab')}</TabsTrigger>
-              <TabsTrigger value="environment">{t('settings.environmentTab')}</TabsTrigger>
-              <TabsTrigger value="advanced">{t('settings.advancedTab')}</TabsTrigger>
-              <TabsTrigger value="hooks">{t('settings.hooksTab')}</TabsTrigger>
-              <TabsTrigger value="commands">{t('settings.commands')}</TabsTrigger>
-              <TabsTrigger value="storage">{t('settings.storage')}</TabsTrigger>
-              <TabsTrigger value="proxy">{t('settings.proxy')}</TabsTrigger>
-              <TabsTrigger value="analytics">{t('settings.analyticsTab')}</TabsTrigger>
-            </TabsList>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-9 w-full sticky top-0 z-10 bg-background">
+                <TabsTrigger value="general">{t('settings.general')}</TabsTrigger>
+                <TabsTrigger value="permissions">{t('settings.permissionsTab')}</TabsTrigger>
+                <TabsTrigger value="environment">{t('settings.environmentTab')}</TabsTrigger>
+                <TabsTrigger value="advanced">{t('settings.advancedTab')}</TabsTrigger>
+                <TabsTrigger value="hooks">{t('settings.hooksTab')}</TabsTrigger>
+                <TabsTrigger value="commands">{t('settings.commands')}</TabsTrigger>
+                <TabsTrigger value="storage">{t('settings.storage')}</TabsTrigger>
+                <TabsTrigger value="proxy">{t('settings.proxy')}</TabsTrigger>
+                <TabsTrigger value="analytics">{t('settings.analyticsTab')}</TabsTrigger>
+              </TabsList>
             
             {/* General Settings */}
-            <TabsContent value="general" className="space-y-6">
+            <TabsContent value="general" className="space-y-6 mt-6">
               <Card className="p-6 space-y-6">
                 <div>
                   <h3 className="text-base font-semibold mb-4">{t('settings.generalSettings')}</h3>
@@ -633,13 +691,58 @@ export const Settings: React.FC<SettingsProps> = ({
                         </p>
                       )}
                     </div>
+                    
+                    {/* Model Mappings Configuration */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">模型别名映射</Label>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          配置模型别名（sonnet、opus、haiku）对应的实际模型版本
+                        </p>
+                      </div>
+                      
+                      {loadingMappings ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {modelMappings.map((mapping) => (
+                            <div key={mapping.alias} className="space-y-2">
+                              <Label htmlFor={`model-${mapping.alias}`} className="text-sm">
+                                {mapping.alias}
+                              </Label>
+                              <Input
+                                id={`model-${mapping.alias}`}
+                                value={mapping.model_name}
+                                onChange={(e) => updateModelMapping(mapping.alias, e.target.value)}
+                                placeholder={`claude-${mapping.alias}-4-...`}
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                          ))}
+                          
+                          {modelMappingsChanged && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              模型映射已修改，点击保存以应用更改
+                            </p>
+                          )}
+                          
+                          <div className="pt-2">
+                            <p className="text-xs text-muted-foreground">
+                              <strong>说明：</strong>Agent执行时会根据这里的配置解析模型别名。例如，如果设置 sonnet → claude-sonnet-4-20250514，那么所有使用 "sonnet" 的Agent都会调用该模型版本。
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
             </TabsContent>
             
             {/* Permissions Settings */}
-            <TabsContent value="permissions" className="space-y-6">
+            <TabsContent value="permissions" className="space-y-6 mt-6">
               <Card className="p-6">
                 <div className="space-y-6">
                   <div>
@@ -760,7 +863,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </TabsContent>
             
             {/* Environment Variables */}
-            <TabsContent value="environment" className="space-y-6">
+            <TabsContent value="environment" className="space-y-6 mt-6">
               <Card className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -834,7 +937,7 @@ export const Settings: React.FC<SettingsProps> = ({
               </Card>
             </TabsContent>
             {/* Advanced Settings */}
-            <TabsContent value="advanced" className="space-y-6">
+            <TabsContent value="advanced" className="space-y-6 mt-6">
               <Card className="p-6">
                 <div className="space-y-6">
                   <div>
@@ -873,7 +976,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </TabsContent>
             
             {/* Hooks Settings */}
-            <TabsContent value="hooks" className="space-y-6">
+            <TabsContent value="hooks" className="space-y-6 mt-6">
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
@@ -898,19 +1001,19 @@ export const Settings: React.FC<SettingsProps> = ({
             </TabsContent>
             
             {/* Commands Tab */}
-            <TabsContent value="commands">
+            <TabsContent value="commands" className="mt-6">
               <Card className="p-6">
                 <SlashCommandsManager className="p-0" />
               </Card>
             </TabsContent>
             
             {/* Storage Tab */}
-            <TabsContent value="storage">
+            <TabsContent value="storage" className="mt-6">
               <StorageTab />
             </TabsContent>
             
             {/* Proxy Settings */}
-            <TabsContent value="proxy">
+            <TabsContent value="proxy" className="mt-6">
               <Card className="p-6">
                 <ProxySettings 
                   setToast={setToast}
@@ -923,7 +1026,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </TabsContent>
             
             {/* Analytics Settings */}
-            <TabsContent value="analytics" className="space-y-6">
+            <TabsContent value="analytics" className="space-y-6 mt-6">
               <Card className="p-6 space-y-6">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
@@ -1013,6 +1116,7 @@ export const Settings: React.FC<SettingsProps> = ({
               </Card>
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       )}
       </div>
