@@ -35,6 +35,8 @@ pub struct Project {
     pub sessions: Vec<String>,
     /// Unix timestamp when the project directory was created
     pub created_at: u64,
+    /// Unix timestamp of the most recent session (last modified time of newest JSONL file)
+    pub last_session_time: u64,
 }
 
 /// Represents a session with its metadata
@@ -422,6 +424,8 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
 
             // List all JSONL files (sessions) in this project directory
             let mut sessions = Vec::new();
+            let mut last_session_time = created_at; // Default to project creation time
+            
             if let Ok(session_entries) = fs::read_dir(&path) {
                 for session_entry in session_entries.flatten() {
                     let session_path = session_entry.path();
@@ -431,6 +435,21 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                         if let Some(session_id) = session_path.file_stem().and_then(|s| s.to_str())
                         {
                             sessions.push(session_id.to_string());
+                            
+                            // Get the modified time of this session file
+                            if let Ok(metadata) = fs::metadata(&session_path) {
+                                if let Ok(modified) = metadata.modified() {
+                                    let modified_time = modified
+                                        .duration_since(SystemTime::UNIX_EPOCH)
+                                        .unwrap_or_default()
+                                        .as_secs();
+                                    
+                                    // Update last_session_time if this file is newer
+                                    if modified_time > last_session_time {
+                                        last_session_time = modified_time;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -441,12 +460,13 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                 path: project_path,
                 sessions,
                 created_at,
+                last_session_time,
             });
         }
     }
 
-    // Sort projects by creation time (newest first)
-    projects.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    // Sort projects by last session time (newest first)
+    projects.sort_by(|a, b| b.last_session_time.cmp(&a.last_session_time));
 
     log::info!("Found {} projects", projects.len());
     Ok(projects)

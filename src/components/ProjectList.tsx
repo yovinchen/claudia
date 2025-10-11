@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
   FolderOpen, 
@@ -6,11 +6,14 @@ import {
   FileText, 
   ChevronRight, 
   Settings,
-  MoreVertical
+  MoreVertical,
+  Search,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,20 +76,96 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 }) => {
   const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Sort and filter projects
+  const filteredAndSortedProjects = useMemo(() => {
+    // First, sort by last_session_time in descending order (newest first)
+    let sorted = [...projects].sort((a, b) => b.last_session_time - a.last_session_time);
+    
+    // Then filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      sorted = sorted.filter(project => 
+        getProjectName(project.path).toLowerCase().includes(query)
+      );
+    }
+    
+    return sorted;
+  }, [projects, searchQuery]);
   
   // Calculate pagination
-  const totalPages = Math.ceil(projects.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAndSortedProjects.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentProjects = projects.slice(startIndex, endIndex);
+  const currentProjects = filteredAndSortedProjects.slice(startIndex, endIndex);
   
-  // Reset to page 1 if projects change
+  // Reset to page 1 if projects or search query changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [projects.length]);
+  }, [projects.length, searchQuery]);
   
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Search bar and results info */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('searchProjects')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Results info */}
+        <div className="text-sm text-muted-foreground">
+          {searchQuery ? (
+            <span>
+              {t('showingResults')}: <span className="font-semibold text-foreground">{filteredAndSortedProjects.length}</span> / {projects.length}
+            </span>
+          ) : (
+            <span>
+              {t('totalProjects')}: <span className="font-semibold text-foreground">{projects.length}</span>
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {/* Empty state */}
+      {filteredAndSortedProjects.length === 0 && searchQuery && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-12"
+        >
+          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">{t('noSearchResults')}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t('noProjectsMatchSearch')} "{searchQuery}"
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => setSearchQuery("")}
+          >
+            {t('clearSearch')}
+          </Button>
+        </motion.div>
+      )}
+      
+      {/* Project grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {currentProjects.map((project, index) => (
           <motion.div
@@ -100,26 +179,30 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             }}
           >
             <Card
-              className="p-4 hover:shadow-md transition-all duration-200 cursor-pointer group h-full"
+              className="p-4 hover:shadow-lg hover:border-primary/50 transition-all duration-200 cursor-pointer group h-full relative overflow-hidden"
               onClick={() => onProjectClick(project)}
             >
-              <div className="flex flex-col h-full">
+              {/* Hover gradient effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              <div className="flex flex-col h-full relative z-10">
                 <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                      <h3 className="font-semibold text-base truncate">
+                      <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                        <FolderOpen className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
                         {getProjectName(project.path)}
                       </h3>
                     </div>
                     {project.sessions.length > 0 && (
-                      <Badge variant="secondary" className="shrink-0 ml-2">
+                      <Badge variant="secondary" className="shrink-0 ml-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                         {project.sessions.length}
                       </Badge>
                     )}
                   </div>
                   
-                  <p className="text-sm text-muted-foreground mb-3 font-mono truncate">
+                  <p className="text-xs text-muted-foreground mb-4 font-mono truncate bg-muted/50 rounded px-2 py-1">
                     {project.path}
                   </p>
                 </div>

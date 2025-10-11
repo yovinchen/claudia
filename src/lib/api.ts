@@ -29,6 +29,8 @@ export interface Project {
   sessions: string[];
   /** Unix timestamp when the project directory was created */
   created_at: number;
+  /** Unix timestamp of the most recent session (last modified time of newest JSONL file) */
+  last_session_time: number;
 }
 
 /**
