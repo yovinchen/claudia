@@ -413,8 +413,6 @@
       "verboseOutputDesc": "显示完整的 bash 和命令输出",
       "chatRetention": "聊天记录保留期 (天)",
       "chatRetentionDesc": "本地保留聊天记录的时长（默认：30 天）",
-      "chatRetentionPermanent": "已启用永久保存，聊天记录将不会被自动删除",
-      "permanentRetention": "永久保存",
       "claudeCodeInstallation": "Claude Code 安装",
       "choosePreferredInstallation": "选择您偏好的 Claude Code 安装。",
       "loadingAvailableInstallations": "正在加载可用安装...",

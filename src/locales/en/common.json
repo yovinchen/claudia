@@ -426,8 +426,6 @@
       "verboseOutputDesc": "Show full bash and command outputs",
       "chatRetention": "Chat Transcript Retention (days)",
       "chatRetentionDesc": "How long to retain chat transcripts locally (default: 30 days)",
-      "chatRetentionPermanent": "Permanent retention enabled, chat records will not be automatically deleted",
-      "permanentRetention": "Permanent Retention",
       "claudeCodeInstallation": "Claude Code Installation",
       "choosePreferredInstallation": "Choose your preferred Claude Code installation.",
       "loadingAvailableInstallations": "Loading available installations...",

@@ -658,37 +658,19 @@ export const Settings: React.FC<SettingsProps> = ({
                     {/* Cleanup Period */}
                     <div className="space-y-2">
                       <Label htmlFor="cleanup">{t('settings.generalOptions.chatRetention')}</Label>
-                      <div className="flex items-center gap-3">
-                        <Input
-                          id="cleanup"
-                          type="number"
-                          min="1"
-                          placeholder="30"
-                          value={settings?.cleanupPeriodDays === -1 ? "" : (settings?.cleanupPeriodDays || "")}
-                          onChange={(e) => {
-                            const value = e.target.value ? parseInt(e.target.value) : undefined;
-                            updateSetting("cleanupPeriodDays", value);
-                          }}
-                          disabled={settings?.cleanupPeriodDays === -1}
-                          className="flex-1"
-                        />
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id="permanent-retention"
-                            checked={settings?.cleanupPeriodDays === -1}
-                            onCheckedChange={(checked) => {
-                              updateSetting("cleanupPeriodDays", checked ? -1 : undefined);
-                            }}
-                          />
-                          <Label htmlFor="permanent-retention" className="text-sm cursor-pointer">
-                            {t('settings.generalOptions.permanentRetention')}
-                          </Label>
-                        </div>
-                      </div>
+                      <Input
+                        id="cleanup"
+                        type="number"
+                        min="1"
+                        placeholder="30"
+                        value={settings?.cleanupPeriodDays || ""}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseInt(e.target.value) : undefined;
+                          updateSetting("cleanupPeriodDays", value);
+                        }}
+                      />
                       <p className="text-xs text-muted-foreground">
-                        {settings?.cleanupPeriodDays === -1
-                          ? t('settings.generalOptions.chatRetentionPermanent')
-                          : t('settings.generalOptions.chatRetentionDesc')}
+                        {t('settings.generalOptions.chatRetentionDesc')}
                       </p>
                     </div>
                     
