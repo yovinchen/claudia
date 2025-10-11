@@ -16,14 +16,15 @@ const languageDetectorOptions = {
     checkWhitelist: true,
 };
 
+const i18nDebug = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_I18N_DEBUG === 'true');
+
 i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
         // 回退语言
         fallbackLng: 'en',
-        // 调试模式（开发环境）
-        debug: process.env.NODE_ENV === 'development',
+        debug: i18nDebug,
 
         // 语言资源
         resources: {

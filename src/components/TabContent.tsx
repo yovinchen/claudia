@@ -226,9 +226,12 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         );
       
       case 'agent':
+        
         if (!tab.agentRunId) {
+          console.error('[TabContent] No agentRunId in tab:', tab);
           return <div className="p-4">{t('messages.noAgentRunIdSpecified')}</div>;
         }
+        
         return (
           <AgentRunOutputViewer
             agentRunId={tab.agentRunId}
@@ -316,6 +319,10 @@ export const TabContent: React.FC = () => {
   const { t } = useTranslation();
   const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   const [hasInitialized, setHasInitialized] = React.useState(false);
+  
+  // Debug: Monitor activeTabId changes
+  useEffect(() => {
+  }, [activeTabId, tabs]);
   
   // Auto redirect to home when no tabs (but not on initial load)
   useEffect(() => {

@@ -58,6 +58,7 @@ export function AgentRunOutputViewer({
   tabId,
   className 
 }: AgentRunOutputViewerProps) {
+  
   const { t } = useTranslation();
   const { updateTabTitle, updateTabStatus } = useTabState();
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
@@ -143,25 +144,17 @@ export function AgentRunOutputViewer({
   const loadOutput = async (skipCache = false) => {
     if (!run?.id) return;
 
-    console.log('[AgentRunOutputViewer] Loading output for run:', {
-      runId: run.id,
-      status: run.status,
-      sessionId: run.session_id,
-      skipCache
-    });
 
     try {
       // Check cache first if not skipping cache
       if (!skipCache) {
         const cached = getCachedOutput(run.id);
         if (cached) {
-          console.log('[AgentRunOutputViewer] Found cached output');
           const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
           setRawJsonlOutput(cachedJsonlLines);
           setMessages(cached.messages);
           // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
           if (Date.now() - cached.lastUpdated < 5000 && run.status !== 'running') {
-            console.log('[AgentRunOutputViewer] Using recent cache, skipping refresh');
             return;
           }
         }
@@ -171,10 +164,8 @@ export function AgentRunOutputViewer({
 
       // If we have a session_id, try to load from JSONL file first
       if (run.session_id && run.session_id !== '') {
-        console.log('[AgentRunOutputViewer] Attempting to load from JSONL with session_id:', run.session_id);
         try {
           const history = await api.loadAgentSessionHistory(run.session_id);
-          console.log('[AgentRunOutputViewer] Successfully loaded JSONL history:', history.length, 'messages');
           
           // Convert history to messages format
           const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
@@ -195,29 +186,22 @@ export function AgentRunOutputViewer({
           
           // Set up live event listeners for running sessions
           if (run.status === 'running') {
-            console.log('[AgentRunOutputViewer] Setting up live listeners for running session');
             setupLiveEventListeners();
             
             try {
               await api.streamSessionOutput(run.id);
             } catch (streamError) {
-              console.warn('[AgentRunOutputViewer] Failed to start streaming, will poll instead:', streamError);
             }
           }
           
           return;
         } catch (err) {
-          console.warn('[AgentRunOutputViewer] Failed to load from JSONL:', err);
-          console.warn('[AgentRunOutputViewer] Falling back to regular output method');
+          // Fallback path will be used if JSONL loading fails
         }
       } else {
-        console.log('[AgentRunOutputViewer] No session_id available, using fallback method');
       }
 
-      // Fallback to the original method if JSONL loading fails or no session_id
-      console.log('[AgentRunOutputViewer] Using getSessionOutput fallback');
       const rawOutput = await api.getSessionOutput(run.id);
-      console.log('[AgentRunOutputViewer] Received raw output:', rawOutput.length, 'characters');
       
       // Parse JSONL output into messages
       const jsonlLines = rawOutput.split('\n').filter(line => line.trim());
@@ -232,7 +216,6 @@ export function AgentRunOutputViewer({
           console.error("[AgentRunOutputViewer] Failed to parse message:", err, line);
         }
       }
-      console.log('[AgentRunOutputViewer] Parsed', parsedMessages.length, 'messages from output');
       setMessages(parsedMessages);
       
       // Update cache
@@ -245,13 +228,11 @@ export function AgentRunOutputViewer({
       
       // Set up live event listeners for running sessions
       if (run.status === 'running') {
-        console.log('[AgentRunOutputViewer] Setting up live listeners for running session (fallback)');
         setupLiveEventListeners();
         
         try {
           await api.streamSessionOutput(run.id);
         } catch (streamError) {
-          console.warn('[AgentRunOutputViewer] Failed to start streaming (fallback), will poll instead:', streamError);
         }
       }
     } catch (error) {
@@ -285,7 +266,6 @@ export function AgentRunOutputViewer({
         try {
           // Skip messages during initial load phase
           if (isInitialLoadRef.current) {
-            console.log('[AgentRunOutputViewer] Skipping message during initial load');
             return;
           }
           
@@ -403,7 +383,6 @@ export function AgentRunOutputViewer({
       const success = await api.killAgentSession(run.id);
       
       if (success) {
-        console.log(`[AgentRunOutputViewer] Successfully stopped agent session ${run.id}`);
         setToast({ message: 'Agent execution stopped', type: 'success' });
         
         // Clean up listeners
@@ -431,7 +410,6 @@ export function AgentRunOutputViewer({
         // Refresh the output to get updated status
         await loadOutput(true);
       } else {
-        console.warn(`[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`);
         setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
       }
     } catch (err) {

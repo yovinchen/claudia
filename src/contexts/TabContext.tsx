@@ -42,6 +42,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
+
   // Always start with a fresh CC Projects tab
   useEffect(() => {
     // Create default projects tab
@@ -90,6 +91,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setTabs(prevTabs => [...prevTabs, newTab]);
     setActiveTabId(newTab.id);
+    
     return newTab.id;
   }, [tabs.length, t]);
 
@@ -127,10 +129,11 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const setActiveTab = useCallback((id: string) => {
-    if (tabs.find(tab => tab.id === id)) {
+    const tabExists = tabs.find(tab => tab.id === id);
+    if (tabExists) {
       setActiveTabId(id);
     }
-  }, [tabs]);
+  }, [tabs, activeTabId]);
 
   const reorderTabs = useCallback((startIndex: number, endIndex: number) => {
     setTabs(prevTabs => {

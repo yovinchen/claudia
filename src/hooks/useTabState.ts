@@ -82,7 +82,7 @@ export const useTabState = (): UseTabStateReturn => {
       return existingTab.id;
     }
 
-    return addTab({
+    const newTabId = addTab({
       type: 'agent',
       title: agentName,
       agentRunId,
@@ -90,6 +90,7 @@ export const useTabState = (): UseTabStateReturn => {
       hasUnsavedChanges: false,
       icon: 'bot'
     });
+    return newTabId;
   }, [addTab, tabs, setActiveTab]);
 
   const createProjectsTab = useCallback((): string | null => {

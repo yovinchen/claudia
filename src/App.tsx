@@ -90,7 +90,6 @@ function AppContent() {
         const backendLocale = frontendLang === 'zh' ? 'zh-CN' : 'en-US';
         // Sync to backend
         await api.setLanguage(backendLocale);
-        console.log('Backend language initialized to:', backendLocale);
       } catch (error) {
         console.error('Failed to initialize backend language:', error);
       }
@@ -184,6 +183,27 @@ function AppContent() {
     window.addEventListener('switch-to-welcome', handleSwitchToWelcome);
     return () => {
       window.removeEventListener('switch-to-welcome', handleSwitchToWelcome);
+    };
+  }, []);
+
+  // Listen for a global request to switch to the tabbed interface
+  useEffect(() => {
+    const handleSwitchToTabs = (event: Event) => {
+      // Accept optional tabId in event detail
+      const detail = (event as CustomEvent).detail || {};
+      const tabId = detail.tabId as string | undefined;
+      setView('tabs');
+      if (tabId) {
+        // Wait a tick for TabManager to mount, then switch to the tab
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId } }));
+        }, 50);
+      }
+    };
+
+    window.addEventListener('switch-to-tabs', handleSwitchToTabs as EventListener);
+    return () => {
+      window.removeEventListener('switch-to-tabs', handleSwitchToTabs as EventListener);
     };
   }, []);
 

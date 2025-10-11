@@ -98,12 +98,19 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   };
   
   const handleRunClick = (run: AgentRunWithMetrics) => {
+    
+    if (!run.id) {
+      console.error('[AgentRunsList] Cannot open run - no ID available:', run);
+      return;
+    }
+    
     // If there's a callback, use it (for full-page navigation)
     if (onRunClick) {
       onRunClick(run);
-    } else if (run.id) {
+    } else {
       // Otherwise, open in new tab
-      createAgentTab(run.id.toString(), run.agent_name);
+      const tabId = createAgentTab(run.id.toString(), run.agent_name);
+      window.dispatchEvent(new CustomEvent('switch-to-tabs', { detail: { tabId } }));
     }
   };
   
