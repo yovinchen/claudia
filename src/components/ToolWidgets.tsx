@@ -635,6 +635,7 @@ export const BashWidget: React.FC<{
   description?: string;
   result?: any;
 }> = ({ command, description, result }) => {
+  const { t } = useTranslation();
   // Extract result content if available
   let resultContent = '';
   let isError = false;
@@ -660,7 +661,7 @@ export const BashWidget: React.FC<{
     <div className="rounded-lg border bg-zinc-950 overflow-hidden">
       <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2 border-b">
         <Terminal className="h-3.5 w-3.5 text-green-500" />
-        <span className="text-xs font-mono text-muted-foreground">Terminal</span>
+        <span className="text-xs font-mono text-muted-foreground">{t('widgets.terminal.title')}</span>
         {description && (
           <>
             <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -671,7 +672,7 @@ export const BashWidget: React.FC<{
         {!result && (
           <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-            <span>Running...</span>
+            <span>{t('widgets.common.running')}</span>
           </div>
         )}
       </div>
@@ -688,7 +689,7 @@ export const BashWidget: React.FC<{
               ? "border-red-500/20 bg-red-500/5 text-red-400" 
               : "border-green-500/20 bg-green-500/5 text-green-300"
           )}>
-            {resultContent || (isError ? "Command failed" : "Command completed")}
+            {resultContent || (isError ? t('widgets.bash.commandFailed') : t('widgets.bash.commandCompleted'))}
           </div>
         )}
       </div>

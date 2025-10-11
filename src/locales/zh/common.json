@@ -12,6 +12,7 @@
     "name": "Claudia",
     "welcome": "欢迎使用 Claudia",
     "tagline": "强大的 Claude Code 会话管理工具",
+    "returnHome": "返回首页",
     "loading": "加载中...",
     "error": "错误",
     "success": "成功",
@@ -96,7 +97,19 @@
     "justNow": "刚刚",
     "minutesAgo": "{{count}} 分钟前",
     "hoursAgo": "{{count}} 小时前",
-    "daysAgo": "{{count}} 天前"
+    "daysAgo": "{{count}} 天前",
+    "loadingOutput": "加载输出中...",
+    "waitingForOutput": "等待输出...",
+    "noOutput": "暂无输出",
+    "agentRunningNoOutput": "智能体正在运行，但尚未收到输出",
+    "failedToLoadSessionOutput": "加载会话输出失败",
+    "outputRefreshed": "输出已刷新",
+    "failedToRefreshOutput": "刷新输出失败",
+    "agentExecutionCompleted": "智能体执行已完成",
+    "agentExecutionCancelled": "智能体执行已取消",
+    "loadingAgentRun": "正在加载运行详情...",
+    "selectProjectFirst": "请先选择项目目录",
+    "selectDirectoryFailed": "选择目录失败：{{message}}"
   },
   "navigation": {
     "projects": "Claude Code 项目",
@@ -135,7 +148,27 @@
     "sessions": "会话",
     "noSessions": "未找到会话",
     "lastModified": "最近修改",
-    "sessionHistory": "会话历史"
+    "sessionHistory": "会话历史",
+    "sessionCount": "共 {{count}} 个会话"
+  },
+  "sessions": {
+    "firstMessage": "首条消息：",
+    "hasTodo": "包含待办"
+  },
+  "runningSessions": {
+    "title": "运行中的 Claude 会话",
+    "countRunning": "（{{count}} 个运行中）",
+    "running": "运行中",
+    "resume": "恢复",
+    "loadFailed": "加载运行中的会话失败"
+  },
+  "widgets": {
+    "terminal": { "title": "终端" },
+    "common": { "running": "运行中..." },
+    "bash": {
+      "commandFailed": "命令执行失败",
+      "commandCompleted": "命令执行完成"
+    }
   },
   "agents": {
     "title": "Agent 管理",
@@ -202,6 +235,11 @@
     "enterTask": "输入智能体的任务",
     "hooks": "钩子",
     "configureHooks": "配置钩子",
+    "configureHooksDesc": "配置在工具执行前、中、后运行的钩子。更改将立即保存。",
+    "projectSettings": "项目设置",
+    "localSettings": "本地设置",
+    "initializing": "正在初始化智能体...",
+    "exportToFile": "导出为 .claudia.json",
     "fullscreen": "全屏",
     "stop": "停止",
     "selectProjectPathAndTask": "选择项目路径并输入任务以运行智能体",
@@ -306,7 +344,13 @@
     "condition": "条件",
     "matchesRegex": "匹配正则表达式",
     "message": "消息",
-    "enterShellCommand": "输入 shell 命令..."
+    "enterShellCommand": "输入 shell 命令...",
+    "projectHooks": "项目钩子",
+    "localHooks": "本地钩子"
+  },
+  "projectSettings": {
+    "gitignoreLocalWarning": "本地设置文件未添加到 .gitignore",
+    "addToGitignore": "添加到 .gitignore"
   },
   "settings": {
     "title": "设置",
@@ -369,6 +413,8 @@
       "verboseOutputDesc": "显示完整的 bash 和命令输出",
       "chatRetention": "聊天记录保留期 (天)",
       "chatRetentionDesc": "本地保留聊天记录的时长（默认：30 天）",
+      "chatRetentionPermanent": "已启用永久保存，聊天记录将不会被自动删除",
+      "permanentRetention": "永久保存",
       "claudeCodeInstallation": "Claude Code 安装",
       "choosePreferredInstallation": "选择您偏好的 Claude Code 安装。",
       "loadingAvailableInstallations": "正在加载可用安装...",
@@ -678,6 +724,9 @@
   "checkpoint": {
     "title": "检查点",
     "createCheckpoint": "创建检查点",
+    "createCheckpointDesc": "保存会话当前状态，并可填写可选说明。",
+    "descriptionOptional": "描述（可选）",
+    "descriptionPlaceholder": "例如：大型重构前",
     "restoreCheckpoint": "恢复检查点",
     "deleteCheckpoint": "删除检查点",
     "checkpointName": "检查点名称",
@@ -688,6 +737,15 @@
     "checkpointSettingsTitle": "检查点设置",
     "experimentalFeature": "实验性功能",
     "checkpointWarning": "检查点可能会影响目录结构或导致数据丢失。请谨慎使用。",
+    "current": "当前",
+    "restoreToThis": "恢复到此检查点",
+    "forkFromThis": "从此检查点分叉",
+    "compareWithAnother": "与另一个检查点比较",
+    "checkpointComparison": "检查点对比",
+    "modifiedFiles": "修改的文件",
+    "addedFiles": "新增的文件",
+    "deletedFiles": "删除的文件",
+    "noPrompt": "无提示",
     "automaticCheckpoints": "自动检查点",
     "automaticCheckpointsDesc": "根据所选策略自动创建检查点",
     "checkpointStrategy": "检查点策略",
@@ -893,5 +951,61 @@
   },
   "warning": {
     "title": "警告"
+  }
+  ,
+  "agentRun": {
+    "runNotFound": "未找到运行记录",
+    "loadFailed": "加载执行详情失败",
+    "executionStopped": "已由用户停止执行",
+    "live": "实时",
+    "stopFailed": "停止失败，可能已结束"
+  },
+  "tabs": {
+    "scrollLeft": "向左滚动标签",
+    "scrollRight": "向右滚动标签",
+    "browseProjectsShortcut": "浏览项目（Ctrl+T）",
+    "maximumTabsReached": "已达到最大标签数（{{count}}/20）"
+  },
+  "storageTab": {
+    "title": "数据库存储",
+    "sqlQuery": "SQL 查询",
+    "resetDbShort": "重置库",
+    "selectTable": "选择数据表",
+    "rows": "行",
+    "searchInTable": "在表中搜索...",
+    "newRow": "新增行",
+    "actions": "操作",
+    "pagination": {
+      "showing": "显示第 {{from}}-{{to}} 条，共 {{total}} 条",
+      "pageOf": "第 {{page}} / {{total}} 页"
+    },
+    "editRow": "编辑行",
+    "editRowDesc": "更新 {{table}} 表中此行的值。",
+    "primaryKey": "主键",
+    "type": "类型",
+    "notNull": "非空",
+    "default": "默认值",
+    "insert": "插入",
+    "newRowDesc": "向 {{table}} 表添加一行。",
+    "deleteRow": "删除行",
+    "deleteRowConfirm": "确定要删除此行吗？该操作无法撤销。",
+    "resetDatabaseTitle": "重置数据库",
+    "resetDatabaseDesc": "这将删除所有数据并使用默认结构重新创建数据库（agents、agent_runs、app_settings 为空表）。数据库将恢复到首次安装应用时的状态。该操作无法撤销。",
+    "resetWarning": "您所有的智能体、运行记录和设置都将被永久删除！",
+    "sqlEditorTitle": "SQL 查询编辑器",
+    "sqlEditorDesc": "在数据库上执行原始 SQL 语句，请谨慎使用。",
+    "sqlQueryPlaceholder": "SELECT * FROM agents LIMIT 10;",
+    "queryExecuted": "查询执行成功。",
+    "rowsAffected": "行受影响。",
+    "lastInsertId": "最后插入 ID",
+    "loadTablesFailed": "加载数据表失败",
+    "loadTableDataFailed": "加载数据失败",
+    "updateRowFailed": "更新行失败",
+    "deleteRowFailed": "删除行失败",
+    "insertRowFailed": "插入行失败",
+    "executeSqlFailed": "执行 SQL 失败",
+    "resetDatabaseFailed": "重置数据库失败",
+    "resetFailed": "重置失败，请重试。",
+    "resetSuccess": "数据库已重置为默认状态（agents、agent_runs、app_settings 为空表）。"
   }
 }

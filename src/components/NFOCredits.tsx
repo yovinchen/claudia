@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import asteriskLogo from "@/assets/nfo/asterisk-logo.png";
 import keygennMusic from "@/assets/nfo/claudia-nfo.ogg";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface NFOCreditsProps {
   /**
@@ -22,6 +23,7 @@ interface NFOCreditsProps {
  * <NFOCredits onClose={() => setShowNFO(false)} />
  */
 export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
+  const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -159,10 +161,10 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     await openUrl("https://github.com/getAsterisk/claudia/issues/new");
                   }}
                   className="flex items-center gap-1 h-auto px-2 py-1"
-                  title="File a bug"
+                  title={t('app.fileABug')}
                 >
                   <Github className="h-3 w-3" />
-                  <span className="text-xs">File a bug</span>
+                  <span className="text-xs">{t('app.fileABug')}</span>
                 </Button>
                 <Button
                   variant="ghost"

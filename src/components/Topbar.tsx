@@ -112,7 +112,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           // Emit event to return to home
           window.dispatchEvent(new CustomEvent('switch-to-welcome'));
         }}
-        title="Return to Home"
+        title={t('app.returnHome')}
       >
         <div className="flex items-center space-x-2 text-xs">
           <Circle

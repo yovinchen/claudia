@@ -103,7 +103,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
       }
     } catch (err) {
       console.error("Failed to load run:", err);
-      setError("Failed to load execution details");
+      setError(t('agentRun.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -198,7 +198,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           type: "result",
           subtype: "error",
           is_error: true,
-          result: "Execution stopped by user",
+          result: t('agentRun.executionStopped'),
           duration_ms: 0,
           usage: {
             input_tokens: 0,
@@ -235,8 +235,8 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   if (error || !run) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full", className)}>
-        <p className="text-destructive mb-4">{error || "Run not found"}</p>
-        <Button onClick={onBack}>Go Back</Button>
+        <p className="text-destructive mb-4">{error || t('agentRun.runNotFound')}</p>
+        <Button onClick={onBack}>{t('app.back')}</Button>
       </div>
     );
   }
@@ -264,7 +264,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
               {renderIcon(run.agent_icon)}
               <div>
                 <h2 className="text-lg font-semibold">{run.agent_name}</h2>
-                <p className="text-xs text-muted-foreground">Execution History</p>
+                <p className="text-xs text-muted-foreground">{t('agents.executionHistory')}</p>
               </div>
             </div>
           </div>
@@ -278,7 +278,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 className="text-destructive hover:text-destructive"
               >
                 <StopCircle className="h-4 w-4 mr-1" />
-                Stop
+                {t('agents.stop')}
               </Button>
             )}
             
@@ -326,10 +326,10 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           <CardContent className="p-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-medium">Task:</h3>
+                <h3 className="text-sm font-medium">{t('app.task')}:</h3>
                 <p className="text-sm text-muted-foreground flex-1">{run.task}</p>
                 <Badge variant="outline" className="text-xs">
-                  {run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
+                  {run.model === 'opus' ? t('agents.opusName') : t('agents.sonnetName')}
                 </Badge>
               </div>
               
@@ -349,7 +349,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 {run.metrics?.total_tokens && (
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
-                    <span>{run.metrics.total_tokens} tokens</span>
+                    <span>{run.metrics.total_tokens} {t('usage.tokens')}</span>
                   </div>
                 )}
                 

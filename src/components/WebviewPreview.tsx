@@ -172,7 +172,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
       className={cn("flex flex-col h-full bg-background border-l", className)}
       tabIndex={-1}
       role="region"
-      aria-label="Web preview"
+      aria-label={t('webview.preview')}
     >
       {/* Browser Top Bar */}
       <div className="border-b bg-muted/30 flex-shrink-0">
@@ -322,7 +322,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
             ref={iframeRef}
             src={currentUrl}
             className="absolute inset-0 w-full h-full border-0"
-            title="Preview"
+            title={t('webview.preview')}
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
             onLoad={() => setIsLoading(false)}
             onError={() => {

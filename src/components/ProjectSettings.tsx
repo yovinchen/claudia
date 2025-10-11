@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HooksEditor } from '@/components/HooksEditor';
 import { SlashCommandsManager } from '@/components/SlashCommandsManager';
 import { api } from '@/lib/api';
@@ -33,6 +34,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   onBack,
   className
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('commands');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
@@ -89,7 +91,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             </Button>
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-xl font-semibold">Project Settings</h2>
+              <h2 className="text-xl font-semibold">{t('agents.projectSettings')}</h2>
             </div>
           </div>
         </div>
@@ -109,15 +111,15 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <TabsList className="mb-6">
               <TabsTrigger value="commands" className="gap-2">
                 <Command className="h-4 w-4" />
-                Slash Commands
+                {t('slashCommands.slashCommands')}
               </TabsTrigger>
               <TabsTrigger value="project" className="gap-2">
                 <GitBranch className="h-4 w-4" />
-                Project Hooks
+                {t('hooks.projectHooks', 'Project Hooks')}
               </TabsTrigger>
               <TabsTrigger value="local" className="gap-2">
                 <Shield className="h-4 w-4" />
-                Local Hooks
+                {t('hooks.localHooks', 'Local Hooks')}
               </TabsTrigger>
             </TabsList>
 
@@ -125,7 +127,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Project Slash Commands</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('slashCommands.projectSlashCommands')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       Custom commands that are specific to this project. These commands are stored in
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/slash-commands/</code>
@@ -145,7 +147,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Project Hooks</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('hooks.projectHooks', 'Project Hooks')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       These hooks apply to all users working on this project. They are stored in
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.json</code>
@@ -165,7 +167,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Local Hooks</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('hooks.localHooks', 'Local Hooks')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       These hooks only apply to your machine. They are stored in
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.local.json</code>
@@ -177,7 +179,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                         <AlertTriangle className="h-5 w-5 text-yellow-600" />
                         <div className="flex-1">
                           <p className="text-sm text-yellow-600">
-                            Local settings file is not in .gitignore
+                            {t('projectSettings.gitignoreLocalWarning')}
                           </p>
                         </div>
                         <Button
@@ -185,7 +187,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                           variant="outline"
                           onClick={addToGitIgnore}
                         >
-                          Add to .gitignore
+                          {t('projectSettings.addToGitignore')}
                         </Button>
                       </div>
                     )}

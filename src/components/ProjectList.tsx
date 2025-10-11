@@ -8,7 +8,8 @@ import {
   Settings,
   MoreVertical,
   Search,
-  X
+  X,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -39,6 +40,10 @@ interface ProjectListProps {
    * Callback when hooks configuration is clicked
    */
   onProjectSettings?: (project: Project) => void;
+  /**
+   * Callback when new session button is clicked
+   */
+  onNewSession?: () => void;
   /**
    * Whether the list is currently loading
    */
@@ -72,6 +77,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   projects,
   onProjectClick,
   onProjectSettings,
+  onNewSession,
   className,
 }) => {
   const { t } = useTranslation();
@@ -107,16 +113,32 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Search bar and results info */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
+      {/* Action bar with new session button and search */}
+      <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        {/* New session button */}
+        {onNewSession && (
+          <Button
+            onClick={onNewSession}
+            size="default"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 lg:w-auto w-full group relative overflow-hidden"
+          >
+            {/* Gradient overlay effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+            <Plus className="mr-2 h-4 w-4 relative z-10" />
+            <span className="relative z-10">{t('newClaudeCodeSession')}</span>
+          </Button>
+        )}
+        
+        {/* Search and results info */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 lg:max-w-2xl">
+          <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder={t('searchProjects')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9"
+            className="pl-9 pr-9 h-10"
           />
           {searchQuery && (
             <Button
@@ -130,8 +152,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           )}
         </div>
         
-        {/* Results info */}
-        <div className="text-sm text-muted-foreground">
+          {/* Results info */}
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
           {searchQuery ? (
             <span>
               {t('showingResults')}: <span className="font-semibold text-foreground">{filteredAndSortedProjects.length}</span> / {projects.length}
@@ -141,6 +163,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
               {t('totalProjects')}: <span className="font-semibold text-foreground">{projects.length}</span>
             </span>
           )}
+          </div>
         </div>
       </div>
       

@@ -46,7 +46,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
       setError(null);
     } catch (err) {
       console.error("Failed to load running sessions:", err);
-      setError("Failed to load running sessions");
+      setError(t('runningSessions.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -101,10 +101,10 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <h3 className="text-sm font-medium">Active Claude Sessions</h3>
+          <h3 className="text-sm font-medium">{t('runningSessions.title')}</h3>
         </div>
         <span className="text-xs text-muted-foreground">
-          ({runningSessions.length} running)
+          {t('runningSessions.countRunning', { count: runningSessions.length })}
         </span>
       </div>
 
@@ -137,7 +137,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                             {sessionId.substring(0, 20)}...
                           </p>
                           <span className="text-xs text-green-600 font-medium">
-                            Running
+                            {t('runningSessions.running')}
                           </span>
                         </div>
                         
@@ -163,7 +163,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                       className="flex-shrink-0"
                     >
                       <Play className="h-3 w-3 mr-1" />
-                      Resume
+                      {t('runningSessions.resume')}
                     </Button>
                   </div>
                 </CardContent>

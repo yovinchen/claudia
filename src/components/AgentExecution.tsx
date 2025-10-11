@@ -274,7 +274,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Project Directory"
+        title: t('webview.selectProjectDirectory')
       });
       
       if (selected) {
@@ -576,7 +576,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     <div>
                       <h1 className="text-xl font-bold">{t('agents.execute')}: {agent.name}</h1>
                       <p className="text-sm text-muted-foreground">
-                        {model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
+                        {model === 'opus' ? t('agents.opusName') : t('agents.sonnetName')}
                       </p>
                     </div>
                   </div>
@@ -669,7 +669,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                         <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
                       )}
                     </div>
-                    <span>Claude 4 Sonnet</span>
+                    <span>{t('agents.sonnetName')}</span>
                   </div>
                 </button>
                 
@@ -695,7 +695,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                         <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
                       )}
                     </div>
-                    <span>Claude 4.1 Opus</span>
+                    <span>{t('agents.opusName')}</span>
                   </div>
                 </button>
               </div>
@@ -772,7 +772,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                    <span className="text-sm text-muted-foreground">{t('agents.initializing') || 'Initializing agent...'}</span>
                   </div>
                 </div>
               )}
@@ -826,11 +826,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               {renderIcon()}
-              <h2 className="text-lg font-semibold">{agent.name} - Output</h2>
+              <h2 className="text-lg font-semibold">{agent.name} - {t('app.output')}</h2>
               {isRunning && (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-green-600 font-medium">Running</span>
+                  <span className="text-xs text-green-600 font-medium">{t('agents.statusRunning')}</span>
                 </div>
               )}
             </div>
@@ -878,7 +878,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 className="flex items-center gap-2"
               >
                 <X className="h-4 w-4" />
-                Close
+                {t('app.close')}
               </Button>
             </div>
           </div>
@@ -914,7 +914,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                    <span className="text-sm text-muted-foreground">{t('agents.initializing') || 'Initializing agent...'}</span>
                   </div>
                 </div>
               )}
@@ -967,8 +967,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           
           <Tabs value={activeHooksTab} onValueChange={setActiveHooksTab} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="project">Project Settings</TabsTrigger>
-              <TabsTrigger value="local">Local Settings</TabsTrigger>
+              <TabsTrigger value="project">{t('agents.projectSettings') || 'Project Settings'}</TabsTrigger>
+              <TabsTrigger value="local">{t('agents.localSettings') || 'Local Settings'}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="project" className="flex-1 overflow-auto">

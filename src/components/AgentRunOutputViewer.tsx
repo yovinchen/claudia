@@ -237,7 +237,7 @@ export function AgentRunOutputViewer({
       }
     } catch (error) {
       console.error('Failed to load agent output:', error);
-      setToast({ message: 'Failed to load agent output', type: 'error' });
+      setToast({ message: t('app.failedToLoadSessionOutput'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -286,12 +286,12 @@ export function AgentRunOutputViewer({
       });
 
       const completeUnlisten = await listen<boolean>(`agent-complete:${run!.id}`, () => {
-        setToast({ message: 'Agent execution completed', type: 'success' });
+        setToast({ message: t('app.agentExecutionCompleted'), type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
       const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run!.id}`, () => {
-        setToast({ message: 'Agent execution was cancelled', type: 'error' });
+        setToast({ message: t('app.agentExecutionCancelled'), type: 'error' });
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
@@ -305,7 +305,7 @@ export function AgentRunOutputViewer({
     const jsonl = rawJsonlOutput.join('\n');
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as JSONL', type: 'success' });
+    setToast({ message: t('webview.sessionOutputCopiedJsonl'), type: 'success' });
   };
 
   const handleCopyAsMarkdown = async () => {
@@ -363,7 +363,7 @@ export function AgentRunOutputViewer({
 
     await navigator.clipboard.writeText(markdown);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as Markdown', type: 'success' });
+    setToast({ message: t('webview.sessionOutputCopiedMarkdown'), type: 'success' });
   };
 
   const handleRefresh = async () => {
@@ -383,7 +383,7 @@ export function AgentRunOutputViewer({
       const success = await api.killAgentSession(run.id);
       
       if (success) {
-        setToast({ message: 'Agent execution stopped', type: 'success' });
+        setToast({ message: t('agentRun.executionStopped'), type: 'success' });
         
         // Clean up listeners
         unlistenRefs.current.forEach(unlisten => unlisten());
@@ -410,14 +410,11 @@ export function AgentRunOutputViewer({
         // Refresh the output to get updated status
         await loadOutput(true);
       } else {
-        setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
+        setToast({ message: t('agentRun.stopFailed'), type: 'error' });
       }
     } catch (err) {
       console.error('[AgentRunOutputViewer] Failed to stop agent:', err);
-      setToast({ 
-        message: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`, 
-        type: 'error' 
-      });
+      setToast({ message: t('agentRun.stopFailed'), type: 'error' });
     }
   };
 
@@ -515,7 +512,7 @@ export function AgentRunOutputViewer({
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading agent run...</p>
+          <p className="text-muted-foreground">{t('app.loadingAgentRun')}</p>
         </div>
       </div>
     );
@@ -537,7 +534,7 @@ export function AgentRunOutputViewer({
                     {run.status === 'running' && (
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-green-600 font-medium">Running</span>
+                        <span className="text-xs text-green-600 font-medium">{t('agents.statusRunning')}</span>
                       </div>
                     )}
                   </CardTitle>
@@ -546,7 +543,7 @@ export function AgentRunOutputViewer({
                   </p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                     <Badge variant="outline" className="text-xs">
-                      {run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
+                      {run.model === 'opus' ? t('agents.opusName') : t('agents.sonnetName')}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -579,7 +576,7 @@ export function AgentRunOutputViewer({
                       className="h-8 px-2"
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      Copy
+                      {t('app.copyOutput')}
                       <ChevronDown className="h-3 w-3 ml-1" />
                     </Button>
                   }
@@ -611,7 +608,7 @@ export function AgentRunOutputViewer({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  title={isFullscreen ? t('webview.exitFullScreen') : t('webview.enterFullScreen')}
                   className="h-8 px-2"
                 >
                   {isFullscreen ? (
@@ -625,7 +622,7 @@ export function AgentRunOutputViewer({
                   size="sm"
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  title="Refresh output"
+                  title={t('app.refresh')}
                   className="h-8 px-2"
                 >
                   <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -636,7 +633,7 @@ export function AgentRunOutputViewer({
                     size="sm"
                     onClick={handleStop}
                     disabled={refreshing}
-                    title="Stop execution"
+                    title={t('agents.stop')}
                     className="h-8 px-2 text-destructive hover:text-destructive"
                   >
                     <StopCircle className="h-4 w-4" />
@@ -650,12 +647,12 @@ export function AgentRunOutputViewer({
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Loading output...</span>
+                  <span>{t('app.loadingOutput')}</span>
                 </div>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No output available yet</p>
+                <p>{t('app.noOutput')}</p>
               </div>
             ) : (
               <div 
@@ -745,7 +742,7 @@ export function AgentRunOutputViewer({
                   disabled={refreshing}
                 >
                   <StopCircle className="h-4 w-4 mr-2" />
-                  Stop
+                  {t('agents.stop')}
                 </Button>
               )}
               <Button
@@ -754,7 +751,7 @@ export function AgentRunOutputViewer({
                 onClick={() => setIsFullscreen(false)}
               >
                 <Minimize2 className="h-4 w-4 mr-2" />
-                Exit Fullscreen
+                {t('webview.exitFullScreen')}
               </Button>
             </div>
           </div>
@@ -766,7 +763,7 @@ export function AgentRunOutputViewer({
             <div className="max-w-4xl mx-auto space-y-2">
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  No output available yet
+                  {t('app.noOutput')}
                 </div>
               ) : (
                 <>

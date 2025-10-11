@@ -90,7 +90,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               className="flex items-center gap-2"
             >
               <FolderOpen className="h-4 w-4" />
-              Select Project
+              {t('webview.selectProjectDirectory')}
             </Button>
           )}
         </div>
@@ -104,7 +104,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               </Badge>
               {totalTokens > 0 && (
                 <Badge variant="secondary" className="text-xs">
-                  {totalTokens.toLocaleString()} tokens
+                  {totalTokens.toLocaleString()} {t('usage.tokens')}
                 </Badge>
               )}
             </div>
@@ -165,13 +165,13 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               {onProjectSettings && projectPath && (
                 <DropdownMenuItem onClick={onProjectSettings}>
                   <Settings className="h-4 w-4 mr-2" />
-                  Project Settings
+                  {t('agents.projectSettings')}
                 </DropdownMenuItem>
               )}
               {onSlashCommandsSettings && projectPath && (
                 <DropdownMenuItem onClick={onSlashCommandsSettings}>
                   <Command className="h-4 w-4 mr-2" />
-                  Slash Commands
+                  {t('slashCommands.slashCommands')}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

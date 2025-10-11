@@ -442,7 +442,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                   variant="ghost"
                                   onClick={() => handleExportAgent(agent)}
                                   className="flex items-center gap-1"
-                                  title="Export agent to .claudia.json"
+                                  title={t('agents.exportToFile')}
                                 >
                                   <Upload className="h-3 w-3" />
                                   {t('agents.export')}

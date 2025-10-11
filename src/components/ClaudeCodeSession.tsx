@@ -634,7 +634,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Project Directory"
+        title: t('webview.selectProjectDirectory')
       });
       
       if (selected) {
@@ -644,7 +644,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     } catch (err) {
       console.error("Failed to select directory:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
+      setError(t('app.selectDirectoryFailed', { message: errorMessage }));
     }
   };
 
@@ -652,7 +652,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
-      setError("Please select a project directory first");
+      setError(t('app.selectProjectFirst'));
       return;
     }
 

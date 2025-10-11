@@ -2,6 +2,7 @@ import React, { Component, ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import i18n from "@/lib/i18n";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -51,14 +52,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <div className="flex items-start gap-4">
                 <AlertCircle className="h-8 w-8 text-destructive flex-shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-2">
-                  <h3 className="text-lg font-semibold">Something went wrong</h3>
+                  <h3 className="text-lg font-semibold">{i18n.t('errorBoundary.somethingWentWrong')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    An error occurred while rendering this component.
+                    {i18n.t('errorBoundary.errorOccurred')}
                   </p>
                   {this.state.error.message && (
                     <details className="mt-2">
                       <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
-                        Error details
+                        {i18n.t('errorBoundary.errorDetails')}
                       </summary>
                       <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
                         {this.state.error.message}
@@ -70,7 +71,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     size="sm"
                     className="mt-4"
                   >
-                    Try again
+                    {i18n.t('errorBoundary.tryAgain')}
                   </Button>
                 </div>
               </div>

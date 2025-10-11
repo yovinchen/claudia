@@ -12,6 +12,7 @@
     "name": "Claudia",
     "welcome": "Welcome to Claudia",
     "tagline": "Powerful Claude Code session management tool",
+    "returnHome": "Return to Home",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
@@ -99,8 +100,22 @@
     "justNow": "just now",
     "minutesAgo": "{{count}} minute{{plural}} ago",
     "hoursAgo": "{{count}} hour{{plural}} ago",
-    "daysAgo": "{{count}} day{{plural}} ago"
+    "daysAgo": "{{count}} day{{plural}} ago",
+    "loadingOutput": "Loading output...",
+    "waitingForOutput": "Waiting for output...",
+    "noOutput": "No output available",
+    "agentRunningNoOutput": "Agent is running but no output received yet",
+    "failedToLoadSessionOutput": "Failed to load session output",
+    "outputRefreshed": "Output refreshed",
+    "fileABug": "File a bug",
+    "failedToRefreshOutput": "Failed to refresh output",
+    "loadingAgentRun": "Loading agent run...",
+    "agentExecutionCompleted": "Agent execution completed",
+    "agentExecutionCancelled": "Agent execution was cancelled",
+    "selectProjectFirst": "Please select a project directory first",
+    "selectDirectoryFailed": "Failed to select directory: {{message}}"
   },
+  "claudeSession": {},
   "navigation": {
     "projects": "CC Projects",
     "agents": "Agent Management",
@@ -138,7 +153,27 @@
     "sessions": "Sessions",
     "noSessions": "No sessions found",
     "lastModified": "Last Modified",
-    "sessionHistory": "Session History"
+    "sessionHistory": "Session History",
+    "sessionCount": "{{count}} sessions"
+  },
+  "sessions": {
+    "firstMessage": "First message:",
+    "hasTodo": "Has todo"
+  },
+  "runningSessions": {
+    "title": "Active Claude Sessions",
+    "countRunning": "({{count}} running)",
+    "running": "Running",
+    "resume": "Resume",
+    "loadFailed": "Failed to load running sessions"
+  },
+  "widgets": {
+    "terminal": { "title": "Terminal" },
+    "common": { "running": "Running..." },
+    "bash": {
+      "commandFailed": "Command failed",
+      "commandCompleted": "Command completed"
+    }
   },
   "agents": {
     "title": "Agent Management",
@@ -153,6 +188,11 @@
     "enterTask": "Enter the task for the agent",
     "hooks": "Hooks",
     "configureHooks": "Configure Hooks",
+    "configureHooksDesc": "Configure hooks that run before, during, and after tool executions. Changes are saved immediately.",
+    "projectSettings": "Project Settings",
+    "localSettings": "Local Settings",
+    "initializing": "Initializing agent...",
+    "exportToFile": "Export agent to .claudia.json",
     "fullscreen": "Fullscreen",
     "stop": "Stop",
     "agentName": "Agent Name",
@@ -317,7 +357,13 @@
     "condition": "Condition",
     "matchesRegex": "Matches regex",
     "message": "Message",
-    "enterShellCommand": "Enter shell command..."
+    "enterShellCommand": "Enter shell command...",
+    "projectHooks": "Project Hooks",
+    "localHooks": "Local Hooks"
+  },
+  "projectSettings": {
+    "gitignoreLocalWarning": "Local settings file is not in .gitignore",
+    "addToGitignore": "Add to .gitignore"
   },
   "settings": {
     "title": "Settings",
@@ -380,6 +426,8 @@
       "verboseOutputDesc": "Show full bash and command outputs",
       "chatRetention": "Chat Transcript Retention (days)",
       "chatRetentionDesc": "How long to retain chat transcripts locally (default: 30 days)",
+      "chatRetentionPermanent": "Permanent retention enabled, chat records will not be automatically deleted",
+      "permanentRetention": "Permanent Retention",
       "claudeCodeInstallation": "Claude Code Installation",
       "choosePreferredInstallation": "Choose your preferred Claude Code installation.",
       "loadingAvailableInstallations": "Loading available installations...",
@@ -761,6 +809,18 @@
     "checkpointSettingsTitle": "Checkpoint Settings",
     "experimentalFeature": "Experimental Feature",
     "checkpointWarning": "Checkpointing may affect directory structure or cause data loss. Use with caution.",
+    "createCheckpointDesc": "Save the current state of your session with an optional description.",
+    "descriptionOptional": "Description (optional)",
+    "descriptionPlaceholder": "e.g., Before major refactoring",
+    "current": "Current",
+    "restoreToThis": "Restore to this checkpoint",
+    "forkFromThis": "Fork from this checkpoint",
+    "compareWithAnother": "Compare with another checkpoint",
+    "checkpointComparison": "Checkpoint Comparison",
+    "modifiedFiles": "Modified Files",
+    "addedFiles": "Added Files",
+    "deletedFiles": "Deleted Files",
+    "noPrompt": "No prompt",
     "automaticCheckpoints": "Automatic Checkpoints",
     "automaticCheckpointsDesc": "Automatically create checkpoints based on the selected strategy",
     "checkpointStrategy": "Checkpoint Strategy",
@@ -966,5 +1026,61 @@
   },
   "warning": {
     "title": "Warning"
+  }
+  ,
+  "agentRun": {
+    "runNotFound": "Run not found",
+    "loadFailed": "Failed to load execution details",
+    "executionStopped": "Execution stopped by user",
+    "live": "Live",
+    "stopFailed": "Failed to stop agent - it may have already finished"
+  },
+  "tabs": {
+    "scrollLeft": "Scroll tabs left",
+    "scrollRight": "Scroll tabs right",
+    "browseProjectsShortcut": "Browse projects (Ctrl+T)",
+    "maximumTabsReached": "Maximum tabs reached ({{count}}/20)"
+  },
+  "storageTab": {
+    "title": "Database Storage",
+    "sqlQuery": "SQL Query",
+    "resetDbShort": "Reset DB",
+    "selectTable": "Select a table",
+    "rows": "rows",
+    "searchInTable": "Search in table...",
+    "newRow": "New Row",
+    "actions": "Actions",
+    "pagination": {
+      "showing": "Showing {{from}} to {{to}} of {{total}} rows",
+      "pageOf": "Page {{page}} of {{total}}"
+    },
+    "editRow": "Edit Row",
+    "editRowDesc": "Update the values for this row in the {{table}} table.",
+    "primaryKey": "Primary Key",
+    "type": "Type",
+    "notNull": "NOT NULL",
+    "default": "Default",
+    "insert": "Insert",
+    "newRowDesc": "Add a new row to the {{table}} table.",
+    "deleteRow": "Delete Row",
+    "deleteRowConfirm": "Are you sure you want to delete this row? This action cannot be undone.",
+    "resetDatabaseTitle": "Reset Database",
+    "resetDatabaseDesc": "This will delete all data and recreate the database with its default structure (empty tables for agents, agent_runs, and app_settings). The database will be restored to the same state as when you first installed the app. This action cannot be undone.",
+    "resetWarning": "All your agents, runs, and settings will be permanently deleted!",
+    "sqlEditorTitle": "SQL Query Editor",
+    "sqlEditorDesc": "Execute raw SQL queries on the database. Use with caution.",
+    "sqlQueryPlaceholder": "SELECT * FROM agents LIMIT 10;",
+    "queryExecuted": "Query executed successfully.",
+    "rowsAffected": "rows affected.",
+    "lastInsertId": "Last insert ID",
+    "loadTablesFailed": "Failed to load tables",
+    "loadTableDataFailed": "Failed to load table data",
+    "updateRowFailed": "Failed to update row",
+    "deleteRowFailed": "Failed to delete row",
+    "insertRowFailed": "Failed to insert row",
+    "executeSqlFailed": "Failed to execute SQL",
+    "resetDatabaseFailed": "Failed to reset database",
+    "resetFailed": "Reset failed: please try again.",
+    "resetSuccess": "Database has been reset to its default state with empty tables (agents, agent_runs, app_settings)."
   }
 }

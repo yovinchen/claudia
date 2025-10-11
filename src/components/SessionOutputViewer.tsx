@@ -189,7 +189,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       }
     } catch (error) {
       console.error('Failed to load session output:', error);
-      setToast({ message: 'Failed to load session output', type: 'error' });
+      setToast({ message: t('app.failedToLoadSessionOutput'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -223,12 +223,12 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       });
 
       const completeUnlisten = await listen<boolean>(`agent-complete:${session.id}`, () => {
-        setToast({ message: 'Agent execution completed', type: 'success' });
+        setToast({ message: t('app.agentExecutionCompleted'), type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
       const cancelUnlisten = await listen<boolean>(`agent-cancelled:${session.id}`, () => {
-        setToast({ message: 'Agent execution was cancelled', type: 'error' });
+        setToast({ message: t('app.agentExecutionCancelled'), type: 'error' });
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
@@ -242,7 +242,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     const jsonl = rawJsonlOutput.join('\n');
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as JSONL', type: 'success' });
+    setToast({ message: t('webview.sessionOutputCopiedJsonl'), type: 'success' });
   };
 
   const handleCopyAsMarkdown = async () => {
@@ -297,7 +297,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
 
     await navigator.clipboard.writeText(markdown);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as Markdown', type: 'success' });
+    setToast({ message: t('webview.sessionOutputCopiedMarkdown'), type: 'success' });
   };
 
 
@@ -305,10 +305,10 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     setRefreshing(true);
     try {
       await loadOutput(true); // Skip cache when manually refreshing
-      setToast({ message: 'Output refreshed', type: 'success' });
+      setToast({ message: t('app.outputRefreshed'), type: 'success' });
     } catch (error) {
       console.error('Failed to refresh output:', error);
-      setToast({ message: 'Failed to refresh output', type: 'error' });
+      setToast({ message: t('app.failedToRefreshOutput'), type: 'error' });
     } finally {
       setRefreshing(false);
     }
@@ -388,7 +388,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
               <div className="flex items-center space-x-3">
                 <div className="text-2xl">{session.agent_icon}</div>
                 <div>
-                  <CardTitle className="text-base">{session.agent_name} - Output</CardTitle>
+                  <CardTitle className="text-base">{session.agent_name} - {t('app.output')}</CardTitle>
                   <div className="flex items-center space-x-2 mt-1">
                     <Badge variant={session.status === 'running' ? 'default' : 'secondary'}>
                       {session.status}
@@ -396,7 +396,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                     {session.status === 'running' && (
                       <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse mr-1"></div>
-                        Live
+                        {t('agentRun.live')}
                       </Badge>
                     )}
                     <span className="text-xs text-muted-foreground">
@@ -459,7 +459,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   size="sm"
                   onClick={refreshOutput}
                   disabled={refreshing}
-                  title="Refresh output"
+                  title={t('app.refresh')}
                 >
                   <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </Button>
@@ -474,7 +474,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Loading output...</span>
+                  <span>{t('app.loadingOutput')}</span>
                 </div>
               </div>
             ) : (
@@ -498,14 +498,14 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                     {session.status === 'running' ? (
                       <>
                         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Waiting for output...</p>
+                        <p className="text-muted-foreground">{t('app.waitingForOutput')}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Agent is running but no output received yet
+                          {t('app.agentRunningNoOutput')}
                         </p>
                       </>
                     ) : (
                       <>
-                        <p className="text-muted-foreground">No output available</p>
+                        <p className="text-muted-foreground">{t('app.noOutput')}</p>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -514,7 +514,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                           disabled={refreshing}
                         >
                           {refreshing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                          Refresh
+                          {t('app.refresh')}
                         </Button>
                       </>
                     )}
@@ -551,11 +551,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               <div className="text-2xl">{session.agent_icon}</div>
-              <h2 className="text-lg font-semibold">{session.agent_name} - Output</h2>
+              <h2 className="text-lg font-semibold">{session.agent_name} - {t('app.output')}</h2>
               {session.status === 'running' && (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-green-600 font-medium">Running</span>
+                  <span className="text-xs text-green-600 font-medium">{t('agents.statusRunning')}</span>
                 </div>
               )}
             </div>
@@ -605,7 +605,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                 className="flex items-center gap-2"
               >
                 <X className="h-4 w-4" />
-                Close
+                {t('app.close')}
               </Button>
             </div>
           </div>
@@ -632,14 +632,14 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   {session.status === 'running' ? (
                     <>
                       <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">Waiting for output...</p>
+                      <p className="text-muted-foreground">{t('app.waitingForOutput')}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Agent is running but no output received yet
+                        {t('app.agentRunningNoOutput')}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-muted-foreground">No output available</p>
+                      <p className="text-muted-foreground">{t('app.noOutput')}</p>
                     </>
                   )}
                 </div>

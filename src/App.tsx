@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
@@ -97,6 +97,13 @@ function AppContent() {
     
     initializeBackendLanguage();
   }, []); // Run once on app startup
+
+  // Update document title based on current language
+  useEffect(() => {
+    try {
+      document.title = `${t('app.name')} - ${t('app.tagline')}`;
+    } catch {}
+  }, [t]);
   
   // Track when user reaches different journey stages
   useEffect(() => {
@@ -427,32 +434,16 @@ function AppContent() {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
-                        <Button
-                          onClick={handleNewSession}
-                          size="default"
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          {t('newClaudeCodeSession')}
-                        </Button>
-                      </motion.div>
-
                       {/* Running Claude Sessions */}
                       <RunningClaudeSessions />
 
-                      {/* Project list */}
+                      {/* Project list with integrated new session button */}
                       {projects.length > 0 ? (
                         <ProjectList
                           projects={projects}
                           onProjectClick={handleProjectClick}
                           onProjectSettings={handleProjectSettings}
+                          onNewSession={handleNewSession}
                           loading={loading}
                           className="animate-fade-in"
                         />
