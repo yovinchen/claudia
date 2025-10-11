@@ -2478,6 +2478,21 @@ export const api = {
     }
   },
 
+  /**
+   * Updates the display order of relay stations
+   * @author yovinchen
+   * @param stationIds - Array of station IDs in the new order
+   * @returns Promise resolving when order is updated
+   */
+  async relayStationUpdateOrder(stationIds: string[]): Promise<void> {
+    try {
+      return await invoke<void>("relay_station_update_order", { stationIds });
+    } catch (error) {
+      console.error("Failed to update relay station order:", error);
+      throw error;
+    }
+  },
+
   // ============= PackyCode Nodes =============
 
   /**

@@ -57,6 +57,7 @@ pub struct RelayStation {
     pub user_id: Option<String>,      // 用户 ID（可选）
     pub adapter_config: Option<HashMap<String, serde_json::Value>>, // 适配器特定配置
     pub enabled: bool,                // 启用状态
+    pub display_order: i32,          // 显示顺序
     pub created_at: i64,             // 创建时间
     pub updated_at: i64,             // 更新时间
 }
@@ -180,6 +181,7 @@ impl RelayStation {
             user_id: row.get("user_id")?,
             adapter_config,
             enabled: row.get::<_, i32>("enabled")? == 1,
+            display_order: row.get::<_, i32>("display_order").unwrap_or(0),
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -202,6 +204,7 @@ pub fn init_relay_stations_tables(conn: &Connection) -> Result<()> {
             user_id TEXT,
             adapter_config TEXT,
             enabled INTEGER NOT NULL DEFAULT 1,
+            display_order INTEGER NOT NULL DEFAULT 0,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
         )
@@ -244,7 +247,13 @@ pub async fn relay_stations_list(db: State<'_, AgentDb>) -> Result<Vec<RelayStat
         i18n::t("database.init_failed")
     })?;
 
-    let mut stmt = conn.prepare("SELECT * FROM relay_stations ORDER BY created_at DESC")
+    // 添加 display_order 列（如果不存在）
+    let _ = conn.execute(
+        "ALTER TABLE relay_stations ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
+
+    let mut stmt = conn.prepare("SELECT * FROM relay_stations ORDER BY display_order ASC, created_at DESC")
         .map_err(|e| {
             log::error!("Failed to prepare statement: {}", e);
             i18n::t("database.query_failed")
@@ -375,6 +384,7 @@ pub async fn relay_station_create(
         user_id: request.user_id,
         adapter_config: request.adapter_config,
         enabled: request.enabled,
+        display_order: 0,
         created_at: now,
         updated_at: now,
     };
@@ -463,6 +473,7 @@ pub async fn relay_station_update(
         user_id: request.user_id,
         adapter_config: request.adapter_config,
         enabled: request.enabled,
+        display_order: 0, // 保持原有顺序
         created_at: 0, // 不重要，前端可以重新获取
         updated_at: now,
     };
@@ -907,4 +918,43 @@ pub async fn relay_stations_import(
         failed: failed_count,
         message,
     })
+}
+
+/// 更新中转站排序
+/// @author yovinchen
+#[command]
+pub async fn relay_station_update_order(
+    station_ids: Vec<String>,
+    db: State<'_, AgentDb>
+) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| {
+        log::error!("Failed to acquire database lock: {}", e);
+        i18n::t("database.lock_failed")
+    })?;
+
+    // 开始事务
+    let tx = conn.unchecked_transaction().map_err(|e| {
+        log::error!("Failed to start transaction: {}", e);
+        i18n::t("database.transaction_failed")
+    })?;
+
+    // 更新每个中转站的排序
+    for (index, station_id) in station_ids.iter().enumerate() {
+        tx.execute(
+            "UPDATE relay_stations SET display_order = ?1, updated_at = ?2 WHERE id = ?3",
+            params![index as i32, Utc::now().timestamp(), station_id],
+        ).map_err(|e| {
+            log::error!("Failed to update station order: {}", e);
+            i18n::t("database.update_failed")
+        })?;
+    }
+
+    // 提交事务
+    tx.commit().map_err(|e| {
+        log::error!("Failed to commit transaction: {}", e);
+        i18n::t("database.transaction_failed")
+    })?;
+
+    log::info!("Updated display order for {} relay stations", station_ids.len());
+    Ok(())
 }

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import MonacoEditor from '@monaco-editor/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -34,9 +33,6 @@ import {
 } from '@/lib/api';
 import {
   Plus,
-  Edit,
-  Trash2,
-  Globe,
   Server,
   ArrowLeft,
   Settings,
@@ -49,6 +45,22 @@ import {
   Download,
   Upload
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableStationItem } from './SortableStationItem';
 
 interface RelayStationManagerProps {
   onBack: () => void;
@@ -82,6 +94,38 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [loadingQuota, setLoadingQuota] = useState<Record<string, boolean>>({});
 
   const { t } = useTranslation();
+
+  // 拖拽传感器配置
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 拖拽结束处理
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = stations.findIndex(station => station.id === active.id);
+      const newIndex = stations.findIndex(station => station.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newStations = arrayMove(stations, oldIndex, newIndex);
+        setStations(newStations);
+
+        try {
+          await api.relayStationUpdateOrder(newStations.map(s => s.id));
+          showToast('排序已更新', 'success');
+        } catch (error) {
+          console.error('Failed to update station order:', error);
+          showToast('更新排序失败', 'error');
+          setStations(stations);
+        }
+      }
+    }
+  };
 
   // Token 脱敏函数
   const maskToken = (token: string): string => {
@@ -665,226 +709,47 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       </Card>
 
       {/* 中转站列表 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          <div className="col-span-full text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">{t('common.loading')}</p>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={stations.map(s => s.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading ? (
+              <div className="col-span-full text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">{t('common.loading')}</p>
+              </div>
+            ) : stations.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <Server className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">{t('relayStation.noStations')}</h3>
+                <p className="text-muted-foreground mb-4">{t('relayStation.noStationsDesc')}</p>
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('relayStation.createFirst')}
+                </Button>
+              </div>
+            ) : (
+              stations.map((station) => <SortableStationItem
+                key={station.id}
+                station={station}
+                getStatusBadge={getStatusBadge}
+                getAdapterDisplayName={getAdapterDisplayName}
+                setSelectedStation={setSelectedStation}
+                setShowEditDialog={setShowEditDialog}
+                openDeleteDialog={openDeleteDialog}
+                quotaData={quotaData}
+                loadingQuota={loadingQuota}
+              />)
+            )}
           </div>
-        ) : stations.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <Server className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t('relayStation.noStations')}</h3>
-            <p className="text-muted-foreground mb-4">{t('relayStation.noStationsDesc')}</p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('relayStation.createFirst')}
-            </Button>
-          </div>
-        ) : (
-          stations.map((station) => (
-            <Card key={station.id} className="relative">
-              <CardHeader className="pb-2 pt-3 px-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1 min-w-0 mr-2">
-                    <CardTitle className="text-sm font-medium">{station.name}</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      {getAdapterDisplayName(station.adapter)}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {getStatusBadge(station)}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedStation(station);
-                        setShowEditDialog(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-500 hover:text-red-700"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openDeleteDialog(station);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-1 pb-3 px-3">
-                <div className="space-y-2">
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Globe className="mr-1.5 h-3 w-3" />
-                    <span className="truncate">{station.api_url}</span>
-                  </div>
-
-                  {station.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {station.description}
-                    </p>
-                  )}
-
-                  {/* PackyCode 额度显示 */}
-                  {station.adapter === 'packycode' && (
-                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
-                      {loadingQuota[station.id] ? (
-                        <div className="flex items-center justify-center py-1">
-                          <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                          <span className="ml-2 text-xs text-muted-foreground">加载中...</span>
-                        </div>
-                      ) : quotaData[station.id] ? (
-                        <div className="space-y-2">
-                          {/* 用户信息和计划 */}
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              {quotaData[station.id].username && (
-                                <span className="text-muted-foreground">{quotaData[station.id].username}</span>
-                              )}
-                              <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                {quotaData[station.id].plan_type.toUpperCase()}
-                              </Badge>
-                              {quotaData[station.id].opus_enabled && (
-                                <Badge variant="default" className="text-xs h-5 px-1.5 bg-purple-600">
-                                  Opus
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* 账户余额 */}
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">余额:</span>
-                            <span className="font-medium text-blue-600">
-                              ${Number(quotaData[station.id].balance_usd).toFixed(2)}
-                            </span>
-                          </div>
-
-                          {/* 日额度 */}
-                          <div className="space-y-0.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">日额度:</span>
-                              <div className="flex items-center gap-1">
-                                {(() => {
-                                  const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                                  const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                                  return (
-                                    <>
-                                      <span className={daily_spent > daily_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                        ${daily_spent.toFixed(2)}
-                                      </span>
-                                      <span className="text-muted-foreground">/ ${daily_budget.toFixed(2)}</span>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all ${
-                                  (() => {
-                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                                    const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                                    return daily_spent / daily_budget > 0.8;
-                                  })() ? 'bg-orange-500' : 'bg-green-500'
-                                }`}
-                                style={{ width: `${Math.min(
-                                  (() => {
-                                    const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                                    const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                                    return (daily_spent / daily_budget) * 100;
-                                  })(), 100)}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 月额度 */}
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">月额度:</span>
-                              <div className="flex items-center gap-2">
-                                {(() => {
-                                  const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                                  const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                                  return (
-                                    <>
-                                      <span className={monthly_spent > monthly_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                        ${monthly_spent.toFixed(2)}
-                                      </span>
-                                      <span className="text-muted-foreground">/</span>
-                                      <span className="text-muted-foreground">${monthly_budget.toFixed(2)}</span>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all ${
-                                  (() => {
-                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                                    const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                                    return monthly_spent / monthly_budget > 0.8;
-                                  })() ? 'bg-orange-500' : 'bg-green-500'
-                                }`}
-                                style={{ width: `${Math.min(
-                                  (() => {
-                                    const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                                    const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                                    return (monthly_spent / monthly_budget) * 100;
-                                  })(), 100)}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 总消费 */}
-                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                            <span>总消费: ${Number(quotaData[station.id].total_spent_usd).toFixed(2)}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                fetchPackycodeQuota(station.id);
-                              }}
-                            >
-                              刷新
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              fetchPackycodeQuota(station.id);
-                            }}
-                            className="h-7 text-xs px-2"
-                          >
-                            查询额度
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* 编辑对话框 */}
       {selectedStation && (

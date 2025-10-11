@@ -59,7 +59,7 @@ use commands::relay_stations::{
     relay_stations_list, relay_station_get, relay_station_create, relay_station_update,
     relay_station_delete, relay_station_toggle_enable, relay_station_sync_config,
     relay_station_restore_config, relay_station_get_current_config,
-    relay_stations_export, relay_stations_import,
+    relay_stations_export, relay_stations_import, relay_station_update_order,
 };
 use commands::relay_adapters::{
     relay_station_get_info, relay_station_get_user_info,
@@ -452,6 +452,7 @@ fn main() {
             relay_station_get_current_config,
             relay_stations_export,
             relay_stations_import,
+            relay_station_update_order,
             relay_station_get_info,
             relay_station_get_user_info,
             relay_station_test_connection,
