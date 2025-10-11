@@ -111,29 +111,91 @@ fn main() {
         // App menu: include standard Edit actions so OS hotkeys (Undo/Redo/Cut/Copy/Paste/Select All)
         // work across all pages, plus a DevTools toggle.
         .menu(|app| {
-            let toggle_devtools = MenuItemBuilder::new("Toggle DevTools")
-                .id("toggle-devtools")
-                .accelerator("CmdOrCtrl+Alt+I")
-                .build(app)
-                .unwrap();
-            // Create a proper "Edit" submenu (macOS expects standard edit actions under Edit)
-            let edit_menu = SubmenuBuilder::new(app, "Edit")
-                .undo()
-                .redo()
-                .separator()
-                .cut()
-                .copy()
-                .paste()
-                .select_all()
-                .build()
-                .unwrap();
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::menu::AboutMetadataBuilder;
+                
+                // Create macOS app menu with Quit
+                let app_menu = SubmenuBuilder::new(app, "Claudia")
+                    .about(Some(AboutMetadataBuilder::new()
+                        .version(Some(env!("CARGO_PKG_VERSION")))
+                        .build()))
+                    .separator()
+                    .quit()
+                    .build()
+                    .unwrap();
+                
+                let edit_menu = SubmenuBuilder::new(app, "Edit")
+                    .undo()
+                    .redo()
+                    .separator()
+                    .cut()
+                    .copy()
+                    .paste()
+                    .select_all()
+                    .build()
+                    .unwrap();
+                
+                let window_menu = SubmenuBuilder::new(app, "Window")
+                    .close_window()
+                    .minimize()
+                    .separator()
+                    .item(&MenuItemBuilder::new("Toggle DevTools")
+                        .id("toggle-devtools")
+                        .accelerator("CmdOrCtrl+Alt+I")
+                        .build(app)
+                        .unwrap())
+                    .build()
+                    .unwrap();
+                
+                MenuBuilder::new(app)
+                    .item(&app_menu)
+                    .item(&edit_menu)
+                    .item(&window_menu)
+                    .build()
+            }
+            
+            #[cfg(not(target_os = "macos"))]
+            {
+                let toggle_devtools = MenuItemBuilder::new("Toggle DevTools")
+                    .id("toggle-devtools")
+                    .accelerator("CmdOrCtrl+Alt+I")
+                    .build(app)
+                    .unwrap();
+                
+                let close_window = MenuItemBuilder::new("Close Window")
+                    .id("close-window")
+                    .accelerator("CmdOrCtrl+W")
+                    .build(app)
+                    .unwrap();
+                
+                let quit = MenuItemBuilder::new("Quit")
+                    .id("quit")
+                    .accelerator("CmdOrCtrl+Q")
+                    .build(app)
+                    .unwrap();
+                
+                let edit_menu = SubmenuBuilder::new(app, "Edit")
+                    .undo()
+                    .redo()
+                    .separator()
+                    .cut()
+                    .copy()
+                    .paste()
+                    .select_all()
+                    .build()
+                    .unwrap();
 
-            MenuBuilder::new(app)
-                .item(&edit_menu)
-                .separator()
-                // DevTools toggle
-                .item(&toggle_devtools)
-                .build()
+                MenuBuilder::new(app)
+                    .item(&edit_menu)
+                    .separator()
+                    .item(&toggle_devtools)
+                    .separator()
+                    .item(&close_window)
+                    .separator()
+                    .item(&quit)
+                    .build()
+            }
         })
         .on_menu_event(|app, event| {
             if event.id() == "toggle-devtools" {
