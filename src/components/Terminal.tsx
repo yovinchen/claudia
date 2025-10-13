@@ -54,21 +54,6 @@ export const Terminal: React.FC<TerminalProps> = ({
     const rows = Math.max(24, Math.floor(availableHeight / lineHeight));
 
     // 计算实际使用的宽度
-    const usedWidth = cols * charWidth;
-    const unusedWidth = availableWidth - usedWidth;
-    const percentUsed = ((usedWidth / availableWidth) * 100).toFixed(1);
-
-    console.log('[Terminal] Size calculation:', {
-      containerWidth: rect.width,
-      availableWidth,
-      charWidth,
-      cols,
-      usedWidth,
-      unusedWidth,
-      percentUsed: `${percentUsed}%`,
-      message: unusedWidth > 10 ? `还有 ${unusedWidth.toFixed(1)}px 未使用` : '宽度使用正常'
-    });
-
     return { cols, rows };
   }, []);
 
@@ -87,10 +72,6 @@ export const Terminal: React.FC<TerminalProps> = ({
         if (dims.actualCellWidth) actualCharWidth = dims.actualCellWidth;
         if (dims.actualCellHeight) actualLineHeight = dims.actualCellHeight;
 
-        console.log('[Terminal] Using actual char dimensions:', {
-          actualCharWidth,
-          actualLineHeight
-        });
       }
     } catch (e) {
       // 使用默认值
@@ -108,22 +89,8 @@ export const Terminal: React.FC<TerminalProps> = ({
     const newRows = Math.max(24, Math.floor(availableHeight / actualLineHeight));
 
     // 计算宽度使用情况
-    const usedWidth = newCols * actualCharWidth;
-    const unusedWidth = availableWidth - usedWidth;
-    const percentUsed = ((usedWidth / availableWidth) * 100).toFixed(1);
-
     // 只有当尺寸真的改变时才调整
     if (newCols !== terminalSize.cols || newRows !== terminalSize.rows) {
-      console.log('[Terminal] Resizing:', {
-        from: terminalSize,
-        to: { cols: newCols, rows: newRows },
-        containerWidth: rect.width,
-        availableWidth,
-        usedWidth,
-        unusedWidth,
-        percentUsed: `${percentUsed}%`
-      });
-
       setTerminalSize({ cols: newCols, rows: newRows });
       xtermRef.current.resize(newCols, newRows);
 
@@ -163,7 +130,6 @@ export const Terminal: React.FC<TerminalProps> = ({
 
     const initializeTerminal = async () => {
       try {
-        console.log('[Terminal] Initializing...');
         isInitializedRef.current = true;
 
         // 先计算初始尺寸
@@ -247,22 +213,10 @@ export const Terminal: React.FC<TerminalProps> = ({
                 const actualLineHeight = dims.actualCellHeight || dims.scaledCellHeight;
 
                 if (actualCharWidth && actualLineHeight) {
-                  console.log('[Terminal] Actual character dimensions:', {
-                    charWidth: actualCharWidth,
-                    lineHeight: actualLineHeight
-                  });
-
                   // 使用实际尺寸重新计算
                   const rect = terminalRef.current.getBoundingClientRect();
                   const availableWidth = rect.width - 2;
                   const newCols = Math.floor(availableWidth / actualCharWidth);
-
-                  console.log('[Terminal] Recalculating with actual dimensions:', {
-                    availableWidth,
-                    actualCharWidth,
-                    newCols,
-                    currentCols: xtermRef.current.cols
-                  });
 
                   if (newCols > xtermRef.current.cols) {
                     xtermRef.current.resize(newCols, xtermRef.current.rows);
@@ -279,7 +233,6 @@ export const Terminal: React.FC<TerminalProps> = ({
 
         // 如果没有有效的 projectPath,跳过创建终端会话
         if (!projectPath || projectPath.trim() === '') {
-          console.log('[Terminal] Skipping session creation - no project path');
           if (xtermRef.current) {
             xtermRef.current.write('\r\n\x1b[33mNo project directory selected. Please select a project to use the terminal.\x1b[0m\r\n');
           }
@@ -314,8 +267,6 @@ export const Terminal: React.FC<TerminalProps> = ({
             });
           }
         });
-
-        console.log('[Terminal] Initialized with session:', newSessionId);
 
       } catch (error) {
         console.error('[Terminal] Failed to initialize:', error);

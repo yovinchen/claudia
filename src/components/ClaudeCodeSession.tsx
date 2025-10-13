@@ -439,17 +439,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   });
 
   // Debug logging
-  useEffect(() => {
-    console.log('[ClaudeCodeSession] State update:', {
-      projectPath,
-      session,
-      extractedSessionInfo,
-      effectiveSession,
-      messagesCount: messages.length,
-      isLoading
-    });
-  }, [projectPath, session, extractedSessionInfo, effectiveSession, messages.length, isLoading]);
-
   // Load session history if resuming
   useEffect(() => {
     if (session) {
@@ -479,7 +468,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     if (tabId && projectPath && !session) {
       // Only update for new sessions (not resumed sessions)
       // This ensures the path is saved when user selects/enters it
-      console.log('[ClaudeCodeSession] Syncing projectPath to tab:', { tabId, projectPath });
       updateTab(tabId, {
         initialProjectPath: projectPath
       });
@@ -571,7 +559,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         
         if (activeSession) {
           // Session is still active, reconnect to its stream
-          console.log('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
           // IMPORTANT: Set claudeSessionId before reconnecting
           setClaudeSessionId(session.id);
           
@@ -588,11 +575,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const reconnectToSession = async (sessionId: string) => {
-    console.log('[ClaudeCodeSession] Reconnecting to session:', sessionId);
     
     // Prevent duplicate listeners
     if (isListeningRef.current) {
-      console.log('[ClaudeCodeSession] Already listening to session, skipping reconnect');
       return;
     }
     
@@ -609,7 +594,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     // Set up session-specific listeners
     const outputUnlisten = await listen<string>(`claude-output:${sessionId}`, async (event) => {
       try {
-        console.log('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
         
         if (!isMountedRef.current) return;
         
@@ -632,7 +616,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     });
 
     const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
-      console.log('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
       if (isMountedRef.current) {
         setIsLoading(false);
         hasActiveSessionRef.current = false;
@@ -668,7 +651,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus" | "opus-plan") => {
-    console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
       setError(t('app.selectProjectFirst'));
@@ -718,13 +700,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         //     generic ones to prevent duplicate handling.
         // --------------------------------------------------------------------
 
-        console.log('[ClaudeCodeSession] Setting up generic event listeners first');
 
         let currentSessionId: string | null = claudeSessionId || effectiveSession?.id || null;
 
         // Helper to attach session-specific listeners **once we are sure**
         const attachSessionSpecificListeners = async (sid: string) => {
-          console.log('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
 
           const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, (evt) => {
             handleStreamMessage(evt.payload);
@@ -736,7 +716,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           });
 
           const specificCompleteUnlisten = await listen<boolean>(`claude-complete:${sid}`, (evt) => {
-            console.log('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
             processComplete(evt.payload);
           });
 
@@ -754,7 +733,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const msg = JSON.parse(event.payload) as ClaudeStreamMessage;
             if (msg.type === 'system' && msg.subtype === 'init' && msg.session_id) {
               if (!currentSessionId || currentSessionId !== msg.session_id) {
-                console.log('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
                 currentSessionId = msg.session_id;
                 setClaudeSessionId(msg.session_id);
 
@@ -962,7 +940,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
 
         const genericCompleteUnlisten = await listen<boolean>('claude-complete', (evt) => {
-          console.log('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
           processComplete(evt.payload);
         });
 
@@ -1029,12 +1006,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
-          console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
           trackEvent.sessionResumed(effectiveSession.id);
           trackEvent.modelSelected(model);
           await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
         } else {
-          console.log('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
           trackEvent.sessionCreated(model, 'prompt_input');
           trackEvent.modelSelected(model);
@@ -1329,7 +1304,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
   
   const handlePreviewUrlChange = (url: string) => {
-    console.log('[ClaudeCodeSession] Preview URL changed to:', url);
     openLayoutPreview(url);
   };
 
@@ -1338,7 +1312,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     isMountedRef.current = true;
     
     return () => {
-      console.log('[ClaudeCodeSession] Component unmounting, cleaning up listeners');
       isMountedRef.current = false;
       isListeningRef.current = false;
       
