@@ -43,9 +43,12 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
 
-  // Always start with a fresh CC Projects tab
+  // Ensure there is always at least one projects tab, but avoid clobbering existing tabs
   useEffect(() => {
-    // Create default projects tab
+    if (tabs.length > 0) {
+      return;
+    }
+
     const defaultTab: Tab = {
       id: generateTabId(),
       type: 'projects',
@@ -53,12 +56,44 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'idle',
       hasUnsavedChanges: false,
       order: 0,
+      icon: 'folder',
       createdAt: new Date(),
       updatedAt: new Date()
     };
+
     setTabs([defaultTab]);
     setActiveTabId(defaultTab.id);
-  }, [t]);
+  }, [tabs.length, t]);
+
+  // Keep the projects tab title in sync with the active locale without resetting other tabs
+  useEffect(() => {
+    if (tabs.length === 0) {
+      return;
+    }
+
+    const translatedTitle = t('ccProjects');
+    setTabs(prevTabs => {
+      let hasChanges = false;
+      const updatedTabs = prevTabs.map(tab => {
+        if (tab.type === 'projects' && tab.title !== translatedTitle) {
+          hasChanges = true;
+          return {
+            ...tab,
+            title: translatedTitle
+          };
+        }
+        return tab;
+      });
+      return hasChanges ? updatedTabs : prevTabs;
+    });
+  }, [t, tabs.length]);
+
+  // Guard against an empty activeTabId when tabs exist
+  useEffect(() => {
+    if (!activeTabId && tabs.length > 0) {
+      setActiveTabId(tabs[0].id);
+    }
+  }, [activeTabId, tabs]);
 
   // Tab persistence disabled - no longer saving to localStorage
   // useEffect(() => {

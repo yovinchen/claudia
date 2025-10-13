@@ -176,6 +176,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   // Listen for keyboard shortcut events
   useEffect(() => {
     const handleCreateTab = () => {
+      if (!canAddTab()) {
+        return;
+      }
       createChatTab();
       trackEvent.tabCreated('chat');
     };
@@ -246,7 +249,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
       window.removeEventListener('switch-to-tab-by-index', handleTabByIndex as EventListener);
       window.removeEventListener('open-session-tab', handleOpenSessionTab as EventListener);
     };
-  }, [tabs, activeTabId, createChatTab, closeTab, switchToTab, updateTab, canAddTab]);
+  }, [tabs, activeTabId, createChatTab, closeTab, switchToTab, updateTab, canAddTab, trackEvent]);
 
   // Check scroll buttons visibility
   const checkScrollButtons = () => {

@@ -277,8 +277,17 @@ export const Terminal: React.FC<TerminalProps> = ({
           resizeTerminal();
         }, 150);
 
+        // 如果没有有效的 projectPath,跳过创建终端会话
+        if (!projectPath || projectPath.trim() === '') {
+          console.log('[Terminal] Skipping session creation - no project path');
+          if (xtermRef.current) {
+            xtermRef.current.write('\r\n\x1b[33mNo project directory selected. Please select a project to use the terminal.\x1b[0m\r\n');
+          }
+          return;
+        }
+
         // 创建终端会话
-        const newSessionId = await api.createTerminalSession(projectPath || process.cwd());
+        const newSessionId = await api.createTerminalSession(projectPath);
 
         if (!isMounted) {
           await api.closeTerminalSession(newSessionId);

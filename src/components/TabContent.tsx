@@ -3,12 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTabState } from '@/hooks/useTabState';
 import { useScreenTracking } from '@/hooks/useAnalytics';
 import { Tab } from '@/contexts/TabContext';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
-import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Lazy load heavy components
@@ -162,36 +161,20 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
+                      className="space-y-6"
                     >
-                      {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
-                        <Button
-                          onClick={handleNewSession}
-                          size="default"
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          {t('newClaudeCodeSession')}
-                        </Button>
-                      </motion.div>
-
-                      {/* Running Claude Sessions */}
+                      {/* Running Claude Sessions - moved before project list */}
                       <RunningClaudeSessions />
 
-                      {/* Project list */}
+                      {/* Project list - now includes new session button and search */}
                       {projects.length > 0 ? (
                         <ProjectList
                           projects={projects}
                           onProjectClick={handleProjectClick}
                           onProjectSettings={(project) => {
-                            // Project settings functionality can be added here if needed
                             console.log('Project settings clicked for:', project);
                           }}
+                          onNewSession={handleNewSession}
                           loading={loading}
                           className="animate-fade-in"
                         />
@@ -215,6 +198,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
           <ClaudeCodeSession
             session={tab.sessionData} // Pass the full session object if available
             initialProjectPath={tab.initialProjectPath || tab.sessionId}
+            tabId={tab.id} // Pass tabId for state synchronization
             onBack={() => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
@@ -294,24 +278,24 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
     }
   };
 
+  // Only render content when the tab is active or was previously active (to keep state)
+  // This prevents unnecessary unmounting/remounting
+  const shouldRenderContent = isActive;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
-      className={`h-full w-full ${panelVisibilityClass}`}
-    >
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        }
-      >
-        {renderContent()}
-      </Suspense>
-    </motion.div>
+    <div className={`h-full w-full ${panelVisibilityClass}`}>
+      {shouldRenderContent && (
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          {renderContent()}
+        </Suspense>
+      )}
+    </div>
   );
 };
 
@@ -319,7 +303,7 @@ export const TabContent: React.FC = () => {
   const { t } = useTranslation();
   const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   const [hasInitialized, setHasInitialized] = React.useState(false);
-  
+
   // Debug: Monitor activeTabId changes
   useEffect(() => {
   }, [activeTabId, tabs]);
@@ -428,15 +412,13 @@ export const TabContent: React.FC = () => {
   
   return (
     <div className="flex-1 h-full relative">
-      <AnimatePresence mode="wait">
-        {tabs.map((tab) => (
-          <TabPanel
-            key={tab.id}
-            tab={tab}
-            isActive={tab.id === activeTabId}
-          />
-        ))}
-      </AnimatePresence>
+      {tabs.map((tab) => (
+        <TabPanel
+          key={tab.id}
+          tab={tab}
+          isActive={tab.id === activeTabId}
+        />
+      ))}
       
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">

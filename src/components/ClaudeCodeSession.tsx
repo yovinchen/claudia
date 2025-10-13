@@ -32,6 +32,7 @@ import { Popover } from "@/components/ui/popover";
 import { useTranslation } from "react-i18next";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTabState } from "@/hooks/useTabState";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
@@ -78,6 +79,10 @@ interface ClaudeCodeSessionProps {
    */
   initialProjectPath?: string;
   /**
+   * Tab ID (for syncing state back to tab)
+   */
+  tabId?: string;
+  /**
    * Callback to go back
    */
   onBack: () => void;
@@ -104,18 +109,20 @@ interface ClaudeCodeSessionProps {
 export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
   initialProjectPath = "",
+  tabId,
   onBack,
   onProjectSettings,
   className,
   onStreamingChange,
 }) => {
   const { t } = useTranslation();
+  const { updateTab } = useTabState();
   const layoutManager = useLayoutManager(initialProjectPath || session?.project_path);
-  const { 
-    layout, 
-    breakpoints, 
-    toggleFileExplorer, 
-    toggleGitPanel, 
+  const {
+    layout,
+    breakpoints,
+    toggleFileExplorer,
+    toggleGitPanel,
     toggleTimeline,
     setPanelWidth,
     setSplitPosition: setLayoutSplitPosition,
@@ -128,7 +135,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     closeTerminal,
     toggleTerminalMaximize
   } = layoutManager;
-  
+
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -466,7 +473,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     onStreamingChange?.(isLoading, claudeSessionId);
   }, [isLoading, claudeSessionId, onStreamingChange]);
-  
+
+  // Sync projectPath to tab when it changes (for persistence)
+  useEffect(() => {
+    if (tabId && projectPath && !session) {
+      // Only update for new sessions (not resumed sessions)
+      // This ensures the path is saved when user selects/enters it
+      console.log('[ClaudeCodeSession] Syncing projectPath to tab:', { tabId, projectPath });
+      updateTab(tabId, {
+        initialProjectPath: projectPath
+      });
+    }
+  }, [projectPath, tabId, session, updateTab]);
+
   // 滚动到顶部
   const scrollToTop = useCallback(() => {
     if (parentRef.current) {

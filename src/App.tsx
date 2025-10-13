@@ -58,7 +58,14 @@ type View =
 function AppContent() {
   const { t } = useTranslation();
   const [view, setView] = useState<View>("welcome");
-  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
+  const {
+    createClaudeMdTab,
+    createSettingsTab,
+    createUsageTab,
+    createMCPTab,
+    createChatTab,
+    canAddTab
+  } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -252,9 +259,18 @@ function AppContent() {
   /**
    * Opens a new Claude Code session in the interactive UI
    */
-  const handleNewSession = async () => {
-    handleViewChange("tabs");
-    // The tab system will handle creating a new chat tab
+  const handleNewSession = () => {
+    if (!canAddTab()) {
+      return;
+    }
+
+    const newTabId = createChatTab();
+
+    if (view !== "tabs") {
+      setView("tabs");
+    } else {
+      window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: newTabId } }));
+    }
   };
 
   /**
