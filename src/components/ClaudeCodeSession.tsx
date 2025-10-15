@@ -615,7 +615,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     });
 
-    const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
+    const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async () => {
       if (isMountedRef.current) {
         setIsLoading(false);
         hasActiveSessionRef.current = false;
