@@ -354,6 +354,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     queuedPromptsRef.current = queuedPrompts;
   }, [queuedPrompts]);
 
+  // 当父组件通过智能会话或外部导航注入项目路径时，确保初次渲染即可进入工作区而非停留在创建页
+  useEffect(() => {
+    if (!session && initialProjectPath && projectPath.trim().length === 0) {
+      setProjectPath(initialProjectPath);
+      setError(null);
+    }
+  }, [initialProjectPath, projectPath, session]);
+
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
     if (session) return session;
@@ -473,6 +481,22 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       });
     }
   }, [projectPath, tabId, session, updateTab]);
+
+  // Auto-start file monitoring when project path is available
+  useEffect(() => {
+    if (projectPath && !isFileWatching) {
+      // Auto-start file monitoring for smart sessions or when project path is set
+      const timeoutId = setTimeout(async () => {
+        try {
+          await startFileWatching();
+        } catch (error) {
+          console.warn('[ClaudeCodeSession] Failed to auto-start file monitoring:', error);
+        }
+      }, 500); // Small delay to ensure component is fully mounted
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [projectPath, isFileWatching, startFileWatching]);
 
   // 滚动到顶部
   const scrollToTop = useCallback(() => {
@@ -1527,7 +1551,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     </div>
   );
 
-  const projectPathInput = !session && (
+  const projectPathInput = !session && !projectPath && (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

@@ -1,16 +1,19 @@
 import { motion } from "framer-motion";
-import { Bot, FolderCode, BarChart, ServerCog, FileText, Settings, Network, Router } from "lucide-react";
+import { Bot, FolderCode, BarChart, ServerCog, FileText, Settings, Network, Router, Zap, FolderOpen, Loader2 } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Button } from "@/components/ui/button";
 import { ClaudiaLogoMinimal } from "@/components/ClaudiaLogo";
+import { useState } from "react";
 
 interface WelcomePageProps {
   onNavigate: (view: string) => void;
   onNewSession: () => void;
+  onSmartQuickStart?: () => void;
 }
 
-export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
+export function WelcomePage({ onNavigate, onNewSession, onSmartQuickStart }: WelcomePageProps) {
   const { t } = useTranslation();
+  const [isCreatingSmartSession, setIsCreatingSmartSession] = useState(false);
 
   const mainFeatures = [
     {
@@ -96,6 +99,17 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
 
   const handleButtonClick = () => {
     onNewSession();
+  };
+
+  const handleSmartQuickStartClick = async () => {
+    if (!onSmartQuickStart) return;
+    
+    setIsCreatingSmartSession(true);
+    try {
+      await onSmartQuickStart();
+    } finally {
+      setIsCreatingSmartSession(false);
+    }
   };
 
   return (
@@ -191,7 +205,7 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
           ))}
         </div>
 
-        {/* Quick Action Button */}
+        {/* Quick Action Buttons */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -201,21 +215,47 @@ export function WelcomePage({ onNavigate, onNewSession }: WelcomePageProps) {
             type: "spring",
             stiffness: 100
           }}
-          className="flex justify-center"
+          className="flex justify-center gap-4"
         >
+          {/* 智能快速开始 - 新功能 */}
+          {onSmartQuickStart && (
+            <Button
+              size="lg"
+              className="relative px-8 py-6 text-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 rounded-2xl group overflow-hidden"
+              onClick={handleSmartQuickStartClick}
+              disabled={isCreatingSmartSession}
+            >
+              {/* Shimmer effect on button */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+              </div>
+              
+              <span className="relative z-10 flex items-center gap-2">
+                {isCreatingSmartSession ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t("welcome.creatingSmartSession")}
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    {t("welcome.smartQuickStart")}
+                  </>
+                )}
+              </span>
+            </Button>
+          )}
+
+          {/* 传统快速开始 - 保持原功能 */}
           <Button
             size="lg"
-            className="relative px-10 py-7 text-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 rounded-2xl group overflow-hidden"
+            variant="outline"
+            className="relative px-8 py-6 text-lg font-semibold border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-300 hover:scale-105 rounded-2xl group"
             onClick={handleButtonClick}
           >
-            {/* Shimmer effect on button */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-            </div>
-            
             <span className="relative z-10 flex items-center gap-2">
-              <span className="text-2xl">+</span>
-              {t("welcome.quickStartSession")}
+              <FolderOpen className="w-5 h-5" />
+              {t("welcome.choosePathStart")}
             </span>
           </Button>
         </motion.div>

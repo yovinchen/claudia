@@ -64,7 +64,9 @@ function AppContent() {
     createUsageTab,
     createMCPTab,
     createChatTab,
-    canAddTab
+    canAddTab,
+    updateTab,
+    switchToTab
   } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -274,6 +276,64 @@ function AppContent() {
   };
 
   /**
+   * Creates a smart quick start session and opens it in a new tab
+   * @author yovinchen
+   */
+  const handleSmartQuickStart = async () => {
+    try {
+      if (!canAddTab()) {
+        setToast({ message: t('maximumTabsReached'), type: "error" });
+        return;
+      }
+
+      // Create smart session
+      const smartSession = await api.createSmartQuickStartSession();
+      
+      // Create a new tab for the smart session
+      const newTabId = createChatTab();
+      
+      // 直接更新新建标签的会话上下文，避免依赖事件时序
+      updateTab(newTabId, {
+        type: 'chat',
+        title: smartSession.display_name || 'Smart Session',
+        initialProjectPath: smartSession.project_path,
+        sessionData: null,
+        status: 'active'
+      });
+
+      // 切换到标签页视图并激活新标签
+      if (view !== "tabs") {
+        setView("tabs");
+      }
+      switchToTab(newTabId);
+
+      // Show success message
+      setToast({ 
+        message: t('smartSessionCreated', { 
+          name: smartSession.display_name,
+          path: smartSession.project_path 
+        }), 
+        type: "success" 
+      });
+
+      trackEvent.journeyMilestone({
+        journey_stage: 'smart_session',
+        milestone_reached: 'smart_session_created',
+        time_to_milestone_ms: Date.now() - performance.timing.navigationStart
+      });
+
+    } catch (error) {
+      console.error('Failed to create smart session:', error);
+      setToast({ 
+        message: t('failedToCreateSmartSession', { 
+          error: error instanceof Error ? error.message : String(error) 
+        }), 
+        type: "error" 
+      });
+    }
+  };
+
+  /**
    * Returns to project list view
    */
   const handleBack = () => {
@@ -321,6 +381,7 @@ function AppContent() {
           <WelcomePage 
             onNavigate={handleViewChange}
             onNewSession={handleNewSession}
+            onSmartQuickStart={handleSmartQuickStart}
           />
         );
 

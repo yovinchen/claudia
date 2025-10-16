@@ -141,6 +141,9 @@
     "settings": "Settings",
     "settingsDesc": "App settings and configuration",
     "quickStartSession": "Quick Start New Session",
+    "smartQuickStart": "Smart Quick Start",
+    "choosePathStart": "Choose Path & Start",
+    "creatingSmartSession": "Creating smart session...",
     "ccrRouter": "CCR Router",
     "ccrRouterDesc": "Claude Code Router configuration management"
   },
@@ -763,6 +766,8 @@
     "claudeCodeNotFound": "Claude Code not found",
     "selectClaudeInstallation": "Select Claude Installation",
     "installClaudeCode": "Install Claude Code",
+    "smartSessionCreated": "Smart session '{{name}}' created at: {{path}}",
+    "failedToCreateSmartSession": "Failed to create smart session: {{error}}",
     "noTabsOpen": "No tabs open",
     "clickPlusToStartChat": "Click the + button to start a new chat",
     "noAgentRunIdSpecified": "No agent run ID specified",

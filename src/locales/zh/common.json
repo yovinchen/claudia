@@ -136,6 +136,9 @@
     "settings": "设置",
     "settingsDesc": "应用设置和配置",
     "quickStartSession": "快速开始新会话",
+    "smartQuickStart": "智能快速开始",
+    "choosePathStart": "选择路径开始",
+    "creatingSmartSession": "正在创建智能会话...",
     "ccrRouter": "CCR 路由",
     "ccrRouterDesc": "Claude Code Router 配置管理"
   },
@@ -706,6 +709,8 @@
     "claudeCodeNotFound": "未找到 Claude Code",
     "selectClaudeInstallation": "选择 Claude 安装",
     "installClaudeCode": "安装 Claude Code",
+    "smartSessionCreated": "智能会话 '{{name}}' 已创建在：{{path}}",
+    "failedToCreateSmartSession": "创建智能会话失败：{{error}}",
     "session": "会话",
     "letClaudeDecide": "让 Claude 决定",
     "basicReasoning": "基础推理",

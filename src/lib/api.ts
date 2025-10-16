@@ -2741,6 +2741,96 @@ export const api = {
       console.error("Failed to update model mapping:", error);
       throw error;
     }
+  },
+
+  // ============= Smart Sessions Management =============
+
+  /**
+   * 创建智能快速开始会话
+   * @author yovinchen
+   * @param sessionName - 可选的会话名称
+   * @returns Promise resolving to smart session result
+   */
+  async createSmartQuickStartSession(sessionName?: string): Promise<SmartSessionResult> {
+    try {
+      return await invoke<SmartSessionResult>("create_smart_quick_start_session", { sessionName });
+    } catch (error) {
+      console.error("Failed to create smart quick start session:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 获取智能会话配置
+   * @author yovinchen
+   * @returns Promise resolving to smart session configuration
+   */
+  async getSmartSessionConfig(): Promise<SmartSessionConfig> {
+    try {
+      return await invoke<SmartSessionConfig>("get_smart_session_config");
+    } catch (error) {
+      console.error("Failed to get smart session config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 更新智能会话配置
+   * @author yovinchen
+   * @param config - 智能会话配置
+   * @returns Promise resolving when configuration is updated
+   */
+  async updateSmartSessionConfig(config: SmartSessionConfig): Promise<void> {
+    try {
+      await invoke<void>("update_smart_session_config", { config });
+    } catch (error) {
+      console.error("Failed to update smart session config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 列出所有智能会话
+   * @author yovinchen
+   * @returns Promise resolving to array of smart sessions
+   */
+  async listSmartSessions(): Promise<SmartSession[]> {
+    try {
+      return await invoke<SmartSession[]>("list_smart_sessions_command");
+    } catch (error) {
+      console.error("Failed to list smart sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 切换智能会话模式
+   * @author yovinchen
+   * @param enabled - 是否启用智能会话
+   * @returns Promise resolving when mode is toggled
+   */
+  async toggleSmartSessionMode(enabled: boolean): Promise<void> {
+    try {
+      await invoke<void>("toggle_smart_session_mode", { enabled });
+    } catch (error) {
+      console.error("Failed to toggle smart session mode:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 清理过期的智能会话
+   * @author yovinchen
+   * @param days - 清理多少天前的会话
+   * @returns Promise resolving to number of cleaned sessions
+   */
+  async cleanupOldSmartSessions(days: number): Promise<number> {
+    try {
+      return await invoke<number>("cleanup_old_smart_sessions_command", { days });
+    } catch (error) {
+      console.error("Failed to cleanup old smart sessions:", error);
+      throw error;
+    }
   }
 };
 
@@ -2867,4 +2957,62 @@ export interface ModelMapping {
   alias: string;
   model_name: string;
   updated_at: string;
+}
+
+// ============= Smart Sessions Types =============
+
+/** 智能会话结果 */
+export interface SmartSessionResult {
+  /** 会话ID */
+  session_id: string;
+  /** 项目路径 */
+  project_path: string;
+  /** 显示名称 */
+  display_name: string;
+  /** 创建时间 */
+  created_at: string;
+  /** 会话类型 */
+  session_type: string;
+}
+
+/** 智能会话配置 */
+export interface SmartSessionConfig {
+  /** 是否启用智能会话 */
+  enabled: boolean;
+  /** 基础目录 */
+  base_directory: string;
+  /** 命名模式 */
+  naming_pattern: string;
+  /** 是否启用自动清理 */
+  auto_cleanup_enabled: boolean;
+  /** 自动清理天数 */
+  auto_cleanup_days: number;
+  /** 模板文件 */
+  template_files: TemplateFile[];
+}
+
+/** 模板文件定义 */
+export interface TemplateFile {
+  /** 文件路径 */
+  path: string;
+  /** 文件内容 */
+  content: string;
+  /** 是否可执行 */
+  executable: boolean;
+}
+
+/** 智能会话记录 */
+export interface SmartSession {
+  /** 会话ID */
+  id: string;
+  /** 显示名称 */
+  display_name: string;
+  /** 项目路径 */
+  project_path: string;
+  /** 创建时间 */
+  created_at: string;
+  /** 最后访问时间 */
+  last_accessed: string;
+  /** 会话类型 */
+  session_type: string;
 }

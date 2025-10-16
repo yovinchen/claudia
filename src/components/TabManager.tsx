@@ -221,16 +221,16 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
       if (session && canAddTab()) {
         // Create a new chat tab with the session data
         const tabId = createChatTab();
-        // Update the tab with session data
-        setTimeout(() => {
-          updateTab(tabId, {
-            type: 'chat',
-            title: session.project_path.split('/').pop() || 'Session',
-            sessionId: session.id,
-            sessionData: session,
-            initialProjectPath: projectPath || session.project_path,
-          });
-        }, 100);
+        // Update the tab with session data immediately
+        updateTab(tabId, {
+          type: 'chat',
+          title: session.project_path.split('/').pop() || 'Session',
+          sessionId: session.id,
+          sessionData: session,
+          initialProjectPath: projectPath || session.project_path,
+        });
+        // Switch to the new tab immediately
+        switchToTab(tabId);
       }
     };
 

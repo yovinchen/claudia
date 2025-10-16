@@ -313,7 +313,7 @@ export interface MemoryWarningProperties {
 
 // User Journey properties
 export interface UserJourneyProperties {
-  journey_stage: 'onboarding' | 'first_chat' | 'first_agent' | 'power_user';
+  journey_stage: 'onboarding' | 'first_chat' | 'first_agent' | 'power_user' | 'smart_session';
   milestone_reached?: string;
   time_to_milestone_ms?: number;
 }

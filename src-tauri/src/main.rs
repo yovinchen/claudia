@@ -86,6 +86,10 @@ use commands::ccr::{
     stop_ccr_service, restart_ccr_service, open_ccr_ui, get_ccr_config_path,
 };
 use commands::system::flush_dns;
+use commands::smart_sessions::{
+    create_smart_quick_start_session, get_smart_session_config, update_smart_session_config,
+    list_smart_sessions_command, toggle_smart_session_mode, cleanup_old_smart_sessions_command,
+};
 use process::ProcessRegistryState;
 use file_watcher::FileWatcherState;
 use std::sync::Mutex;
@@ -424,6 +428,14 @@ fn main() {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
+            
+            // Smart Sessions Management
+            create_smart_quick_start_session,
+            get_smart_session_config,
+            update_smart_session_config,
+            list_smart_sessions_command,
+            toggle_smart_session_mode,
+            cleanup_old_smart_sessions_command,
             
             // Slash Commands
             commands::slash_commands::slash_commands_list,

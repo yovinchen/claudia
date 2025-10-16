@@ -196,6 +196,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       case 'chat':
         return (
           <ClaudeCodeSession
+            key={`${tab.id}-${tab.initialProjectPath || 'no-path'}`} // Force re-render when path changes
             session={tab.sessionData} // Pass the full session object if available
             initialProjectPath={tab.initialProjectPath || tab.sessionId}
             tabId={tab.id} // Pass tabId for state synchronization
@@ -392,6 +393,24 @@ export const TabContent: React.FC = () => {
       }
     };
 
+    const handleCreateSmartSessionTab = (event: CustomEvent) => {
+      const { tabId, sessionData } = event.detail;
+      console.log('[TabContent] Handling create-smart-session-tab:', { tabId, sessionData });
+      
+      // Update the existing tab with smart session data and switch immediately
+      updateTab(tabId, {
+        type: 'chat',
+        title: sessionData.display_name || 'Smart Session',
+        initialProjectPath: sessionData.project_path,
+        sessionData: null, // No existing session, this is a new session workspace
+      });
+      
+      // Force immediate tab switch without delay
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId } }));
+      }, 0);
+    };
+
     window.addEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
     window.addEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
     window.addEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
@@ -399,6 +418,7 @@ export const TabContent: React.FC = () => {
     window.addEventListener('open-import-agent-tab', handleOpenImportAgentTab);
     window.addEventListener('close-tab', handleCloseTab as EventListener);
     window.addEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
+    window.addEventListener('create-smart-session-tab', handleCreateSmartSessionTab as EventListener);
     return () => {
       window.removeEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
       window.removeEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
@@ -407,6 +427,7 @@ export const TabContent: React.FC = () => {
       window.removeEventListener('open-import-agent-tab', handleOpenImportAgentTab);
       window.removeEventListener('close-tab', handleCloseTab as EventListener);
       window.removeEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
+      window.removeEventListener('create-smart-session-tab', handleCreateSmartSessionTab as EventListener);
     };
   }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
   
