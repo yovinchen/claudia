@@ -1,16 +1,16 @@
+use anyhow::Result;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use reqwest::Client;
 use tauri::command;
-use anyhow::Result;
 
 /// PackyCode 节点类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeType {
-    Direct,     // 直连节点
-    Backup,     // 备用节点
-    Emergency,  // 紧急节点（非紧急情况不要使用）
+    Direct,    // 直连节点
+    Backup,    // 备用节点
+    Emergency, // 紧急节点（非紧急情况不要使用）
 }
 
 /// PackyCode 节点信息
@@ -124,17 +124,17 @@ pub fn get_all_nodes() -> Vec<PackycodeNode> {
 /// 测试单个节点速度（仅测试网络延时，不需要认证）
 async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
     let client = Client::builder()
-        .timeout(Duration::from_secs(3))  // 减少超时时间
-        .danger_accept_invalid_certs(true)  // 接受自签名证书
+        .timeout(Duration::from_secs(3)) // 减少超时时间
+        .danger_accept_invalid_certs(true) // 接受自签名证书
         .build()
         .unwrap_or_else(|_| Client::new());
-    
+
     let start_time = Instant::now();
-    
+
     // 使用 GET 请求到根路径，这是最简单的 ping 测试
     // 不需要 token，只测试网络延迟
     let url = format!("{}/", node.url.trim_end_matches('/'));
-    
+
     match client
         .get(&url)
         .timeout(Duration::from_secs(3))
@@ -143,11 +143,11 @@ async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
     {
         Ok(_response) => {
             let response_time = start_time.elapsed().as_millis() as u64;
-            
+
             // 只要能连接到服务器就算成功（不管状态码）
             // 因为我们只是测试延迟，不是测试 API 功能
-            let success = response_time < 3000;  // 小于 3 秒就算成功
-            
+            let success = response_time < 3000; // 小于 3 秒就算成功
+
             NodeSpeedTestResult {
                 node: PackycodeNode {
                     response_time: Some(response_time),
@@ -156,12 +156,16 @@ async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
                 },
                 response_time,
                 success,
-                error: if success { None } else { Some("响应时间过长".to_string()) },
+                error: if success {
+                    None
+                } else {
+                    Some("响应时间过长".to_string())
+                },
             }
         }
         Err(e) => {
             let response_time = start_time.elapsed().as_millis() as u64;
-            
+
             // 如果是超时错误，特别标记
             let error_msg = if e.is_timeout() {
                 "连接超时".to_string()
@@ -170,7 +174,7 @@ async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
             } else {
                 format!("网络错误: {}", e)
             };
-            
+
             NodeSpeedTestResult {
                 node: PackycodeNode {
                     response_time: Some(response_time),
@@ -190,33 +194,29 @@ async fn test_node_speed(node: &PackycodeNode) -> NodeSpeedTestResult {
 pub async fn test_all_packycode_nodes() -> Result<Vec<NodeSpeedTestResult>, String> {
     let nodes = get_all_nodes();
     let mut results = Vec::new();
-    
+
     // 并发测试所有节点
-    let futures: Vec<_> = nodes
-        .iter()
-        .map(|node| test_node_speed(node))
-        .collect();
-    
+    let futures: Vec<_> = nodes.iter().map(|node| test_node_speed(node)).collect();
+
     // 等待所有测试完成
     for (i, future) in futures.into_iter().enumerate() {
         let result = future.await;
-        log::info!("节点 {} 测速结果: {}ms, 成功: {}", 
-            nodes[i].name, 
-            result.response_time, 
+        log::info!(
+            "节点 {} 测速结果: {}ms, 成功: {}",
+            nodes[i].name,
+            result.response_time,
             result.success
         );
         results.push(result);
     }
-    
+
     // 按响应时间排序（成功的节点优先，然后按延迟排序）
-    results.sort_by(|a, b| {
-        match (a.success, b.success) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.response_time.cmp(&b.response_time),
-        }
+    results.sort_by(|a, b| match (a.success, b.success) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.response_time.cmp(&b.response_time),
     });
-    
+
     Ok(results)
 }
 
@@ -225,41 +225,43 @@ pub async fn test_all_packycode_nodes() -> Result<Vec<NodeSpeedTestResult>, Stri
 pub async fn auto_select_best_node() -> Result<PackycodeNode, String> {
     let nodes = get_all_nodes();
     let mut best_node: Option<(PackycodeNode, u64)> = None;
-    
+
     // 只测试直连和备用节点，过滤掉紧急节点
     let test_nodes: Vec<_> = nodes
         .into_iter()
         .filter(|n| matches!(n.node_type, NodeType::Direct | NodeType::Backup))
         .collect();
-    
+
     log::info!("开始测试 {} 个节点...", test_nodes.len());
-    
+
     // 并发测试所有节点
     let futures: Vec<_> = test_nodes
         .iter()
         .map(|node| test_node_speed(node))
         .collect();
-    
+
     // 收集结果并找出最佳节点
     for (i, future) in futures.into_iter().enumerate() {
         let result = future.await;
-        
-        log::info!("节点 {} - 延迟: {}ms, 可用: {}", 
-            test_nodes[i].name, 
-            result.response_time, 
+
+        log::info!(
+            "节点 {} - 延迟: {}ms, 可用: {}",
+            test_nodes[i].name,
+            result.response_time,
             result.success
         );
-        
+
         if result.success {
             match &best_node {
                 None => {
                     log::info!("初始最佳节点: {}", result.node.name);
                     best_node = Some((result.node, result.response_time));
-                },
+                }
                 Some((_, best_time)) if result.response_time < *best_time => {
-                    log::info!("发现更快节点: {} ({}ms < {}ms)", 
-                        result.node.name, 
-                        result.response_time, 
+                    log::info!(
+                        "发现更快节点: {} ({}ms < {}ms)",
+                        result.node.name,
+                        result.response_time,
                         best_time
                     );
                     best_node = Some((result.node, result.response_time));
@@ -268,12 +270,12 @@ pub async fn auto_select_best_node() -> Result<PackycodeNode, String> {
             }
         }
     }
-    
+
     match best_node {
         Some((node, time)) => {
             log::info!("最佳节点选择: {} (延迟: {}ms)", node.name, time);
             Ok(node)
-        },
+        }
         None => {
             log::error!("没有找到可用的节点");
             Err("没有找到可用的节点".to_string())

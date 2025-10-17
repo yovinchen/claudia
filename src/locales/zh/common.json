@@ -516,7 +516,42 @@
     "path": "路径",
     "source": "来源",
     "version": "版本",
-    "versionUnknown": "版本未知"
+    "versionUnknown": "版本未知",
+    "modelMappings": {
+      "title": "模型别名映射",
+      "description": "配置别名（sonnet、opus、haiku）对应的实际模型版本",
+      "loadFailed": "加载模型映射失败",
+      "saved": "模型映射已保存",
+      "saveFailed": "保存模型映射失败",
+      "emptyTitle": "暂无模型映射配置",
+      "emptySubtitle": "数据库初始化可能未完成，请尝试重启应用",
+      "changedNotice": "模型映射已修改，点击保存以应用更改",
+      "note": "说明：",
+      "noteContent": "Agent 执行时会根据此配置解析模型别名，例如 sonnet → claude-sonnet-4-20250514。",
+      "aliasDescriptions": {
+        "sonnet": "平衡性能与成本的主力模型",
+        "opus": "最强大的旗舰模型，适合复杂任务",
+        "haiku": "快速响应的轻量级模型"
+      }
+    }
+  },
+  "ccr": {
+    "loadStatusFailed": "加载 CCR 服务状态失败：{{error}}",
+    "startFailed": "启动 CCR 服务失败：{{error}}",
+    "stopFailed": "停止 CCR 服务失败：{{error}}",
+    "restartFailed": "重启 CCR 服务失败：{{error}}",
+    "serviceStarting": "检测到服务未运行，正在启动...",
+    "serviceStartFailed": "服务启动失败",
+    "openingUI": "正在打开 CCR UI...",
+    "openUIFailed": "打开 CCR UI 失败：{{error}}",
+    "openingAdmin": "正在打开 CCR 管理界面...",
+    "openAdminFailed": "打开管理界面失败：{{error}}"
+  },
+  "claudeSession": {
+    "scrollToTop": "滚动到顶部",
+    "scrollToBottom": "滚动到底部",
+    "startFileWatch": "启动文件监控",
+    "stopFileWatch": "停止文件监控"
   },
   "mcp": {
     "title": "MCP 服务器管理",
@@ -709,8 +744,11 @@
     "claudeCodeNotFound": "未找到 Claude Code",
     "selectClaudeInstallation": "选择 Claude 安装",
     "installClaudeCode": "安装 Claude Code",
-    "smartSessionCreated": "智能会话 '{{name}}' 已创建在：{{path}}",
+    "smartSessionCreated": "智能会话「{{name}}」已就绪。",
+    "smartSessionDefaultToast": "智能会话「{{name}}」已就绪。",
+    "smartSessionDefaultTitle": "智能会话",
     "failedToCreateSmartSession": "创建智能会话失败：{{error}}",
+    "failedToCreateSmartSessionFallback": "创建智能会话失败：{{error}}",
     "session": "会话",
     "letClaudeDecide": "让 Claude 决定",
     "basicReasoning": "基础推理",

@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ccrApi, type CcrServiceStatus } from "@/lib/api";
 import { open } from '@tauri-apps/plugin-shell';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface CcrRouterManagerProps {
   onBack: () => void;
 }
 
 export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
+  const { t } = useTranslation();
   const [serviceStatus, setServiceStatus] = useState<CcrServiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -34,7 +36,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     } catch (error) {
       console.error("Failed to load CCR service status:", error);
       setToast({ 
-        message: `加载CCR服务状态失败: ${error}`, 
+        message: t('ccr.loadStatusFailed', { error: String(error) }), 
         type: "error" 
       });
     } finally {
@@ -63,7 +65,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     } catch (error) {
       console.error("Failed to start CCR service:", error);
       setToast({ 
-        message: `启动CCR服务失败: ${error}`, 
+        message: t('ccr.startFailed', { error: String(error) }), 
         type: "error" 
       });
     } finally {
@@ -83,7 +85,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     } catch (error) {
       console.error("Failed to stop CCR service:", error);
       setToast({ 
-        message: `停止CCR服务失败: ${error}`, 
+        message: t('ccr.stopFailed', { error: String(error) }), 
         type: "error" 
       });
     } finally {
@@ -103,7 +105,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     } catch (error) {
       console.error("Failed to restart CCR service:", error);
       setToast({ 
-        message: `重启CCR服务失败: ${error}`, 
+        message: t('ccr.restartFailed', { error: String(error) }), 
         type: "error" 
       });
     } finally {
@@ -118,14 +120,14 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
       // 如果服务未运行，先尝试启动
       if (!serviceStatus?.is_running) {
         setToast({ 
-          message: "检测到服务未运行，正在启动...", 
+          message: t('ccr.serviceStarting'), 
           type: "info" 
         });
         const startResult = await ccrApi.startService();
         setServiceStatus(startResult.status);
         
         if (!startResult.status.is_running) {
-          throw new Error("服务启动失败");
+          throw new Error(t('ccr.serviceStartFailed'));
         }
         
         // 等待服务完全启动
@@ -134,7 +136,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
       
       await ccrApi.openUI();
       setToast({ 
-        message: "正在打开CCR UI...", 
+        message: t('ccr.openingUI'), 
         type: "info" 
       });
       
@@ -145,7 +147,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     } catch (error) {
       console.error("Failed to open CCR UI:", error);
       setToast({ 
-        message: `打开CCR UI失败: ${error}`, 
+        message: t('ccr.openUIFailed', { error: String(error) }), 
         type: "error" 
       });
     } finally {
@@ -159,7 +161,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
       if (!serviceStatus?.is_running) {
         setActionLoading(true);
         setToast({ 
-          message: "检测到服务未运行，正在启动...", 
+          message: t('ccr.serviceStarting'), 
           type: "info" 
         });
         
@@ -167,7 +169,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
         setServiceStatus(startResult.status);
         
         if (!startResult.status.is_running) {
-          throw new Error("服务启动失败");
+          throw new Error(t('ccr.serviceStartFailed'));
         }
         
         // 等待服务完全启动
@@ -178,14 +180,14 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
       if (serviceStatus?.endpoint) {
         open(`${serviceStatus.endpoint}/ui/`);
         setToast({ 
-          message: "正在打开CCR管理界面...", 
+          message: t('ccr.openingAdmin'), 
           type: "info" 
         });
       }
     } catch (error) {
       console.error("Failed to open CCR UI in browser:", error);
       setToast({ 
-        message: `打开管理界面失败: ${error}`, 
+        message: t('ccr.openAdminFailed', { error: String(error) }), 
         type: "error" 
       });
       setActionLoading(false);

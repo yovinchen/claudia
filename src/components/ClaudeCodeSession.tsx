@@ -1519,7 +1519,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                    <p>滚动到顶部</p>
+                    <p>{t('claudeSession.scrollToTop', 'Scroll to top')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1540,7 +1540,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                    <p>滚动到底部</p>
+                    <p>{t('claudeSession.scrollToBottom', 'Scroll to bottom')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1665,7 +1665,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <div className="flex items-center gap-1.5 text-xs bg-muted/50 rounded-full px-2.5 py-1">
                 <Hash className="h-3 w-3 text-muted-foreground" />
                 <span className="font-mono">{totalTokens.toLocaleString()}</span>
-                <span className="text-muted-foreground">tokens</span>
+                <span className="text-muted-foreground">{t('usage.tokens')}</span>
               </div>
             )}
             
@@ -1705,7 +1705,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>File Explorer</p>
+                    <p>{t('app.fileExplorer')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1726,7 +1726,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Git Panel</p>
+                    <p>{t('app.gitPanel')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1747,7 +1747,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isFileWatching ? '停止文件监控' : '启动文件监控'}</p>
+                    <p>{isFileWatching ? t('claudeSession.stopFileWatch', 'Stop file watching') : t('claudeSession.startFileWatch', 'Start file watching')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

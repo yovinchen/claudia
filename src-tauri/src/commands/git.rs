@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GitStatus {
@@ -94,14 +94,13 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
         .output()
         .ok();
 
-    let remote_url = remote_output
-        .and_then(|o| {
-            if o.status.success() {
-                Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
-            } else {
-                None
-            }
-        });
+    let remote_url = remote_output.and_then(|o| {
+        if o.status.success() {
+            Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+        } else {
+            None
+        }
+    });
 
     let is_clean = staged.is_empty() && modified.is_empty() && untracked.is_empty();
 
@@ -161,7 +160,14 @@ fn get_tracking_info(path: &Path) -> Result<(u32, u32), String> {
     Ok((ahead, behind))
 }
 
-fn parse_git_status(status_text: &str) -> (Vec<GitFileStatus>, Vec<GitFileStatus>, Vec<GitFileStatus>, Vec<GitFileStatus>) {
+fn parse_git_status(
+    status_text: &str,
+) -> (
+    Vec<GitFileStatus>,
+    Vec<GitFileStatus>,
+    Vec<GitFileStatus>,
+    Vec<GitFileStatus>,
+) {
     let mut staged = Vec::new();
     let mut modified = Vec::new();
     let mut untracked = Vec::new();
@@ -197,7 +203,7 @@ fn parse_git_status(status_text: &str) -> (Vec<GitFileStatus>, Vec<GitFileStatus
                     status: "modified".to_string(),
                     staged: false,
                 });
-            },
+            }
             "A " | "AM" => staged.push(GitFileStatus {
                 path: file_path,
                 status: "added".to_string(),
@@ -360,7 +366,7 @@ pub async fn get_git_branches(path: String) -> Result<Vec<GitBranch>, String> {
     for line in branch_text.lines() {
         let is_current = line.starts_with('*');
         let line = line.trim_start_matches('*').trim();
-        
+
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.is_empty() {
             continue;
@@ -404,11 +410,11 @@ pub async fn get_git_diff(
 
     let mut cmd = Command::new("git");
     cmd.arg("diff");
-    
+
     if staged.unwrap_or(false) {
         cmd.arg("--cached");
     }
-    
+
     if let Some(file) = file_path {
         cmd.arg(file);
     }
@@ -440,18 +446,18 @@ mod tests {
     fn test_parse_git_status() {
         let status_text = "?? test-untracked.txt\nA  staged-file.txt\n M modified-file.txt";
         let (staged, modified, untracked, conflicted) = parse_git_status(status_text);
-        
+
         println!("Untracked files: {:?}", untracked);
         println!("Staged files: {:?}", staged);
         println!("Modified files: {:?}", modified);
-        
+
         assert_eq!(untracked.len(), 1);
         assert_eq!(untracked[0].path, "test-untracked.txt");
         assert_eq!(untracked[0].status, "untracked");
-        
+
         assert_eq!(staged.len(), 1);
         assert_eq!(staged[0].path, "staged-file.txt");
-        
+
         assert_eq!(modified.len(), 1);
         assert_eq!(modified[0].path, "modified-file.txt");
     }

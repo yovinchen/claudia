@@ -136,7 +136,7 @@ export const Settings: React.FC<SettingsProps> = ({
       setModelMappings(mappings);
     } catch (err) {
       console.error("Failed to load model mappings:", err);
-      setToast({ message: "加载模型映射失败", type: "error" });
+      setToast({ message: t('settings.modelMappings.loadFailed'), type: "error" });
     } finally {
       setLoadingMappings(false);
     }
@@ -163,10 +163,10 @@ export const Settings: React.FC<SettingsProps> = ({
         await api.updateModelMapping(mapping.alias, mapping.model_name);
       }
       setModelMappingsChanged(false);
-      setToast({ message: "模型映射已保存", type: "success" });
+      setToast({ message: t('settings.modelMappings.saved'), type: "success" });
     } catch (err) {
       console.error("Failed to save model mappings:", err);
-      setToast({ message: "保存模型映射失败", type: "error" });
+      setToast({ message: t('settings.modelMappings.saveFailed'), type: "error" });
     }
   };
 
@@ -696,9 +696,9 @@ export const Settings: React.FC<SettingsProps> = ({
                     {/* Model Mappings Configuration */}
                     <div className="space-y-4">
                       <div>
-                        <Label className="text-sm font-medium mb-2 block">模型别名映射</Label>
+                        <Label className="text-sm font-medium mb-2 block">{t('settings.modelMappings.title')}</Label>
                         <p className="text-xs text-muted-foreground mb-4">
-                          配置模型别名（sonnet、opus、haiku）对应的实际模型版本
+                          {t('settings.modelMappings.description')}
                         </p>
                       </div>
                       
@@ -720,29 +720,29 @@ export const Settings: React.FC<SettingsProps> = ({
                                 className="font-mono text-sm"
                               />
                               <p className="text-xs text-muted-foreground">
-                                {mapping.alias === 'sonnet' && '平衡性能与成本的主力模型'}
-                                {mapping.alias === 'opus' && '最强大的旗舰模型，适合复杂任务'}
-                                {mapping.alias === 'haiku' && '快速响应的轻量级模型'}
+                                {mapping.alias === 'sonnet' && t('settings.modelMappings.aliasDescriptions.sonnet')}
+                                {mapping.alias === 'opus' && t('settings.modelMappings.aliasDescriptions.opus')}
+                                {mapping.alias === 'haiku' && t('settings.modelMappings.aliasDescriptions.haiku')}
                               </p>
                             </div>
                           ))}
                           
                           {modelMappings.length === 0 && (
                             <div className="text-center py-8 text-muted-foreground">
-                              <p className="text-sm">暂无模型映射配置</p>
-                              <p className="text-xs mt-2">数据库初始化可能未完成，请尝试重启应用</p>
+                              <p className="text-sm">{t('settings.modelMappings.emptyTitle')}</p>
+                              <p className="text-xs mt-2">{t('settings.modelMappings.emptySubtitle')}</p>
                             </div>
                           )}
                           
                           {modelMappingsChanged && (
                             <p className="text-xs text-amber-600 dark:text-amber-400">
-                              模型映射已修改，点击保存以应用更改
+                              {t('settings.modelMappings.changedNotice')}
                             </p>
                           )}
                           
                           <div className="pt-2">
                             <p className="text-xs text-muted-foreground">
-                              <strong>说明：</strong>Agent执行时会根据这里的配置解析模型别名。例如，如果设置 sonnet → claude-sonnet-4-20250514，那么所有使用 "sonnet" 的Agent都会调用该模型版本。
+                              <strong>{t('settings.modelMappings.note')}</strong> {t('settings.modelMappings.noteContent')}
                             </p>
                           </div>
                         </div>

@@ -9,15 +9,14 @@ use tauri::{command, State};
 use walkdir::WalkDir;
 
 use super::usage::{
-    UsageStats, ModelUsage, DailyUsage, ProjectUsage, UsageEntry,
-    parse_jsonl_file
+    parse_jsonl_file, DailyUsage, ModelUsage, ProjectUsage, UsageEntry, UsageStats,
 };
 
 #[derive(Default)]
 pub struct UsageCacheState {
     pub conn: Arc<Mutex<Option<Connection>>>,
     pub last_scan_time: Arc<Mutex<Option<i64>>>,
-    pub is_scanning: Arc<Mutex<bool>>,  // 防止并发扫描
+    pub is_scanning: Arc<Mutex<bool>>, // 防止并发扫描
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,10 +43,10 @@ fn ensure_parent_dir(p: &Path) -> std::io::Result<()> {
 pub fn init_cache_db() -> rusqlite::Result<Connection> {
     let path = db_path();
     ensure_parent_dir(&path).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    
+
     let conn = Connection::open(path)?;
     conn.pragma_update(None, "journal_mode", &"WAL")?;
-    
+
     // Create schema
     conn.execute_batch(
         r#"
@@ -86,7 +85,7 @@ pub fn init_cache_db() -> rusqlite::Result<Connection> {
         CREATE INDEX IF NOT EXISTS idx_entries_model ON usage_entries(model);
         "#,
     )?;
-    
+
     Ok(conn)
 }
 
@@ -100,18 +99,22 @@ fn get_file_mtime_ms(path: &Path) -> i64 {
 }
 
 fn get_file_size(path: &Path) -> i64 {
-    fs::metadata(path)
-        .map(|m| m.len() as i64)
-        .unwrap_or(0)
+    fs::metadata(path).map(|m| m.len() as i64).unwrap_or(0)
 }
 
 fn generate_unique_hash(entry: &UsageEntry, has_io_tokens: bool, has_cache_tokens: bool) -> String {
     if has_io_tokens {
         // For I/O tokens: use session_id + timestamp + model
-        format!("io:{}:{}:{}", entry.session_id, entry.timestamp, entry.model)
+        format!(
+            "io:{}:{}:{}",
+            entry.session_id, entry.timestamp, entry.model
+        )
     } else if has_cache_tokens {
         // For cache tokens: use timestamp + model + project
-        format!("cache:{}:{}:{}", entry.timestamp, entry.model, entry.project_path)
+        format!(
+            "cache:{}:{}:{}",
+            entry.timestamp, entry.model, entry.project_path
+        )
     } else {
         // Fallback
         format!("other:{}:{}", entry.timestamp, entry.session_id)
@@ -133,12 +136,12 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
         }
         *is_scanning = true;
     }
-    
+
     // 确保在函数退出时重置扫描状态
     struct ScanGuard<'a> {
         is_scanning: &'a Arc<Mutex<bool>>,
     }
-    
+
     impl<'a> Drop for ScanGuard<'a> {
         fn drop(&mut self) {
             if let Ok(mut is_scanning) = self.is_scanning.lock() {
@@ -146,57 +149,59 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
             }
         }
     }
-    
+
     let _guard = ScanGuard {
         is_scanning: &state.is_scanning,
     };
-    
+
     let start_time = Utc::now().timestamp_millis();
-    
+
     // Initialize or get connection
     let mut conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
     if conn_guard.is_none() {
         *conn_guard = Some(init_cache_db().map_err(|e| e.to_string())?);
     }
     let conn = conn_guard.as_mut().unwrap();
-    
+
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
-    
+
     let projects_dir = claude_path.join("projects");
-    
+
     // Get existing scanned files from DB
     let mut existing_files: HashMap<String, (i64, i64)> = HashMap::new();
     {
         let mut stmt = conn
             .prepare("SELECT file_path, file_size, mtime_ms FROM scanned_files")
             .map_err(|e| e.to_string())?;
-        
-        let rows = stmt.query_map(params![], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
-            ))
-        }).map_err(|e| e.to_string())?;
-        
+
+        let rows = stmt
+            .query_map(params![], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
+                ))
+            })
+            .map_err(|e| e.to_string())?;
+
         for row in rows {
             if let Ok((path, data)) = row {
                 existing_files.insert(path, data);
             }
         }
     }
-    
+
     // Find all .jsonl files
     let mut files_to_process = Vec::new();
     let mut all_current_files = HashSet::new();
-    
+
     if let Ok(projects) = fs::read_dir(&projects_dir) {
         for project in projects.flatten() {
             if project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
                 let project_name = project.file_name().to_string_lossy().to_string();
                 let project_path = project.path();
-                
+
                 WalkDir::new(&project_path)
                     .into_iter()
                     .filter_map(Result::ok)
@@ -205,17 +210,19 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
                         let path = entry.path().to_path_buf();
                         let path_str = path.to_string_lossy().to_string();
                         all_current_files.insert(path_str.clone());
-                        
+
                         // Check if file needs processing
                         let current_size = get_file_size(&path);
                         let current_mtime = get_file_mtime_ms(&path);
-                        
-                        let needs_processing = if let Some((stored_size, stored_mtime)) = existing_files.get(&path_str) {
+
+                        let needs_processing = if let Some((stored_size, stored_mtime)) =
+                            existing_files.get(&path_str)
+                        {
                             current_size != *stored_size || current_mtime != *stored_mtime
                         } else {
                             true // New file
                         };
-                        
+
                         if needs_processing {
                             files_to_process.push((path, project_name.clone()));
                         }
@@ -223,23 +230,23 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
             }
         }
     }
-    
+
     let mut files_scanned = 0u32;
     let mut entries_added = 0u32;
     let mut entries_skipped = 0u32;
-    
+
     // Process files that need updating
     let tx = conn.transaction().map_err(|e| e.to_string())?;
-    
+
     for (file_path, project_name) in files_to_process {
         let path_str = file_path.to_string_lossy().to_string();
         let file_size = get_file_size(&file_path);
         let mtime_ms = get_file_mtime_ms(&file_path);
-        
+
         // Parse the JSONL file and get entries
         let mut processed_hashes = HashSet::new();
         let entries = parse_jsonl_file(&file_path, &project_name, &mut processed_hashes);
-        
+
         // Insert or update file record
         tx.execute(
             "INSERT INTO scanned_files (file_path, file_size, mtime_ms, last_scanned_ms, entry_count) 
@@ -251,13 +258,13 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
                 entry_count = excluded.entry_count",
             params![path_str, file_size, mtime_ms, start_time, entries.len() as i64],
         ).map_err(|e| e.to_string())?;
-        
+
         // Insert usage entries
         for entry in entries {
             let has_io_tokens = entry.input_tokens > 0 || entry.output_tokens > 0;
             let has_cache_tokens = entry.cache_creation_tokens > 0 || entry.cache_read_tokens > 0;
             let unique_hash = generate_unique_hash(&entry, has_io_tokens, has_cache_tokens);
-            
+
             let result = tx.execute(
                 "INSERT INTO usage_entries (
                     timestamp, model, input_tokens, output_tokens, 
@@ -279,34 +286,40 @@ pub async fn usage_scan_update(state: State<'_, UsageCacheState>) -> Result<Scan
                     unique_hash,
                 ],
             );
-            
+
             match result {
                 Ok(n) if n > 0 => entries_added += 1,
                 _ => entries_skipped += 1,
             }
         }
-        
+
         files_scanned += 1;
     }
-    
+
     // Remove entries for files that no longer exist
     for (old_path, _) in existing_files {
         if !all_current_files.contains(&old_path) {
-            tx.execute("DELETE FROM usage_entries WHERE file_path = ?1", params![old_path])
-                .map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM scanned_files WHERE file_path = ?1", params![old_path])
-                .map_err(|e| e.to_string())?;
+            tx.execute(
+                "DELETE FROM usage_entries WHERE file_path = ?1",
+                params![old_path],
+            )
+            .map_err(|e| e.to_string())?;
+            tx.execute(
+                "DELETE FROM scanned_files WHERE file_path = ?1",
+                params![old_path],
+            )
+            .map_err(|e| e.to_string())?;
         }
     }
-    
+
     tx.commit().map_err(|e| e.to_string())?;
-    
+
     // Update last scan time
     let mut last_scan = state.last_scan_time.lock().map_err(|e| e.to_string())?;
     *last_scan = Some(start_time);
-    
+
     let scan_time_ms = (Utc::now().timestamp_millis() - start_time) as u64;
-    
+
     Ok(ScanResult {
         files_scanned,
         entries_added,
@@ -325,16 +338,16 @@ pub async fn usage_get_stats_cached(
         let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
         conn_guard.is_none()
     };
-    
+
     if needs_init {
         // 首次调用，需要初始化和扫描
         usage_scan_update(state.clone()).await?;
     }
     // 移除自动扫描逻辑，让系统只在手动触发时扫描
-    
+
     let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
     let conn = conn_guard.as_ref().ok_or("Database not initialized")?;
-    
+
     // Build date filter
     let date_filter = if let Some(d) = days {
         let cutoff = Local::now().naive_local().date() - chrono::Duration::days(d as i64);
@@ -342,12 +355,17 @@ pub async fn usage_get_stats_cached(
     } else {
         None
     };
-    
+
     // Query total stats
-    let (total_cost, total_input, total_output, total_cache_creation, total_cache_read): (f64, i64, i64, i64, i64) = 
-        if let Some(cutoff) = &date_filter {
-            conn.query_row(
-                "SELECT 
+    let (total_cost, total_input, total_output, total_cache_creation, total_cache_read): (
+        f64,
+        i64,
+        i64,
+        i64,
+        i64,
+    ) = if let Some(cutoff) = &date_filter {
+        conn.query_row(
+            "SELECT 
                     COALESCE(SUM(cost), 0.0),
                     COALESCE(SUM(input_tokens), 0),
                     COALESCE(SUM(output_tokens), 0),
@@ -355,40 +373,60 @@ pub async fn usage_get_stats_cached(
                     COALESCE(SUM(cache_read_tokens), 0)
                 FROM usage_entries
                 WHERE timestamp >= ?1",
-                params![cutoff],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
-            ).map_err(|e| e.to_string())?
-        } else {
-            conn.query_row(
-                "SELECT 
+            params![cutoff],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        )
+        .map_err(|e| e.to_string())?
+    } else {
+        conn.query_row(
+            "SELECT 
                     COALESCE(SUM(cost), 0.0),
                     COALESCE(SUM(input_tokens), 0),
                     COALESCE(SUM(output_tokens), 0),
                     COALESCE(SUM(cache_creation_tokens), 0),
                     COALESCE(SUM(cache_read_tokens), 0)
                 FROM usage_entries",
-                params![],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
-            ).map_err(|e| e.to_string())?
-        };
-    
+            params![],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        )
+        .map_err(|e| e.to_string())?
+    };
+
     let total_tokens = total_input + total_output + total_cache_creation + total_cache_read;
-    
+
     // Get session count
     let total_sessions: i64 = if let Some(cutoff) = &date_filter {
         conn.query_row(
             "SELECT COUNT(DISTINCT session_id) FROM usage_entries WHERE timestamp >= ?1",
             params![cutoff],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?
     } else {
         conn.query_row(
             "SELECT COUNT(DISTINCT session_id) FROM usage_entries",
             params![],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?
     };
-    
+
     // Get stats by model
     let mut by_model = Vec::new();
     {
@@ -418,9 +456,9 @@ pub async fn usage_get_stats_cached(
             GROUP BY model
             ORDER BY total_cost DESC"
         };
-        
+
         let mut stmt = conn.prepare(query).map_err(|e| e.to_string())?;
-        
+
         // Create closure once to avoid type mismatch
         let create_model_usage = |row: &rusqlite::Row| -> rusqlite::Result<ModelUsage> {
             Ok(ModelUsage {
@@ -434,22 +472,26 @@ pub async fn usage_get_stats_cached(
                 total_tokens: 0, // Will calculate below
             })
         };
-        
+
         let rows = if let Some(cutoff) = &date_filter {
-            stmt.query_map(params![cutoff], create_model_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![cutoff], create_model_usage)
+                .map_err(|e| e.to_string())?
         } else {
-            stmt.query_map(params![], create_model_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![], create_model_usage)
+                .map_err(|e| e.to_string())?
         };
-        
+
         for row in rows {
             if let Ok(mut usage) = row {
-                usage.total_tokens = usage.input_tokens + usage.output_tokens + 
-                                   usage.cache_creation_tokens + usage.cache_read_tokens;
+                usage.total_tokens = usage.input_tokens
+                    + usage.output_tokens
+                    + usage.cache_creation_tokens
+                    + usage.cache_read_tokens;
                 by_model.push(usage);
             }
         }
     }
-    
+
     // Get daily stats
     let mut by_date = Vec::new();
     {
@@ -483,19 +525,21 @@ pub async fn usage_get_stats_cached(
             GROUP BY DATE(timestamp)
             ORDER BY date DESC"
         };
-        
+
         let mut stmt = conn.prepare(query).map_err(|e| e.to_string())?;
-        
+
         // Create closure once to avoid type mismatch
         let create_daily_usage = |row: &rusqlite::Row| -> rusqlite::Result<DailyUsage> {
             let models_str: String = row.get(8)?;
             let models_used: Vec<String> = models_str.split(',').map(|s| s.to_string()).collect();
-            
+
             Ok(DailyUsage {
                 date: row.get(0)?,
                 total_cost: row.get(1)?,
-                total_tokens: (row.get::<_, i64>(2)? + row.get::<_, i64>(3)? + 
-                             row.get::<_, i64>(4)? + row.get::<_, i64>(5)?) as u64,
+                total_tokens: (row.get::<_, i64>(2)?
+                    + row.get::<_, i64>(3)?
+                    + row.get::<_, i64>(4)?
+                    + row.get::<_, i64>(5)?) as u64,
                 input_tokens: row.get::<_, i64>(2)? as u64,
                 output_tokens: row.get::<_, i64>(3)? as u64,
                 cache_creation_tokens: row.get::<_, i64>(4)? as u64,
@@ -504,20 +548,22 @@ pub async fn usage_get_stats_cached(
                 models_used,
             })
         };
-        
+
         let rows = if let Some(cutoff) = &date_filter {
-            stmt.query_map(params![cutoff], create_daily_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![cutoff], create_daily_usage)
+                .map_err(|e| e.to_string())?
         } else {
-            stmt.query_map(params![], create_daily_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![], create_daily_usage)
+                .map_err(|e| e.to_string())?
         };
-        
+
         for row in rows {
             if let Ok(daily) = row {
                 by_date.push(daily);
             }
         }
     }
-    
+
     // Get project stats
     let mut by_project = Vec::new();
     {
@@ -543,9 +589,9 @@ pub async fn usage_get_stats_cached(
             GROUP BY project_path
             ORDER BY total_cost DESC"
         };
-        
+
         let mut stmt = conn.prepare(query).map_err(|e| e.to_string())?;
-        
+
         // Create closure once to avoid type mismatch
         let create_project_usage = |row: &rusqlite::Row| -> rusqlite::Result<ProjectUsage> {
             Ok(ProjectUsage {
@@ -557,17 +603,20 @@ pub async fn usage_get_stats_cached(
                 last_used: row.get(4)?,
             })
         };
-        
+
         let rows = if let Some(cutoff) = &date_filter {
-            stmt.query_map(params![cutoff], create_project_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![cutoff], create_project_usage)
+                .map_err(|e| e.to_string())?
         } else {
-            stmt.query_map(params![], create_project_usage).map_err(|e| e.to_string())?
+            stmt.query_map(params![], create_project_usage)
+                .map_err(|e| e.to_string())?
         };
-        
+
         for row in rows {
             if let Ok(mut project) = row {
                 // Extract project name from path
-                project.project_name = project.project_path
+                project.project_name = project
+                    .project_path
                     .split('/')
                     .last()
                     .unwrap_or(&project.project_path)
@@ -576,7 +625,7 @@ pub async fn usage_get_stats_cached(
             }
         }
     }
-    
+
     Ok(UsageStats {
         total_cost,
         total_tokens: total_tokens as u64,
@@ -594,20 +643,20 @@ pub async fn usage_get_stats_cached(
 #[command]
 pub async fn usage_clear_cache(state: State<'_, UsageCacheState>) -> Result<String, String> {
     let mut conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
-    
+
     if let Some(conn) = conn_guard.as_mut() {
         conn.execute("DELETE FROM usage_entries", params![])
             .map_err(|e| e.to_string())?;
         conn.execute("DELETE FROM scanned_files", params![])
             .map_err(|e| e.to_string())?;
-        
+
         // 重置last scan time
         let mut last_scan = state.last_scan_time.lock().map_err(|e| e.to_string())?;
         *last_scan = None;
-        
+
         return Ok("Cache cleared successfully. All costs will be recalculated.".to_string());
     }
-    
+
     Ok("No cache to clear.".to_string())
 }
 
@@ -615,37 +664,39 @@ pub async fn usage_clear_cache(state: State<'_, UsageCacheState>) -> Result<Stri
 pub async fn check_files_changed(state: &State<'_, UsageCacheState>) -> Result<bool, String> {
     let conn_guard = state.conn.lock().map_err(|e| e.to_string())?;
     let conn = conn_guard.as_ref().ok_or("Database not initialized")?;
-    
+
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
     let projects_dir = claude_path.join("projects");
-    
+
     // 获取已知文件的修改时间和大小
     let mut stmt = conn
         .prepare("SELECT file_path, file_size, mtime_ms FROM scanned_files")
         .map_err(|e| e.to_string())?;
-    
+
     let mut known_files = std::collections::HashMap::new();
-    let rows = stmt.query_map([], |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
-        ))
-    }).map_err(|e| e.to_string())?;
-    
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                (row.get::<_, i64>(1)?, row.get::<_, i64>(2)?),
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
     for row in rows {
         if let Ok((path, data)) = row {
             known_files.insert(path, data);
         }
     }
-    
+
     // 快速检查是否有文件变化
     if let Ok(projects) = fs::read_dir(&projects_dir) {
         for project in projects.flatten() {
             if project.file_type().map(|t| t.is_dir()).unwrap_or(false) {
                 let project_path = project.path();
-                
+
                 for entry in walkdir::WalkDir::new(&project_path)
                     .into_iter()
                     .filter_map(Result::ok)
@@ -655,7 +706,7 @@ pub async fn check_files_changed(state: &State<'_, UsageCacheState>) -> Result<b
                     let path_str = path.to_string_lossy().to_string();
                     let current_size = get_file_size(path);
                     let current_mtime = get_file_mtime_ms(path);
-                    
+
                     if let Some((stored_size, stored_mtime)) = known_files.get(&path_str) {
                         if current_size != *stored_size || current_mtime != *stored_mtime {
                             return Ok(true); // 发现变化
@@ -667,7 +718,7 @@ pub async fn check_files_changed(state: &State<'_, UsageCacheState>) -> Result<b
             }
         }
     }
-    
+
     Ok(false) // 没有变化
 }
 

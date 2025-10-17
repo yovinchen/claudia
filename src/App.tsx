@@ -80,6 +80,41 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+
+  const translateWithFallback = (
+    primaryKey: string,
+    params: Record<string, unknown> = {},
+    fallbackKeys: string[] = [],
+    fallbackDefault: string | ((params: Record<string, unknown>) => string) = primaryKey
+  ) => {
+    const defaultNamespace = Array.isArray(i18n.options?.defaultNS)
+      ? i18n.options.defaultNS[0] ?? "common"
+      : (i18n.options?.defaultNS ?? "common");
+
+    const candidateKeys = [primaryKey, ...fallbackKeys];
+    const rawLanguage = i18n.language || i18n.resolvedLanguage;
+    const normalizedLanguage = rawLanguage?.split('-')[0];
+    const localesToTry = [rawLanguage, normalizedLanguage, 'en'].filter(Boolean) as string[];
+    const missingToken = '__i18n_missing__';
+
+    for (const key of candidateKeys) {
+      for (const locale of localesToTry) {
+        const fixedT = i18n.getFixedT(locale, defaultNamespace);
+        const translated = fixedT(key, {
+          ...params,
+          defaultValue: missingToken,
+        });
+
+        if (translated !== missingToken) {
+          return translated;
+        }
+      }
+    }
+
+    return typeof fallbackDefault === 'function'
+      ? (fallbackDefault as (params: Record<string, unknown>) => string)(params)
+      : fallbackDefault;
+  };
   
   // Initialize analytics lifecycle tracking
   useAppLifecycle();
@@ -292,10 +327,12 @@ function AppContent() {
       // Create a new tab for the smart session
       const newTabId = createChatTab();
       
+      const sessionDisplayName = smartSession.display_name || t('messages.smartSessionDefaultTitle');
+
       // 直接更新新建标签的会话上下文，避免依赖事件时序
       updateTab(newTabId, {
         type: 'chat',
-        title: smartSession.display_name || 'Smart Session',
+        title: sessionDisplayName,
         initialProjectPath: smartSession.project_path,
         sessionData: null,
         status: 'active'
@@ -307,13 +344,17 @@ function AppContent() {
       }
       switchToTab(newTabId);
 
-      // Show success message
-      setToast({ 
-        message: t('smartSessionCreated', { 
-          name: smartSession.display_name,
-          path: smartSession.project_path 
-        }), 
-        type: "success" 
+      // Show success message，若主键缺失则回退到默认提示
+      const successMessage = translateWithFallback(
+        'messages.smartSessionCreated',
+        { name: sessionDisplayName },
+        ['messages.smartSessionDefaultToast'],
+        `Smart session '${sessionDisplayName}' is ready to use.`
+      );
+
+      setToast({
+        message: successMessage,
+        type: "success"
       });
 
       trackEvent.journeyMilestone({
@@ -324,11 +365,17 @@ function AppContent() {
 
     } catch (error) {
       console.error('Failed to create smart session:', error);
-      setToast({ 
-        message: t('failedToCreateSmartSession', { 
-          error: error instanceof Error ? error.message : String(error) 
-        }), 
-        type: "error" 
+      const rawError = error instanceof Error ? error.message : String(error);
+      const fallbackErrorMessage = translateWithFallback(
+        'messages.failedToCreateSmartSession',
+        { error: rawError },
+        ['messages.failedToCreateSmartSessionFallback'],
+        `Failed to create smart session: ${rawError}`
+      );
+
+      setToast({
+        message: fallbackErrorMessage,
+        type: "error"
       });
     }
   };

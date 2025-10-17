@@ -61,7 +61,10 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
 
                     // On Windows, if stored path exists but is not executable (shell script), try .cmd version
                     #[cfg(target_os = "windows")]
-                    if path_buf.exists() && !stored_path.ends_with(".cmd") && !stored_path.ends_with(".exe") {
+                    if path_buf.exists()
+                        && !stored_path.ends_with(".cmd")
+                        && !stored_path.ends_with(".exe")
+                    {
                         // Test if the current path works by trying to get version
                         if let Err(_) = get_claude_version(&stored_path) {
                             // If it fails, try the .cmd version
@@ -71,7 +74,10 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                                 if let Ok(_) = get_claude_version(&cmd_path) {
                                     final_path = cmd_path;
                                     path_buf = cmd_path_buf;
-                                    info!("Using .cmd version instead of shell script: {}", final_path);
+                                    info!(
+                                        "Using .cmd version instead of shell script: {}",
+                                        final_path
+                                    );
                                 }
                             }
                         }
@@ -205,10 +211,13 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
     // Create command with enhanced PATH for production environments
     let mut cmd = Command::new(command_name);
     cmd.arg("claude");
-    
+
     // In production (DMG), we need to ensure proper PATH is set
     let enhanced_path = build_enhanced_path();
-    debug!("Using enhanced PATH for {}: {}", command_name, enhanced_path);
+    debug!(
+        "Using enhanced PATH for {}: {}",
+        command_name, enhanced_path
+    );
     cmd.env("PATH", enhanced_path);
 
     match cmd.output() {
@@ -243,7 +252,10 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
                         // Convert /c/path to C:\path
                         let windows_path = path.replace("/c/", "C:\\").replace("/", "\\");
                         windows_path
-                    } else if path.starts_with("/") && path.len() > 3 && path.chars().nth(2) == Some('/') {
+                    } else if path.starts_with("/")
+                        && path.len() > 3
+                        && path.chars().nth(2) == Some('/')
+                    {
                         // Convert /X/path to X:\path where X is drive letter
                         let drive = path.chars().nth(1).unwrap();
                         let rest = &path[3..];
@@ -284,7 +296,10 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
 
                 // Verify the path exists
                 if !PathBuf::from(&final_path).exists() {
-                    warn!("Path from '{}' does not exist: {}", command_name, final_path);
+                    warn!(
+                        "Path from '{}' does not exist: {}",
+                        command_name, final_path
+                    );
                     continue;
                 }
 
@@ -413,12 +428,13 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     let mut path_cmd = Command::new("claude");
     path_cmd.arg("--version");
     path_cmd.env("PATH", build_enhanced_path());
-    
+
     if let Ok(output) = path_cmd.output() {
         if output.status.success() {
             debug!("claude is available in PATH");
             // Combine stdout and stderr for robust version extraction
-            let mut combined: Vec<u8> = Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
+            let mut combined: Vec<u8> =
+                Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
             combined.extend_from_slice(&output.stdout);
             if !output.stderr.is_empty() {
                 combined.extend_from_slice(b"\n");
@@ -443,12 +459,13 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
     // Use the helper function to create command with proper environment
     let mut cmd = create_command_with_env(path);
     cmd.arg("--version");
-    
+
     match cmd.output() {
         Ok(output) => {
             if output.status.success() {
                 // Combine stdout and stderr for robust version extraction
-                let mut combined: Vec<u8> = Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
+                let mut combined: Vec<u8> =
+                    Vec::with_capacity(output.stdout.len() + output.stderr.len() + 1);
                 combined.extend_from_slice(&output.stdout);
                 if !output.stderr.is_empty() {
                     combined.extend_from_slice(b"\n");
@@ -481,7 +498,8 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     // - A dot, followed by
     // - One or more digits
     // - Optionally followed by pre-release/build metadata
-    let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
+    let version_regex =
+        regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
 
     if let Some(captures) = version_regex.captures(&output_str) {
         if let Some(version_match) = captures.get(1) {
@@ -616,7 +634,8 @@ pub fn create_command_with_env(program: &str) -> Command {
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             // Ensure the Node.js bin directory is in PATH
-            let current_path = cmd.get_envs()
+            let current_path = cmd
+                .get_envs()
                 .find(|(k, _)| k.to_str() == Some("PATH"))
                 .and_then(|(_, v)| v)
                 .and_then(|v| v.to_str())
@@ -638,12 +657,12 @@ pub fn create_command_with_env(program: &str) -> Command {
 /// This is especially important for DMG/packaged applications where PATH may be limited
 fn build_enhanced_path() -> String {
     let mut paths = Vec::new();
-    
+
     // Start with current PATH
     if let Ok(current_path) = std::env::var("PATH") {
         paths.push(current_path);
     }
-    
+
     // Add standard system paths that might be missing in packaged apps
     let system_paths = vec![
         "/usr/local/bin",
@@ -652,13 +671,13 @@ fn build_enhanced_path() -> String {
         "/opt/homebrew/bin",
         "/opt/homebrew/sbin",
     ];
-    
+
     for path in system_paths {
         if PathBuf::from(path).exists() {
             paths.push(path.to_string());
         }
     }
-    
+
     // Add user-specific paths
     if let Ok(home) = std::env::var("HOME") {
         let user_paths = vec![
@@ -671,13 +690,13 @@ fn build_enhanced_path() -> String {
             format!("{}/.config/yarn/global/node_modules/.bin", home),
             format!("{}/node_modules/.bin", home),
         ];
-        
+
         for path in user_paths {
             if PathBuf::from(&path).exists() {
                 paths.push(path);
             }
         }
-        
+
         // Add all NVM node versions
         let nvm_dir = PathBuf::from(&home).join(".nvm/versions/node");
         if nvm_dir.exists() {
@@ -693,13 +712,13 @@ fn build_enhanced_path() -> String {
             }
         }
     }
-    
+
     // Remove duplicates while preserving order
     let mut seen = std::collections::HashSet::new();
     let unique_paths: Vec<String> = paths
         .into_iter()
         .filter(|path| seen.insert(path.clone()))
         .collect();
-    
+
     unique_paths.join(":")
 }

@@ -10,7 +10,6 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
-
 /// Global state to track current Claude process
 pub struct ClaudeProcessState {
     pub current_process: Arc<Mutex<Option<Child>>>,
@@ -267,22 +266,18 @@ fn create_command_with_env(program: &str) -> Command {
 }
 
 /// Creates a system binary command with the given arguments
-fn create_system_command(
-    claude_path: &str,
-    args: Vec<String>,
-    project_path: &str,
-) -> Command {
+fn create_system_command(claude_path: &str, args: Vec<String>, project_path: &str) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -293,16 +288,31 @@ pub async fn watch_claude_project_directory(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     use crate::file_watcher::FileWatcherState;
-    
-    log::info!("Starting to watch Claude project directory for project: {}", project_path);
-    
+    let project_path_buf = PathBuf::from(&project_path);
+
+    // 支持直接传入位于 ~/.claude 或 ~/.claudia 下的特殊目录（例如智能会话）
+    if (project_path.contains("/.claude/") || project_path.contains("/.claudia/"))
+        && project_path_buf.exists()
+    {
+        let file_watcher_state = app_handle.state::<FileWatcherState>();
+        let path_str = project_path_buf.to_string_lossy().to_string();
+        return file_watcher_state
+            .with_manager(|manager| manager.watch_path(&path_str, false))
+            .map_err(|e| format!("Failed to watch Claude project directory: {}", e));
+    }
+
+    log::info!(
+        "Starting to watch Claude project directory for project: {}",
+        project_path
+    );
+
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let projects_dir = claude_dir.join("projects");
-    
+
     if !projects_dir.exists() {
         return Err("Claude projects directory does not exist".to_string());
     }
-    
+
     // 找到对应项目的目录
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries {
@@ -315,17 +325,19 @@ pub async fn watch_claude_project_directory(
                             // 找到了对应的项目目录，开始监控
                             let file_watcher_state = app_handle.state::<FileWatcherState>();
                             let path_str = path.to_string_lossy().to_string();
-                            
-                            return file_watcher_state.with_manager(|manager| {
-                                manager.watch_path(&path_str, false)
-                            }).map_err(|e| format!("Failed to watch Claude project directory: {}", e));
+
+                            return file_watcher_state
+                                .with_manager(|manager| manager.watch_path(&path_str, false))
+                                .map_err(|e| {
+                                    format!("Failed to watch Claude project directory: {}", e)
+                                });
                         }
                     }
                 }
             }
         }
     }
-    
+
     Err("Could not find Claude project directory for the given project path".to_string())
 }
 
@@ -336,16 +348,29 @@ pub async fn unwatch_claude_project_directory(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     use crate::file_watcher::FileWatcherState;
-    
-    log::info!("Stopping watch on Claude project directory for project: {}", project_path);
-    
+    let project_path_buf = PathBuf::from(&project_path);
+
+    // 对智能会话等位于 ~/.claude* 下的目录执行直接取消
+    if project_path.contains("/.claude/") || project_path.contains("/.claudia/") {
+        let file_watcher_state = app_handle.state::<FileWatcherState>();
+        let path_str = project_path_buf.to_string_lossy().to_string();
+        return file_watcher_state
+            .with_manager(|manager| manager.unwatch_path(&path_str))
+            .map_err(|e| format!("Failed to stop watching Claude project directory: {}", e));
+    }
+
+    log::info!(
+        "Stopping watch on Claude project directory for project: {}",
+        project_path
+    );
+
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let projects_dir = claude_dir.join("projects");
-    
+
     if !projects_dir.exists() {
         return Ok(()); // 目录不存在，视为成功
     }
-    
+
     // 找到对应项目的目录
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries {
@@ -358,17 +383,22 @@ pub async fn unwatch_claude_project_directory(
                             // 找到了对应的项目目录，停止监控
                             let file_watcher_state = app_handle.state::<FileWatcherState>();
                             let path_str = path.to_string_lossy().to_string();
-                            
-                            return file_watcher_state.with_manager(|manager| {
-                                manager.unwatch_path(&path_str)
-                            }).map_err(|e| format!("Failed to stop watching Claude project directory: {}", e));
+
+                            return file_watcher_state
+                                .with_manager(|manager| manager.unwatch_path(&path_str))
+                                .map_err(|e| {
+                                    format!(
+                                        "Failed to stop watching Claude project directory: {}",
+                                        e
+                                    )
+                                });
                         }
                     }
                 }
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -425,7 +455,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
             // List all JSONL files (sessions) in this project directory
             let mut sessions = Vec::new();
             let mut last_session_time = created_at; // Default to project creation time
-            
+
             if let Ok(session_entries) = fs::read_dir(&path) {
                 for session_entry in session_entries.flatten() {
                     let session_path = session_entry.path();
@@ -435,7 +465,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                         if let Some(session_id) = session_path.file_stem().and_then(|s| s.to_str())
                         {
                             sessions.push(session_id.to_string());
-                            
+
                             // Get the modified time of this session file
                             if let Ok(metadata) = fs::metadata(&session_path) {
                                 if let Ok(modified) = metadata.modified() {
@@ -443,7 +473,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                                         .duration_since(SystemTime::UNIX_EPOCH)
                                         .unwrap_or_default()
                                         .as_secs();
-                                    
+
                                     // Update last_session_time if this file is newer
                                     if modified_time > last_session_time {
                                         last_session_time = modified_time;
@@ -648,7 +678,7 @@ pub async fn check_claude_version(_app: AppHandle) -> Result<ClaudeVersionStatus
 
     // Try to find Claude installations with versions
     let installations = crate::claude_binary::discover_claude_installations();
-    
+
     if installations.is_empty() {
         return Ok(ClaudeVersionStatus {
             is_installed: false,
@@ -660,13 +690,11 @@ pub async fn check_claude_version(_app: AppHandle) -> Result<ClaudeVersionStatus
     // Find the best installation (highest version or first found)
     let best_installation = installations
         .into_iter()
-        .max_by(|a, b| {
-            match (&a.version, &b.version) {
-                (Some(v1), Some(v2)) => v1.cmp(v2),
-                (Some(_), None) => std::cmp::Ordering::Greater,
-                (None, Some(_)) => std::cmp::Ordering::Less,
-                (None, None) => std::cmp::Ordering::Equal,
-            }
+        .max_by(|a, b| match (&a.version, &b.version) {
+            (Some(v1), Some(v2)) => v1.cmp(v2),
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (None, None) => std::cmp::Ordering::Equal,
         })
         .unwrap(); // Safe because we checked is_empty() above
 
@@ -866,8 +894,6 @@ pub async fn load_session_history(
     Ok(messages)
 }
 
-
-
 /// Execute a new interactive Claude Code session with streaming output
 #[tauri::command]
 pub async fn execute_claude_code(
@@ -883,13 +909,13 @@ pub async fn execute_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     // Map opus-plan to the appropriate Claude CLI parameter
     let claude_model = match model.as_str() {
         "opus-plan" => "opusplan".to_string(),
-        _ => model.clone()
+        _ => model.clone(),
     };
-    
+
     let args = vec![
         "-p".to_string(),
         prompt.clone(),
@@ -920,13 +946,13 @@ pub async fn continue_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     // Map opus-plan to the appropriate Claude CLI parameter
     let claude_model = match model.as_str() {
         "opus-plan" => "opusplan".to_string(),
-        _ => model.clone()
+        _ => model.clone(),
     };
-    
+
     let args = vec![
         "-c".to_string(), // Continue flag
         "-p".to_string(),
@@ -960,13 +986,13 @@ pub async fn resume_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     // Map opus-plan to the appropriate Claude CLI parameter
     let claude_model = match model.as_str() {
         "opus-plan" => "opusplan".to_string(),
-        _ => model.clone()
+        _ => model.clone(),
     };
-    
+
     let args = vec![
         "--resume".to_string(),
         session_id.clone(),
@@ -1003,8 +1029,12 @@ pub async fn cancel_claude_execution(
         let registry = app.state::<crate::process::ProcessRegistryState>();
         match registry.0.get_claude_session_by_id(sid) {
             Ok(Some(process_info)) => {
-                log::info!("Found process in registry for session {}: run_id={}, PID={}", 
-                    sid, process_info.run_id, process_info.pid);
+                log::info!(
+                    "Found process in registry for session {}: run_id={}, PID={}",
+                    sid,
+                    process_info.run_id,
+                    process_info.pid
+                );
                 match registry.0.kill_process(process_info.run_id).await {
                     Ok(success) => {
                         if success {
@@ -1037,7 +1067,10 @@ pub async fn cancel_claude_execution(
         if let Some(mut child) = current_process.take() {
             // Try to get the PID before killing
             let pid = child.id();
-            log::info!("Attempting to kill Claude process via ClaudeProcessState with PID: {:?}", pid);
+            log::info!(
+                "Attempting to kill Claude process via ClaudeProcessState with PID: {:?}",
+                pid
+            );
 
             // Kill the process
             match child.kill().await {
@@ -1046,8 +1079,11 @@ pub async fn cancel_claude_execution(
                     killed = true;
                 }
                 Err(e) => {
-                    log::error!("Failed to kill Claude process via ClaudeProcessState: {}", e);
-                    
+                    log::error!(
+                        "Failed to kill Claude process via ClaudeProcessState: {}",
+                        e
+                    );
+
                     // Method 3: If we have a PID, try system kill as last resort
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
@@ -1060,7 +1096,7 @@ pub async fn cancel_claude_execution(
                                 .args(["-KILL", &pid.to_string()])
                                 .output()
                         };
-                        
+
                         match kill_result {
                             Ok(output) if output.status.success() => {
                                 log::info!("Successfully killed process via system command");
@@ -1093,18 +1129,18 @@ pub async fn cancel_claude_execution(
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         let _ = app.emit(&format!("claude-complete:{}", sid), false);
     }
-    
+
     // Also emit generic events for backward compatibility
     let _ = app.emit("claude-cancelled", true);
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     let _ = app.emit("claude-complete", false);
-    
+
     if killed {
         log::info!("Claude process cancellation completed successfully");
     } else if !attempted_methods.is_empty() {
         log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {:?}", attempted_methods);
     }
-    
+
     Ok(())
 }
 
@@ -1131,9 +1167,15 @@ pub async fn get_claude_session_output(
 }
 
 /// Helper function to spawn Claude process and handle streaming
-async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, model: String, project_path: String) -> Result<(), String> {
-    use tokio::io::{AsyncBufReadExt, BufReader};
+async fn spawn_claude_process(
+    app: AppHandle,
+    mut cmd: Command,
+    prompt: String,
+    model: String,
+    project_path: String,
+) -> Result<(), String> {
     use std::sync::Mutex;
+    use tokio::io::{AsyncBufReadExt, BufReader};
 
     // Spawn the process
     let mut child = cmd
@@ -1146,10 +1188,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
 
     // Get the child PID for logging
     let pid = child.id().unwrap_or(0);
-    log::info!(
-        "Spawned Claude process with PID: {:?}",
-        pid
-    );
+    log::info!("Spawned Claude process with PID: {:?}", pid);
 
     // Create readers first (before moving child)
     let stdout_reader = BufReader::new(stdout);
@@ -1184,7 +1223,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
         let mut lines = stdout_reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
             log::debug!("Claude stdout: {}", line);
-            
+
             // Parse the line to check for init message with session ID
             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
                 if msg["type"] == "system" && msg["subtype"] == "init" {
@@ -1193,7 +1232,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                         if session_id_guard.is_none() {
                             *session_id_guard = Some(claude_session_id.to_string());
                             log::info!("Extracted Claude session ID: {}", claude_session_id);
-                            
+
                             // Now register with ProcessRegistry using Claude's session ID
                             match registry_clone.register_claude_session(
                                 claude_session_id.to_string(),
@@ -1215,12 +1254,12 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     }
                 }
             }
-            
+
             // Store live output in registry if we have a run_id
             if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
                 let _ = registry_clone.append_live_output(run_id, &line);
             }
-            
+
             // Emit the line to the frontend with session isolation if we have session ID
             if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                 let _ = app_handle.emit(&format!("claude-output:{}", session_id), &line);
@@ -1264,10 +1303,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
-                        let _ = app_handle_wait.emit(
-                            &format!("claude-complete:{}", session_id),
-                            status.success(),
-                        );
+                        let _ = app_handle_wait
+                            .emit(&format!("claude-complete:{}", session_id), status.success());
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", status.success());
@@ -1277,8 +1314,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
-                        let _ = app_handle_wait
-                            .emit(&format!("claude-complete:{}", session_id), false);
+                        let _ =
+                            app_handle_wait.emit(&format!("claude-complete:{}", session_id), false);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", false);
@@ -1297,7 +1334,6 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
 
     Ok(())
 }
-
 
 /// Lists files and directories in a given path
 #[tauri::command]
@@ -2015,78 +2051,92 @@ pub async fn track_session_messages(
 
 /// Gets hooks configuration from settings at specified scope
 #[tauri::command]
-pub async fn get_hooks_config(scope: String, project_path: Option<String>) -> Result<serde_json::Value, String> {
-    log::info!("Getting hooks config for scope: {}, project: {:?}", scope, project_path);
+pub async fn get_hooks_config(
+    scope: String,
+    project_path: Option<String>,
+) -> Result<serde_json::Value, String> {
+    log::info!(
+        "Getting hooks config for scope: {}, project: {:?}",
+        scope,
+        project_path
+    );
 
     let settings_path = match scope.as_str() {
-        "user" => {
-            get_claude_dir()
-                .map_err(|e| e.to_string())?
-                .join("settings.json")
-        },
+        "user" => get_claude_dir()
+            .map_err(|e| e.to_string())?
+            .join("settings.json"),
         "project" => {
             let path = project_path.ok_or("Project path required for project scope")?;
             PathBuf::from(path).join(".claude").join("settings.json")
-        },
+        }
         "local" => {
             let path = project_path.ok_or("Project path required for local scope")?;
-            PathBuf::from(path).join(".claude").join("settings.local.json")
-        },
-        _ => return Err("Invalid scope".to_string())
+            PathBuf::from(path)
+                .join(".claude")
+                .join("settings.local.json")
+        }
+        _ => return Err("Invalid scope".to_string()),
     };
 
     if !settings_path.exists() {
-        log::info!("Settings file does not exist at {:?}, returning empty hooks", settings_path);
+        log::info!(
+            "Settings file does not exist at {:?}, returning empty hooks",
+            settings_path
+        );
         return Ok(serde_json::json!({}));
     }
 
     let content = fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings: {}", e))?;
-    
-    let settings: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse settings: {}", e))?;
-    
-    Ok(settings.get("hooks").cloned().unwrap_or(serde_json::json!({})))
+
+    let settings: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?;
+
+    Ok(settings
+        .get("hooks")
+        .cloned()
+        .unwrap_or(serde_json::json!({})))
 }
 
 /// Updates hooks configuration in settings at specified scope
 #[tauri::command]
 pub async fn update_hooks_config(
-    scope: String, 
+    scope: String,
     hooks: serde_json::Value,
-    project_path: Option<String>
+    project_path: Option<String>,
 ) -> Result<String, String> {
-    log::info!("Updating hooks config for scope: {}, project: {:?}", scope, project_path);
+    log::info!(
+        "Updating hooks config for scope: {}, project: {:?}",
+        scope,
+        project_path
+    );
 
     let settings_path = match scope.as_str() {
-        "user" => {
-            get_claude_dir()
-                .map_err(|e| e.to_string())?
-                .join("settings.json")
-        },
+        "user" => get_claude_dir()
+            .map_err(|e| e.to_string())?
+            .join("settings.json"),
         "project" => {
             let path = project_path.ok_or("Project path required for project scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             claude_dir.join("settings.json")
-        },
+        }
         "local" => {
             let path = project_path.ok_or("Project path required for local scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             claude_dir.join("settings.local.json")
-        },
-        _ => return Err("Invalid scope".to_string())
+        }
+        _ => return Err("Invalid scope".to_string()),
     };
 
     // Read existing settings or create new
     let mut settings = if settings_path.exists() {
         let content = fs::read_to_string(&settings_path)
             .map_err(|e| format!("Failed to read settings: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse settings: {}", e))?
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?
     } else {
         serde_json::json!({})
     };
@@ -2097,7 +2147,7 @@ pub async fn update_hooks_config(
     // Write back with pretty formatting
     let json_string = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-    
+
     fs::write(&settings_path, json_string)
         .map_err(|e| format!("Failed to write settings: {}", e))?;
 
@@ -2112,9 +2162,9 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     // Validate syntax without executing
     let mut cmd = std::process::Command::new("bash");
     cmd.arg("-n") // Syntax check only
-       .arg("-c")
-       .arg(&command);
-    
+        .arg("-c")
+        .arg(&command);
+
     match cmd.output() {
         Ok(output) => {
             if output.status.success() {
@@ -2130,6 +2180,6 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
                 }))
             }
         }
-        Err(e) => Err(format!("Failed to validate command: {}", e))
+        Err(e) => Err(format!("Failed to validate command: {}", e)),
     }
 }

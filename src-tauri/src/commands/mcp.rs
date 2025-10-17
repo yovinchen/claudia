@@ -751,7 +751,7 @@ pub async fn mcp_export_servers(app: AppHandle) -> Result<MCPExportResult, Strin
 
     // Get all servers
     let servers = mcp_list(app.clone()).await?;
-    
+
     if servers.is_empty() {
         return Ok(MCPExportResult {
             servers: vec![],
@@ -761,7 +761,7 @@ pub async fn mcp_export_servers(app: AppHandle) -> Result<MCPExportResult, Strin
 
     // Get detailed information for each server
     let mut export_configs = Vec::new();
-    
+
     for server in &servers {
         match mcp_get(app.clone(), server.name.clone()).await {
             Ok(detailed_server) => {
@@ -792,7 +792,12 @@ pub async fn mcp_export_servers(app: AppHandle) -> Result<MCPExportResult, Strin
     }
 
     Ok(MCPExportResult {
-        format: if export_configs.len() == 1 { "single" } else { "multiple" }.to_string(),
+        format: if export_configs.len() == 1 {
+            "single"
+        } else {
+            "multiple"
+        }
+        .to_string(),
         servers: export_configs,
     })
 }

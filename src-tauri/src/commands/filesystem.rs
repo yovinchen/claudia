@@ -1,8 +1,8 @@
+use crate::file_watcher::FileWatcherState;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
-use crate::file_watcher::FileWatcherState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileNode {
@@ -23,15 +23,13 @@ pub struct FileSystemChange {
 /// 读取文件内容
 #[tauri::command]
 pub async fn read_file(path: String) -> Result<String, String> {
-    fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read file: {}", e))
+    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
 }
 
 /// 写入文件内容
 #[tauri::command]
 pub async fn write_file(path: String, content: String) -> Result<(), String> {
-    fs::write(&path, content)
-        .map_err(|e| format!("Failed to write file: {}", e))
+    fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))
 }
 
 /// 读取目录树结构
@@ -47,20 +45,21 @@ pub async fn read_directory_tree(
     }
 
     let max_depth = max_depth.unwrap_or(5);
-    let ignore_patterns = ignore_patterns.unwrap_or_else(|| vec![
-        String::from("node_modules"),
-        String::from(".git"),
-        String::from("target"),
-        String::from("dist"),
-        String::from("build"),
-        String::from(".idea"),
-        String::from(".vscode"),
-        String::from("__pycache__"),
-        String::from(".DS_Store"),
-    ]);
+    let ignore_patterns = ignore_patterns.unwrap_or_else(|| {
+        vec![
+            String::from("node_modules"),
+            String::from(".git"),
+            String::from("target"),
+            String::from("dist"),
+            String::from("build"),
+            String::from(".idea"),
+            String::from(".vscode"),
+            String::from("__pycache__"),
+            String::from(".DS_Store"),
+        ]
+    });
 
-    read_directory_recursive(path, 0, max_depth, &ignore_patterns)
-        .map_err(|e| e.to_string())
+    read_directory_recursive(path, 0, max_depth, &ignore_patterns).map_err(|e| e.to_string())
 }
 
 fn read_directory_recursive(
@@ -69,28 +68,29 @@ fn read_directory_recursive(
     max_depth: u32,
     ignore_patterns: &[String],
 ) -> std::io::Result<FileNode> {
-    let name = path.file_name()
+    let name = path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
 
     let metadata = fs::metadata(path)?;
-    
+
     let node = if metadata.is_dir() {
         let mut children = Vec::new();
-        
+
         if current_depth < max_depth {
             // Check if directory should be ignored
-            let should_ignore = ignore_patterns.iter().any(|pattern| {
-                &name == pattern || name.starts_with('.')
-            });
-            
+            let should_ignore = ignore_patterns
+                .iter()
+                .any(|pattern| &name == pattern || name.starts_with('.'));
+
             if !should_ignore {
                 let entries = fs::read_dir(path)?;
                 for entry in entries {
                     let entry = entry?;
                     let child_path = entry.path();
-                    
+
                     // Skip symlinks to avoid infinite loops
                     if let Ok(meta) = entry.metadata() {
                         if !meta.file_type().is_symlink() {
@@ -105,25 +105,24 @@ fn read_directory_recursive(
                         }
                     }
                 }
-                
+
                 // Sort children: directories first, then files, alphabetically
-                children.sort_by(|a, b| {
-                    match (a.file_type.as_str(), b.file_type.as_str()) {
-                        ("directory", "file") => std::cmp::Ordering::Less,
-                        ("file", "directory") => std::cmp::Ordering::Greater,
-                        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-                    }
+                children.sort_by(|a, b| match (a.file_type.as_str(), b.file_type.as_str()) {
+                    ("directory", "file") => std::cmp::Ordering::Less,
+                    ("file", "directory") => std::cmp::Ordering::Greater,
+                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
                 });
             }
         }
-        
+
         FileNode {
             name,
             path: path.to_string_lossy().to_string(),
             file_type: String::from("directory"),
             children: Some(children),
             size: None,
-            modified: metadata.modified()
+            modified: metadata
+                .modified()
                 .ok()
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_secs()),
@@ -135,13 +134,14 @@ fn read_directory_recursive(
             file_type: String::from("file"),
             children: None,
             size: Some(metadata.len()),
-            modified: metadata.modified()
+            modified: metadata
+                .modified()
                 .ok()
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_secs()),
         }
     };
-    
+
     Ok(node)
 }
 
@@ -162,7 +162,7 @@ pub async fn search_files_by_name(
     let mut results = Vec::new();
 
     search_recursive(base_path, &query_lower, &mut results, max_results)?;
-    
+
     Ok(results)
 }
 
@@ -176,8 +176,7 @@ fn search_recursive(
         return Ok(());
     }
 
-    let entries = fs::read_dir(dir)
-        .map_err(|e| format!("Failed to read directory: {}", e))?;
+    let entries = fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
 
     for entry in entries {
         if results.len() >= max_results {
@@ -186,7 +185,8 @@ fn search_recursive(
 
         let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
         let path = entry.path();
-        let file_name = path.file_name()
+        let file_name = path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -197,10 +197,11 @@ fn search_recursive(
 
         if path.is_dir() {
             // Skip hidden directories and common ignore patterns
-            if !file_name.starts_with('.') 
+            if !file_name.starts_with('.')
                 && file_name != "node_modules"
                 && file_name != "target"
-                && file_name != "dist" {
+                && file_name != "dist"
+            {
                 let _ = search_recursive(&path, query, results, max_results);
             }
         }
@@ -217,10 +218,10 @@ pub async fn get_file_info(path: String) -> Result<FileNode, String> {
         return Err(format!("Path does not exist: {}", path.display()));
     }
 
-    let metadata = fs::metadata(path)
-        .map_err(|e| format!("Failed to get metadata: {}", e))?;
+    let metadata = fs::metadata(path).map_err(|e| format!("Failed to get metadata: {}", e))?;
 
-    let name = path.file_name()
+    let name = path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
@@ -228,18 +229,19 @@ pub async fn get_file_info(path: String) -> Result<FileNode, String> {
     Ok(FileNode {
         name,
         path: path.to_string_lossy().to_string(),
-        file_type: if metadata.is_dir() { 
-            String::from("directory") 
-        } else { 
-            String::from("file") 
+        file_type: if metadata.is_dir() {
+            String::from("directory")
+        } else {
+            String::from("file")
         },
         children: None,
-        size: if metadata.is_file() { 
-            Some(metadata.len()) 
-        } else { 
-            None 
+        size: if metadata.is_file() {
+            Some(metadata.len())
+        } else {
+            None
         },
-        modified: metadata.modified()
+        modified: metadata
+            .modified()
             .ok()
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs()),
@@ -254,10 +256,8 @@ pub async fn watch_directory(
     recursive: Option<bool>,
 ) -> Result<(), String> {
     let recursive = recursive.unwrap_or(false);
-    
-    watcher_state.with_manager(|manager| {
-        manager.watch_path(&path, recursive)
-    })
+
+    watcher_state.with_manager(|manager| manager.watch_path(&path, recursive))
 }
 
 /// 停止监听指定路径
@@ -266,9 +266,7 @@ pub async fn unwatch_directory(
     watcher_state: State<'_, FileWatcherState>,
     path: String,
 ) -> Result<(), String> {
-    watcher_state.with_manager(|manager| {
-        manager.unwatch_path(&path)
-    })
+    watcher_state.with_manager(|manager| manager.unwatch_path(&path))
 }
 
 /// 获取当前监听的路径列表
@@ -276,9 +274,7 @@ pub async fn unwatch_directory(
 pub async fn get_watched_paths(
     watcher_state: State<'_, FileWatcherState>,
 ) -> Result<Vec<String>, String> {
-    watcher_state.with_manager(|manager| {
-        Ok(manager.get_watched_paths())
-    })
+    watcher_state.with_manager(|manager| Ok(manager.get_watched_paths()))
 }
 
 /// 获取文件树（简化版，供文件浏览器使用）
@@ -302,8 +298,8 @@ pub async fn get_file_tree(project_path: String) -> Result<Vec<FileNode>, String
     ];
 
     // 增加最大深度为 10，以支持更深的文件夹结构
-    let root_node = read_directory_recursive(path, 0, 10, &ignore_patterns)
-        .map_err(|e| e.to_string())?;
+    let root_node =
+        read_directory_recursive(path, 0, 10, &ignore_patterns).map_err(|e| e.to_string())?;
 
     // Return children of root node if it has any
     Ok(root_node.children.unwrap_or_default())

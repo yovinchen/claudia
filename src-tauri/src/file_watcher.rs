@@ -31,7 +31,7 @@ impl FileWatcherManager {
     /// 监听指定路径（文件或目录）
     pub fn watch_path(&self, path: &str, recursive: bool) -> Result<(), String> {
         let path_buf = PathBuf::from(path);
-        
+
         // 检查路径是否存在
         if !path_buf.exists() {
             return Err(format!("Path does not exist: {}", path));
@@ -52,20 +52,19 @@ impl FileWatcherManager {
 
         // 创建文件监听器
         let mut watcher = RecommendedWatcher::new(
-            move |res: Result<Event, notify::Error>| {
-                match res {
-                    Ok(event) => {
-                        Self::handle_event(event, &app_handle, &last_events);
-                    }
-                    Err(e) => {
-                        log::error!("Watch error: {:?}", e);
-                    }
+            move |res: Result<Event, notify::Error>| match res {
+                Ok(event) => {
+                    Self::handle_event(event, &app_handle, &last_events);
+                }
+                Err(e) => {
+                    log::error!("Watch error: {:?}", e);
                 }
             },
             Config::default()
                 .with_poll_interval(Duration::from_secs(1))
                 .with_compare_contents(false),
-        ).map_err(|e| format!("Failed to create watcher: {}", e))?;
+        )
+        .map_err(|e| format!("Failed to create watcher: {}", e))?;
 
         // 开始监听
         let mode = if recursive {
@@ -89,7 +88,7 @@ impl FileWatcherManager {
     /// 停止监听指定路径
     pub fn unwatch_path(&self, path: &str) -> Result<(), String> {
         let mut watchers = self.watchers.lock().unwrap();
-        
+
         if watchers.remove(path).is_some() {
             log::info!("Stopped watching path: {}", path);
             Ok(())
@@ -108,7 +107,11 @@ impl FileWatcherManager {
     }
 
     /// 处理文件系统事件
-    fn handle_event(event: Event, app_handle: &AppHandle, last_events: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>) {
+    fn handle_event(
+        event: Event,
+        app_handle: &AppHandle,
+        last_events: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
+    ) {
         // 过滤不需要的事件
         let change_type = match event.kind {
             EventKind::Create(_) => "created",
@@ -123,10 +126,12 @@ impl FileWatcherManager {
             let now = SystemTime::now();
             let should_emit = {
                 let mut last_events = last_events.lock().unwrap();
-                
+
                 if let Some(last_time) = last_events.get(&path) {
                     // 如果距离上次事件不到500ms，忽略
-                    if now.duration_since(*last_time).unwrap_or(Duration::ZERO) < Duration::from_millis(500) {
+                    if now.duration_since(*last_time).unwrap_or(Duration::ZERO)
+                        < Duration::from_millis(500)
+                    {
                         false
                     } else {
                         last_events.insert(path.clone(), now);

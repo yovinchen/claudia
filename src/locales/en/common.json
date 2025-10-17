@@ -536,7 +536,42 @@
       "allowRuleExample": "e.g., Bash(npm run test:*)",
       "denyRuleExample": "e.g., Bash(curl:*)",
       "apiKeyHelperPath": "/path/to/generate_api_key.sh"
+    },
+    "modelMappings": {
+      "title": "Model alias mappings",
+      "description": "Configure actual model versions for aliases (sonnet, opus, haiku)",
+      "loadFailed": "Failed to load model mappings",
+      "saved": "Model mappings saved",
+      "saveFailed": "Failed to save model mappings",
+      "emptyTitle": "No model mappings configured",
+      "emptySubtitle": "Database may not be initialized yet. Try restarting the app.",
+      "changedNotice": "Model mappings changed. Click Save to apply.",
+      "note": "Note:",
+      "noteContent": "Agents using aliases will resolve to configured versions. For example, sonnet → claude-sonnet-4-20250514.",
+      "aliasDescriptions": {
+        "sonnet": "Balanced model for most tasks",
+        "opus": "Most capable flagship model for complex tasks",
+        "haiku": "Fast, lightweight model"
+      }
     }
+  },
+  "ccr": {
+    "loadStatusFailed": "Failed to load CCR service status: {{error}}",
+    "startFailed": "Failed to start CCR service: {{error}}",
+    "stopFailed": "Failed to stop CCR service: {{error}}",
+    "restartFailed": "Failed to restart CCR service: {{error}}",
+    "serviceStarting": "Service not running, starting...",
+    "serviceStartFailed": "Service failed to start",
+    "openingUI": "Opening CCR UI...",
+    "openUIFailed": "Failed to open CCR UI: {{error}}",
+    "openingAdmin": "Opening CCR admin...",
+    "openAdminFailed": "Failed to open admin UI: {{error}}"
+  },
+  "claudeSession": {
+    "scrollToTop": "Scroll to top",
+    "scrollToBottom": "Scroll to bottom",
+    "startFileWatch": "Start file watching",
+    "stopFileWatch": "Stop file watching"
   },
   "mcp": {
     "title": "MCP Server Management",
@@ -766,8 +801,11 @@
     "claudeCodeNotFound": "Claude Code not found",
     "selectClaudeInstallation": "Select Claude Installation",
     "installClaudeCode": "Install Claude Code",
-    "smartSessionCreated": "Smart session '{{name}}' created at: {{path}}",
+    "smartSessionCreated": "Smart session '{{name}}' is ready to use.",
+    "smartSessionDefaultToast": "Smart session '{{name}}' is ready to use.",
+    "smartSessionDefaultTitle": "Smart Session",
     "failedToCreateSmartSession": "Failed to create smart session: {{error}}",
+    "failedToCreateSmartSessionFallback": "Failed to create smart session: {{error}}",
     "noTabsOpen": "No tabs open",
     "clickPlusToStartChat": "Click the + button to start a new chat",
     "noAgentRunIdSpecified": "No agent run ID specified",

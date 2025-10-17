@@ -398,9 +398,11 @@ export const TabContent: React.FC = () => {
       console.log('[TabContent] Handling create-smart-session-tab:', { tabId, sessionData });
       
       // Update the existing tab with smart session data and switch immediately
+      const displayName = sessionData.display_name || t('smartSessionDefaultTitle');
+
       updateTab(tabId, {
         type: 'chat',
-        title: sessionData.display_name || 'Smart Session',
+        title: displayName,
         initialProjectPath: sessionData.project_path,
         sessionData: null, // No existing session, this is a new session workspace
       });

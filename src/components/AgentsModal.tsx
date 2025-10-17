@@ -150,11 +150,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       if (filePath) {
         const agent = await api.importAgentFromFile(filePath as string);
         loadAgents(); // Refresh list
-        setToast({ message: `Agent "${agent.name}" imported successfully`, type: "success" });
+        setToast({ message: t('agents.importedSuccessfully', { name: agent.name }), type: "success" });
       }
     } catch (error) {
       console.error('Failed to import agent:', error);
-      setToast({ message: "Failed to import agent", type: "error" });
+      setToast({ message: t('agents.importFailed'), type: "error" });
     }
   };
 
@@ -175,11 +175,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       
       if (filePath) {
         await invoke('write_file', { path: filePath, content: JSON.stringify(exportData, null, 2) });
-        setToast({ message: "Agent exported successfully", type: "success" });
+        setToast({ message: t('agents.exportedSuccessfully', { name: agent.name }), type: "success" });
       }
     } catch (error) {
       console.error('Failed to export agent:', error);
-      setToast({ message: "Failed to export agent", type: "error" });
+      setToast({ message: t('agents.exportFailed'), type: "error" });
     }
   };
 
@@ -424,7 +424,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       onImportSuccess={() => {
         setShowGitHubBrowser(false);
         loadAgents(); // Refresh the agents list
-        setToast({ message: "Agent imported successfully", type: "success" });
+        setToast({ message: t('agents.importedSuccessfully'), type: "success" });
       }}
     />
 

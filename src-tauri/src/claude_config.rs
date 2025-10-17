@@ -1,10 +1,10 @@
-use std::fs;
-use std::path::PathBuf;
-use std::collections::HashMap;
+use crate::commands::relay_stations::RelayStation;
+use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use dirs::home_dir;
-use crate::commands::relay_stations::RelayStation;
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
 
 /// Claude 配置文件结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,11 +39,17 @@ pub struct StatusLineConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaudeEnv {
-    #[serde(rename = "ANTHROPIC_AUTH_TOKEN", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ANTHROPIC_AUTH_TOKEN",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub anthropic_auth_token: Option<String>,
     #[serde(rename = "ANTHROPIC_BASE_URL", skip_serializing_if = "Option::is_none")]
     pub anthropic_base_url: Option<String>,
-    #[serde(rename = "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub disable_nonessential_traffic: Option<String>,
     // 使用 flatten 来支持任何其他环境变量
     #[serde(flatten)]
@@ -84,7 +90,7 @@ pub fn get_config_backup_path() -> Result<PathBuf, String> {
 /// 读取 Claude 配置文件
 pub fn read_claude_config() -> Result<ClaudeConfig, String> {
     let config_path = get_claude_config_path()?;
-    
+
     if !config_path.exists() {
         // 如果配置文件不存在，创建默认配置
         return Ok(ClaudeConfig {
@@ -96,14 +102,14 @@ pub fn read_claude_config() -> Result<ClaudeConfig, String> {
             extra_fields: HashMap::new(),
         });
     }
-    
-    let content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("读取配置文件失败: {}", e))?;
-    
+
+    let content =
+        fs::read_to_string(&config_path).map_err(|e| format!("读取配置文件失败: {}", e))?;
+
     // 首先尝试解析为 JSON Value，以便处理可能的格式问题
-    let mut json_value: Value = serde_json::from_str(&content)
-        .map_err(|e| format!("解析配置文件失败: {}", e))?;
-    
+    let mut json_value: Value =
+        serde_json::from_str(&content).map_err(|e| format!("解析配置文件失败: {}", e))?;
+
     // 如果JSON解析成功，再转换为ClaudeConfig
     if let Some(obj) = json_value.as_object_mut() {
         // 确保必要的字段存在
@@ -111,44 +117,40 @@ pub fn read_claude_config() -> Result<ClaudeConfig, String> {
             obj.insert("env".to_string(), json!({}));
         }
     }
-    
-    serde_json::from_value(json_value)
-        .map_err(|e| format!("转换配置结构失败: {}", e))
+
+    serde_json::from_value(json_value).map_err(|e| format!("转换配置结构失败: {}", e))
 }
 
 /// 写入 Claude 配置文件
 pub fn write_claude_config(config: &ClaudeConfig) -> Result<(), String> {
     let config_path = get_claude_config_path()?;
-    
+
     log::info!("尝试写入配置文件到: {:?}", config_path);
-    
+
     // 确保目录存在
     if let Some(parent) = config_path.parent() {
         log::info!("确保目录存在: {:?}", parent);
-        fs::create_dir_all(parent)
-            .map_err(|e| {
-                let error_msg = format!("创建配置目录失败: {}", e);
-                log::error!("{}", error_msg);
-                error_msg
-            })?;
+        fs::create_dir_all(parent).map_err(|e| {
+            let error_msg = format!("创建配置目录失败: {}", e);
+            log::error!("{}", error_msg);
+            error_msg
+        })?;
     }
-    
-    let content = serde_json::to_string_pretty(config)
-        .map_err(|e| {
-            let error_msg = format!("序列化配置失败: {}", e);
-            log::error!("{}", error_msg);
-            error_msg
-        })?;
-    
+
+    let content = serde_json::to_string_pretty(config).map_err(|e| {
+        let error_msg = format!("序列化配置失败: {}", e);
+        log::error!("{}", error_msg);
+        error_msg
+    })?;
+
     log::info!("准备写入内容:\n{}", content);
-    
-    fs::write(&config_path, &content)
-        .map_err(|e| {
-            let error_msg = format!("写入配置文件失败: {} (路径: {:?})", e, config_path);
-            log::error!("{}", error_msg);
-            error_msg
-        })?;
-    
+
+    fs::write(&config_path, &content).map_err(|e| {
+        let error_msg = format!("写入配置文件失败: {} (路径: {:?})", e, config_path);
+        log::error!("{}", error_msg);
+        error_msg
+    })?;
+
     log::info!("配置文件写入成功: {:?}", config_path);
     Ok(())
 }
@@ -157,12 +159,11 @@ pub fn write_claude_config(config: &ClaudeConfig) -> Result<(), String> {
 pub fn backup_claude_config() -> Result<(), String> {
     let config_path = get_claude_config_path()?;
     let backup_path = get_config_backup_path()?;
-    
+
     if config_path.exists() {
-        fs::copy(&config_path, &backup_path)
-            .map_err(|e| format!("备份配置文件失败: {}", e))?;
+        fs::copy(&config_path, &backup_path).map_err(|e| format!("备份配置文件失败: {}", e))?;
     }
-    
+
     Ok(())
 }
 
@@ -170,14 +171,13 @@ pub fn backup_claude_config() -> Result<(), String> {
 pub fn restore_claude_config() -> Result<(), String> {
     let config_path = get_claude_config_path()?;
     let backup_path = get_config_backup_path()?;
-    
+
     if !backup_path.exists() {
         return Err("备份文件不存在".to_string());
     }
-    
-    fs::copy(&backup_path, &config_path)
-        .map_err(|e| format!("恢复配置文件失败: {}", e))?;
-    
+
+    fs::copy(&backup_path, &config_path).map_err(|e| format!("恢复配置文件失败: {}", e))?;
+
     Ok(())
 }
 
@@ -185,20 +185,20 @@ pub fn restore_claude_config() -> Result<(), String> {
 pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), String> {
     // 先备份当前配置
     backup_claude_config()?;
-    
+
     // 读取当前配置
     let mut config = read_claude_config()?;
-    
+
     // 仅更新这三个关键字段，保留其他所有配置不变：
     // 1. ANTHROPIC_BASE_URL
     config.env.anthropic_base_url = Some(station.api_url.clone());
-    
-    // 2. ANTHROPIC_AUTH_TOKEN  
+
+    // 2. ANTHROPIC_AUTH_TOKEN
     config.env.anthropic_auth_token = Some(station.system_token.clone());
-    
+
     // 3. apiKeyHelper - 设置为 echo 格式
     config.api_key_helper = Some(format!("echo '{}'", station.system_token));
-    
+
     // 如果是特定适配器，可能需要特殊处理 URL 格式
     match station.adapter.as_str() {
         "packycode" => {
@@ -209,10 +209,10 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
         }
         _ => {}
     }
-    
+
     // 写入更新后的配置
     write_claude_config(&config)?;
-    
+
     log::info!("已将中转站 {} 的 API 配置（apiKeyHelper, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN）应用到 Claude 配置文件", station.name);
     Ok(())
 }
@@ -230,14 +230,14 @@ pub fn clear_relay_station_from_config() -> Result<(), String> {
     } else {
         None
     };
-    
+
     // 读取当前配置
     let mut config = read_claude_config()?;
-    
+
     // 清除 API URL 和 Token
     config.env.anthropic_base_url = None;
     config.env.anthropic_auth_token = None;
-    
+
     // 恢复原始的 apiKeyHelper（如果有备份的话）
     if let Some(backup) = backup_config {
         config.api_key_helper = backup.api_key_helper;
@@ -249,10 +249,10 @@ pub fn clear_relay_station_from_config() -> Result<(), String> {
         // 如果没有备份，清除 apiKeyHelper
         config.api_key_helper = None;
     }
-    
+
     // 写入更新后的配置
     write_claude_config(&config)?;
-    
+
     log::info!("已清除 Claude 配置文件中的中转站设置");
     Ok(())
 }

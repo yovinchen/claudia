@@ -5,9 +5,9 @@ pub mod checkpoint;
 pub mod claude_binary;
 pub mod claude_config;
 pub mod commands;
-pub mod process;
-pub mod i18n;
 pub mod file_watcher;
+pub mod i18n;
+pub mod process;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

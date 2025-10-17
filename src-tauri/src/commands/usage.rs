@@ -152,40 +152,86 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
 // 独立的模型价格匹配函数，更精确的模型识别
 fn match_model_prices(model_lower: &str) -> (f64, f64, f64, f64) {
     // Claude Opus 4.1 (最新最强)
-    if model_lower.contains("opus") && (model_lower.contains("4-1") || model_lower.contains("4.1")) {
-        (OPUS_4_1_INPUT_PRICE, OPUS_4_1_OUTPUT_PRICE, OPUS_4_1_CACHE_WRITE_PRICE, OPUS_4_1_CACHE_READ_PRICE)
+    if model_lower.contains("opus") && (model_lower.contains("4-1") || model_lower.contains("4.1"))
+    {
+        (
+            OPUS_4_1_INPUT_PRICE,
+            OPUS_4_1_OUTPUT_PRICE,
+            OPUS_4_1_CACHE_WRITE_PRICE,
+            OPUS_4_1_CACHE_READ_PRICE,
+        )
     }
     // Claude Sonnet 4
-    else if model_lower.contains("sonnet") && (model_lower.contains("-4-") || model_lower.contains("sonnet-4")) {
-        (SONNET_4_INPUT_PRICE, SONNET_4_OUTPUT_PRICE, SONNET_4_CACHE_WRITE_PRICE, SONNET_4_CACHE_READ_PRICE)
+    else if model_lower.contains("sonnet")
+        && (model_lower.contains("-4-") || model_lower.contains("sonnet-4"))
+    {
+        (
+            SONNET_4_INPUT_PRICE,
+            SONNET_4_OUTPUT_PRICE,
+            SONNET_4_CACHE_WRITE_PRICE,
+            SONNET_4_CACHE_READ_PRICE,
+        )
     }
     // Claude Haiku 3.5
     else if model_lower.contains("haiku") {
-        (HAIKU_3_5_INPUT_PRICE, HAIKU_3_5_OUTPUT_PRICE, HAIKU_3_5_CACHE_WRITE_PRICE, HAIKU_3_5_CACHE_READ_PRICE)
+        (
+            HAIKU_3_5_INPUT_PRICE,
+            HAIKU_3_5_OUTPUT_PRICE,
+            HAIKU_3_5_CACHE_WRITE_PRICE,
+            HAIKU_3_5_CACHE_READ_PRICE,
+        )
     }
     // Claude 3.x Sonnet 系列（3.7, 3.5）
-    else if model_lower.contains("sonnet") &&
-            (model_lower.contains("3-7") || model_lower.contains("3.7") ||
-             model_lower.contains("3-5") || model_lower.contains("3.5")) {
-        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+    else if model_lower.contains("sonnet")
+        && (model_lower.contains("3-7")
+            || model_lower.contains("3.7")
+            || model_lower.contains("3-5")
+            || model_lower.contains("3.5"))
+    {
+        (
+            SONNET_3_INPUT_PRICE,
+            SONNET_3_OUTPUT_PRICE,
+            SONNET_3_CACHE_WRITE_PRICE,
+            SONNET_3_CACHE_READ_PRICE,
+        )
     }
     // Claude 3 Opus (旧版)
     else if model_lower.contains("opus") && model_lower.contains("3") {
-        (OPUS_3_INPUT_PRICE, OPUS_3_OUTPUT_PRICE, OPUS_3_CACHE_WRITE_PRICE, OPUS_3_CACHE_READ_PRICE)
+        (
+            OPUS_3_INPUT_PRICE,
+            OPUS_3_OUTPUT_PRICE,
+            OPUS_3_CACHE_WRITE_PRICE,
+            OPUS_3_CACHE_READ_PRICE,
+        )
     }
     // 默认 Sonnet（未明确版本号时）
     else if model_lower.contains("sonnet") {
-        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+        (
+            SONNET_3_INPUT_PRICE,
+            SONNET_3_OUTPUT_PRICE,
+            SONNET_3_CACHE_WRITE_PRICE,
+            SONNET_3_CACHE_READ_PRICE,
+        )
     }
     // 默认 Opus（未明确版本号时，假设是最新版）
     else if model_lower.contains("opus") {
-        (OPUS_4_1_INPUT_PRICE, OPUS_4_1_OUTPUT_PRICE, OPUS_4_1_CACHE_WRITE_PRICE, OPUS_4_1_CACHE_READ_PRICE)
+        (
+            OPUS_4_1_INPUT_PRICE,
+            OPUS_4_1_OUTPUT_PRICE,
+            OPUS_4_1_CACHE_WRITE_PRICE,
+            OPUS_4_1_CACHE_READ_PRICE,
+        )
     }
     // 未知模型
     else {
         log::warn!("Unknown model for cost calculation: {}", model_lower);
         // 默认使用 Sonnet 3 的价格（保守估计）
-        (SONNET_3_INPUT_PRICE, SONNET_3_OUTPUT_PRICE, SONNET_3_CACHE_WRITE_PRICE, SONNET_3_CACHE_READ_PRICE)
+        (
+            SONNET_3_INPUT_PRICE,
+            SONNET_3_OUTPUT_PRICE,
+            SONNET_3_CACHE_WRITE_PRICE,
+            SONNET_3_CACHE_READ_PRICE,
+        )
     }
 }
 
@@ -236,7 +282,8 @@ pub fn parse_jsonl_file(
                             // 智能去重策略
                             let has_io_tokens = usage.input_tokens.unwrap_or(0) > 0
                                 || usage.output_tokens.unwrap_or(0) > 0;
-                            let has_cache_tokens = usage.cache_creation_input_tokens.unwrap_or(0) > 0
+                            let has_cache_tokens = usage.cache_creation_input_tokens.unwrap_or(0)
+                                > 0
                                 || usage.cache_read_input_tokens.unwrap_or(0) > 0;
 
                             let should_skip = if has_io_tokens {
@@ -254,7 +301,9 @@ pub fn parse_jsonl_file(
                                 }
                             } else if has_cache_tokens {
                                 // 缓存令牌：使用 message_id + request_id 宽松去重
-                                if let (Some(msg_id), Some(req_id)) = (&message.id, &entry.request_id) {
+                                if let (Some(msg_id), Some(req_id)) =
+                                    (&message.id, &entry.request_id)
+                                {
                                     let unique_hash = format!("cache:{}:{}", msg_id, req_id);
                                     if processed_hashes.contains(&unique_hash) {
                                         true
@@ -287,13 +336,16 @@ pub fn parse_jsonl_file(
                                 .unwrap_or_else(|| encoded_project_name.to_string());
 
                             // 转换时间戳为本地时间格式
-                            let local_timestamp = if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
-                                // 转换为本地时区并格式化为 ISO 格式
-                                dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S%.3f").to_string()
-                            } else {
-                                // 如果解析失败，保留原始时间戳
-                                entry.timestamp.clone()
-                            };
+                            let local_timestamp =
+                                if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
+                                    // 转换为本地时区并格式化为 ISO 格式
+                                    dt.with_timezone(&Local)
+                                        .format("%Y-%m-%d %H:%M:%S%.3f")
+                                        .to_string()
+                                } else {
+                                    // 如果解析失败，保留原始时间戳
+                                    entry.timestamp.clone()
+                                };
 
                             entries.push(UsageEntry {
                                 timestamp: local_timestamp,
@@ -414,7 +466,9 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
                 // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
                 let date = if e.timestamp.contains(' ') {
                     // 新格式：直接解析日期部分
-                    e.timestamp.split(' ').next()
+                    e.timestamp
+                        .split(' ')
+                        .next()
                         .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
                 } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                     // 旧格式：RFC3339 格式
@@ -487,7 +541,12 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
         let date = if entry.timestamp.contains(' ') {
             // 新格式：直接提取日期部分
-            entry.timestamp.split(' ').next().unwrap_or(&entry.timestamp).to_string()
+            entry
+                .timestamp
+                .split(' ')
+                .next()
+                .unwrap_or(&entry.timestamp)
+                .to_string()
         } else if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
             // 旧格式：RFC3339 格式
             dt.with_timezone(&Local).date_naive().to_string()
@@ -631,7 +690,9 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
             let date = if e.timestamp.contains(' ') {
                 // 新格式：直接解析日期部分
-                e.timestamp.split(' ').next()
+                e.timestamp
+                    .split(' ')
+                    .next()
                     .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
             } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                 // 旧格式：RFC3339 格式
@@ -716,7 +777,12 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
         let date = if entry.timestamp.contains(' ') {
             // 新格式：直接提取日期部分
-            entry.timestamp.split(' ').next().unwrap_or(&entry.timestamp).to_string()
+            entry
+                .timestamp
+                .split(' ')
+                .next()
+                .unwrap_or(&entry.timestamp)
+                .to_string()
         } else if let Ok(dt) = DateTime::parse_from_rfc3339(&entry.timestamp) {
             // 旧格式：RFC3339 格式
             dt.with_timezone(&Local).date_naive().to_string()
@@ -889,7 +955,9 @@ pub fn get_session_stats(
             // 处理新的本地时间格式 "YYYY-MM-DD HH:MM:SS.sss"
             let date = if e.timestamp.contains(' ') {
                 // 新格式：直接解析日期部分
-                e.timestamp.split(' ').next()
+                e.timestamp
+                    .split(' ')
+                    .next()
                     .and_then(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok())
             } else if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                 // 旧格式：RFC3339 格式
