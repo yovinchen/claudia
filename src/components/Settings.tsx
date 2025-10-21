@@ -30,6 +30,7 @@ import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
+import PromptFilesManager from "./PromptFilesManager";
 import { ProxySettings } from "./ProxySettings";
 import { AnalyticsConsent } from "./AnalyticsConsent";
 import { useTheme, useTrackEvent, useTranslation } from "@/hooks";
@@ -457,13 +458,14 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-9 w-full sticky top-0 z-10 bg-background">
+              <TabsList className="grid grid-cols-10 w-full sticky top-0 z-10 bg-background">
                 <TabsTrigger value="general">{t('settings.general')}</TabsTrigger>
                 <TabsTrigger value="permissions">{t('settings.permissionsTab')}</TabsTrigger>
                 <TabsTrigger value="environment">{t('settings.environmentTab')}</TabsTrigger>
                 <TabsTrigger value="advanced">{t('settings.advancedTab')}</TabsTrigger>
                 <TabsTrigger value="hooks">{t('settings.hooksTab')}</TabsTrigger>
                 <TabsTrigger value="commands">{t('settings.commands')}</TabsTrigger>
+                <TabsTrigger value="prompts">{t('promptFiles.title')}</TabsTrigger>
                 <TabsTrigger value="storage">{t('settings.storage')}</TabsTrigger>
                 <TabsTrigger value="proxy">{t('settings.proxy')}</TabsTrigger>
                 <TabsTrigger value="analytics">{t('settings.analyticsTab')}</TabsTrigger>
@@ -1016,6 +1018,13 @@ export const Settings: React.FC<SettingsProps> = ({
             <TabsContent value="commands" className="mt-6">
               <Card className="p-6">
                 <SlashCommandsManager className="p-0" />
+              </Card>
+            </TabsContent>
+            
+            {/* Prompt Files Tab */}
+            <TabsContent value="prompts" className="mt-6">
+              <Card className="p-6">
+                <PromptFilesManager className="p-0" />
               </Card>
             </TabsContent>
             

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot } from "lucide-react";
+import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot, Files } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -35,6 +35,10 @@ interface TopbarProps {
    */
   onAgentsClick?: () => void;
   /**
+   * Callback when Prompt Files is clicked
+   */
+  onPromptFilesClick?: () => void;
+  /**
    * Optional className for styling
    */
   className?: string;
@@ -58,6 +62,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onMCPClick,
   onInfoClick,
   onAgentsClick,
+  onPromptFilesClick,
   className,
 }) => {
   const { t } = useTranslation();
@@ -217,6 +222,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           <FileText className="mr-2 h-3 w-3" />
           CLAUDE.md
         </Button>
+        
+        {onPromptFilesClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onPromptFilesClick}
+            className="text-xs"
+          >
+            <Files className="mr-2 h-3 w-3" />
+            {t('navigation.promptFiles')}
+          </Button>
+        )}
         
         <Button
           variant="ghost"

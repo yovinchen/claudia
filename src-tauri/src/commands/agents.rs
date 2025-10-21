@@ -373,6 +373,9 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         )?;
     }
 
+    // Initialize prompt files tables
+    crate::commands::prompt_files::init_prompt_files_tables(&conn)?;
+
     Ok(conn)
 }
 

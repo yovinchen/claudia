@@ -422,6 +422,62 @@ export interface SlashCommand {
 }
 
 /**
+ * Represents a prompt file (CLAUDE.md template)
+ */
+export interface PromptFile {
+  /** Unique identifier */
+  id: string;
+  /** File name */
+  name: string;
+  /** Description */
+  description?: string;
+  /** Markdown content */
+  content: string;
+  /** Tags for categorization */
+  tags: string[];
+  /** Whether this is the currently active file */
+  is_active: boolean;
+  /** Unix timestamp when created */
+  created_at: number;
+  /** Unix timestamp when last updated */
+  updated_at: number;
+  /** Unix timestamp when last used */
+  last_used_at?: number;
+  /** Display order */
+  display_order: number;
+}
+
+/**
+ * Request to create a new prompt file
+ */
+export interface CreatePromptFileRequest {
+  /** File name */
+  name: string;
+  /** Description */
+  description?: string;
+  /** Markdown content */
+  content: string;
+  /** Tags */
+  tags: string[];
+}
+
+/**
+ * Request to update an existing prompt file
+ */
+export interface UpdatePromptFileRequest {
+  /** File ID */
+  id: string;
+  /** File name */
+  name: string;
+  /** Description */
+  description?: string;
+  /** Markdown content */
+  content: string;
+  /** Tags */
+  tags: string[];
+}
+
+/**
  * Result of adding a server
  */
 export interface AddServerResult {
@@ -2117,6 +2173,150 @@ export const api = {
       return await invoke<string>("slash_command_delete", { commandId, projectPath });
     } catch (error) {
       console.error("Failed to delete slash command:", error);
+      throw error;
+    }
+  },
+
+  // ================================
+  // Prompt Files Management
+  // ================================
+
+  /**
+   * Lists all prompt files
+   */
+  async promptFilesList(): Promise<PromptFile[]> {
+    try {
+      return await invoke<PromptFile[]>("prompt_files_list");
+    } catch (error) {
+      console.error("Failed to list prompt files:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets a single prompt file by ID
+   */
+  async promptFileGet(id: string): Promise<PromptFile> {
+    try {
+      return await invoke<PromptFile>("prompt_file_get", { id });
+    } catch (error) {
+      console.error("Failed to get prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new prompt file
+   */
+  async promptFileCreate(request: CreatePromptFileRequest): Promise<PromptFile> {
+    try {
+      return await invoke<PromptFile>("prompt_file_create", { request });
+    } catch (error) {
+      console.error("Failed to create prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates an existing prompt file
+   */
+  async promptFileUpdate(request: UpdatePromptFileRequest): Promise<PromptFile> {
+    try {
+      return await invoke<PromptFile>("prompt_file_update", { request });
+    } catch (error) {
+      console.error("Failed to update prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a prompt file
+   */
+  async promptFileDelete(id: string): Promise<void> {
+    try {
+      await invoke<void>("prompt_file_delete", { id });
+    } catch (error) {
+      console.error("Failed to delete prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Applies a prompt file (replaces local CLAUDE.md)
+   */
+  async promptFileApply(id: string, targetPath?: string): Promise<string> {
+    try {
+      return await invoke<string>("prompt_file_apply", { id, targetPath });
+    } catch (error) {
+      console.error("Failed to apply prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deactivates all prompt files
+   */
+  async promptFileDeactivate(): Promise<void> {
+    try {
+      await invoke<void>("prompt_file_deactivate");
+    } catch (error) {
+      console.error("Failed to deactivate prompt files:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports a prompt file from CLAUDE.md
+   */
+  async promptFileImportFromClaudeMd(
+    name: string,
+    description?: string,
+    sourcePath?: string
+  ): Promise<PromptFile> {
+    try {
+      return await invoke<PromptFile>("prompt_file_import_from_claude_md", {
+        name,
+        description,
+        sourcePath,
+      });
+    } catch (error) {
+      console.error("Failed to import from CLAUDE.md:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Exports a prompt file
+   */
+  async promptFileExport(id: string, exportPath: string): Promise<void> {
+    try {
+      await invoke<void>("prompt_file_export", { id, exportPath });
+    } catch (error) {
+      console.error("Failed to export prompt file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates the display order of prompt files
+   */
+  async promptFilesUpdateOrder(ids: string[]): Promise<void> {
+    try {
+      await invoke<void>("prompt_files_update_order", { ids });
+    } catch (error) {
+      console.error("Failed to update prompt files order:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Batch imports prompt files
+   */
+  async promptFilesImportBatch(files: CreatePromptFileRequest[]): Promise<PromptFile[]> {
+    try {
+      return await invoke<PromptFile[]>("prompt_files_import_batch", { files });
+    } catch (error) {
+      console.error("Failed to batch import prompt files:", error);
       throw error;
     }
   },

@@ -26,6 +26,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { WelcomePage } from "@/components/WelcomePage";
 import RelayStationManager from "@/components/RelayStationManager";
 import { CcrRouterManager } from "@/components/CcrRouterManager";
+import { PromptFilesManager } from "@/components";
 import i18n from "@/lib/i18n";
 
 // Lazy load these components to match TabContent's dynamic imports
@@ -48,6 +49,7 @@ type View =
   | "mcp"
   | "relay-stations"
   | "ccr-router"
+  | "prompt-files"
   | "usage-dashboard"
   | "project-settings"
   | "tabs"; // New view for tab-based interface
@@ -464,6 +466,13 @@ function AppContent() {
           </div>
         );
       
+      case "prompt-files":
+        return (
+          <div className="h-full overflow-hidden">
+            <PromptFilesManager onBack={() => handleViewChange("welcome")} />
+          </div>
+        );
+      
       case "settings":
         return (
           <div className="h-full overflow-hidden">
@@ -655,6 +664,7 @@ function AppContent() {
         onMCPClick={() => view === 'tabs' ? createMCPTab() : handleViewChange('mcp')}
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => view === 'tabs' ? setShowAgentsModal(true) : handleViewChange('cc-agents')}
+        onPromptFilesClick={() => handleViewChange('prompt-files')}
       />
       
       {/* Analytics Consent Banner */}

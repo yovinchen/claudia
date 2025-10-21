@@ -43,6 +43,12 @@ use commands::ccr::{
     check_ccr_installation, get_ccr_config_path, get_ccr_service_status, get_ccr_version,
     open_ccr_ui, restart_ccr_service, start_ccr_service, stop_ccr_service,
 };
+use commands::prompt_files::{
+    prompt_file_apply, prompt_file_create, prompt_file_deactivate, prompt_file_delete,
+    prompt_file_export, prompt_file_get, prompt_file_import_from_claude_md,
+    prompt_file_update, prompt_files_import_batch, prompt_files_list, 
+    prompt_files_update_order,
+};
 use commands::filesystem::{
     get_file_info, get_file_tree, get_watched_paths, read_directory_tree, read_file,
     search_files_by_name, unwatch_directory, watch_directory, write_file,
@@ -446,6 +452,18 @@ fn main() {
             commands::slash_commands::slash_command_get,
             commands::slash_commands::slash_command_save,
             commands::slash_commands::slash_command_delete,
+            // Prompt Files Management (Database Based)
+            prompt_files_list,
+            prompt_file_get,
+            prompt_file_create,
+            prompt_file_update,
+            prompt_file_delete,
+            prompt_file_apply,
+            prompt_file_deactivate,
+            prompt_file_import_from_claude_md,
+            prompt_file_export,
+            prompt_files_update_order,
+            prompt_files_import_batch,
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,

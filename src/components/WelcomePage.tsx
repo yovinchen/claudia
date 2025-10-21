@@ -74,13 +74,13 @@ export function WelcomePage({ onNavigate, onNewSession, onSmartQuickStart }: Wel
       view: "ccr-router"
     },
     {
-      id: "claude-md",
+      id: "prompt-files",
       icon: FileText,
-      title: t("welcome.claudeMd"),
-      subtitle: t("welcome.claudeMdDesc"),
+      title: t("welcome.promptFiles"),
+      subtitle: t("welcome.promptFilesDesc"),
       color: "text-orange-500",
       bgColor: "bg-orange-500/10",
-      view: "editor"
+      view: "prompt-files"
     },
     {
       id: "settings",

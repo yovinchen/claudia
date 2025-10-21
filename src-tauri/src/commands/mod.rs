@@ -6,6 +6,8 @@ pub mod git;
 pub mod language;
 pub mod mcp;
 pub mod packycode_nodes;
+pub mod prompt_files;
+pub mod prompt_files_v2;
 pub mod proxy;
 pub mod relay_adapters;
 pub mod relay_stations;
