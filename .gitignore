@@ -31,9 +31,13 @@ temp_lib/
 .cursor/
 AGENTS.md
 CLAUDE.md
+CLAUDE.md.backup*
 *_TASK.md
 
 # Claude project-specific files
 .claude/
+
+# Local tooling artifacts
+.serena/
 
 .env
