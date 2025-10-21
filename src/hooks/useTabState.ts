@@ -20,7 +20,6 @@ interface UseTabStateReturn {
   createUsageTab: () => string | null;
   createMCPTab: () => string | null;
   createSettingsTab: () => string | null;
-  createClaudeMdTab: () => string | null;
   createClaudeFileTab: (fileId: string, fileName: string) => string;
   createCreateAgentTab: () => string;
   createImportAgentTab: () => string;
@@ -161,22 +160,7 @@ export const useTabState = (): UseTabStateReturn => {
     });
   }, [addTab, tabs, setActiveTab, t]);
 
-  const createClaudeMdTab = useCallback((): string | null => {
-    // Check if claude-md tab already exists (singleton)
-    const existingTab = tabs.find(tab => tab.type === 'claude-md');
-    if (existingTab) {
-      setActiveTab(existingTab.id);
-      return existingTab.id;
-    }
-
-    return addTab({
-      type: 'claude-md',
-      title: t('messages.claudemdTitle'),
-      status: 'idle',
-      hasUnsavedChanges: false,
-      icon: 'file-text'
-    });
-  }, [addTab, tabs, setActiveTab, t]);
+  // Removed createClaudeMdTab: using Prompt Files manager instead
 
   const createClaudeFileTab = useCallback((fileId: string, fileName: string): string => {
     // Check if tab already exists for this file
@@ -328,7 +312,6 @@ export const useTabState = (): UseTabStateReturn => {
     createUsageTab,
     createMCPTab,
     createSettingsTab,
-    createClaudeMdTab,
     createClaudeFileTab,
     createCreateAgentTab,
     createImportAgentTab,

@@ -10,7 +10,6 @@ const TAB_SCREEN_NAMES: Record<string, string> = {
   'usage': 'usage_dashboard',
   'mcp': 'mcp_manager',
   'settings': 'settings',
-  'claude-md': 'markdown_editor',
   'claude-file': 'file_editor',
   'agent-execution': 'agent_execution',
   'create-agent': 'create_agent',

@@ -18,7 +18,7 @@ const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ d
 const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
 const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
 const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
-const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor').then(m => ({ default: m.MarkdownEditor })));
+// Removed MarkdownEditor (direct CLAUDE.md editor)
 // const ClaudeFileEditor = lazy(() => import('@/components/ClaudeFileEditor').then(m => ({ default: m.ClaudeFileEditor })));
 
 // Import non-lazy components for projects view
@@ -234,8 +234,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       case 'settings':
         return <Settings onBack={() => {}} />;
       
-      case 'claude-md':
-        return <MarkdownEditor onBack={() => {}} />;
+      // Removed 'claude-md' tab type
       
       case 'claude-file':
         if (!tab.claudeFileId) {

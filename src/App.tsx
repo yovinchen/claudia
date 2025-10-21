@@ -30,7 +30,6 @@ import { PromptFilesManager } from "@/components";
 import i18n from "@/lib/i18n";
 
 // Lazy load these components to match TabContent's dynamic imports
-const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor').then(m => ({ default: m.MarkdownEditor })));
 const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
 const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
 const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
@@ -38,7 +37,6 @@ const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ def
 type View = 
   | "welcome" 
   | "projects" 
-  | "editor" 
   | "claude-file-editor" 
   | "settings"
   | "cc-agents"
@@ -61,7 +59,6 @@ function AppContent() {
   const { t } = useTranslation();
   const [view, setView] = useState<View>("welcome");
   const {
-    createClaudeMdTab,
     createSettingsTab,
     createUsageTab,
     createMCPTab,
@@ -457,14 +454,7 @@ function AppContent() {
           </div>
         );
 
-      case "editor":
-        return (
-          <div className="h-full overflow-hidden">
-            <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
-              <MarkdownEditor onBack={() => handleViewChange("welcome")} />
-            </Suspense>
-          </div>
-        );
+      // Removed old direct CLAUDE.md editor view
       
       case "prompt-files":
         return (
@@ -613,7 +603,7 @@ function AppContent() {
               <TabContent />
             </div>
           </div>
-        );
+      );
       
       case "usage-dashboard":
         return (
@@ -658,7 +648,6 @@ function AppContent() {
     <div className="h-screen bg-background flex flex-col">
       {/* Topbar */}
       <Topbar
-        onClaudeClick={() => view === 'tabs' ? createClaudeMdTab() : handleViewChange('editor')}
         onSettingsClick={() => view === 'tabs' ? createSettingsTab() : handleViewChange('settings')}
         onUsageClick={() => view === 'tabs' ? createUsageTab() : handleViewChange('usage-dashboard')}
         onMCPClick={() => view === 'tabs' ? createMCPTab() : handleViewChange('mcp')}

@@ -34,7 +34,6 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
         return Server;
       case 'settings':
         return Settings;
-      case 'claude-md':
       case 'claude-file':
         return FileText;
       case 'agent-execution':

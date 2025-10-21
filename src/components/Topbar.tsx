@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot, Files } from "lucide-react";
+import { Circle, Settings, ExternalLink, BarChart3, Network, Info, Bot, Files } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -10,10 +10,7 @@ import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface TopbarProps {
-  /**
-   * Callback when CLAUDE.md is clicked
-   */
-  onClaudeClick: () => void;
+  // Removed direct CLAUDE.md editor entry to avoid duplication
   /**
    * Callback when Settings is clicked
    */
@@ -49,14 +46,13 @@ interface TopbarProps {
  * 
  * @example
  * <Topbar
- *   onClaudeClick={() => setView('editor')}
+ *   // CLAUDE.md direct editor removed; use Prompt Files manager instead
  *   onSettingsClick={() => setView('settings')}
  *   onUsageClick={() => setView('usage-dashboard')}
  *   onMCPClick={() => setView('mcp')}
  * />
  */
 export const Topbar: React.FC<TopbarProps> = ({
-  onClaudeClick,
   onSettingsClick,
   onUsageClick,
   onMCPClick,
@@ -213,15 +209,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           {t('navigation.usage')}
         </Button>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClaudeClick}
-          className="text-xs"
-        >
-          <FileText className="mr-2 h-3 w-3" />
-          CLAUDE.md
-        </Button>
+        {/* Removed old direct CLAUDE.md editor button */}
         
         {onPromptFilesClick && (
           <Button
