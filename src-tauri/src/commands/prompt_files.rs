@@ -297,7 +297,7 @@ fn get_claude_config_dir() -> Result<PathBuf, String> {
     Ok(claude_dir)
 }
 
-/// 应用提示词文件（替换本地 CLAUDE.md）
+/// 应用提示词文件（替换本地 CLAUDE.md 或指定目标路径）
 #[command]
 pub async fn prompt_file_apply(
     id: String,
@@ -309,13 +309,39 @@ pub async fn prompt_file_apply(
     // 1. 从数据库读取提示词文件
     let file = prompt_file_get(id.clone(), db.clone()).await?;
 
-    // 2. 确定目标路径
+    // 2. 确定目标路径（兼容传入目录或文件）
+    // - 若传入目录：拼接 CLAUDE.md
+    // - 若传入文件：直接写入该文件
+    // - 若未传入：默认 ~/.claude/CLAUDE.md
     let claude_md_path = if let Some(path) = target_path {
-        PathBuf::from(path).join("CLAUDE.md")
+        let p = PathBuf::from(path);
+        let is_dir = p.is_dir();
+        // 对于不存在路径，依据文件名扩展名进行语义判断
+        let looks_like_file = p
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case("claude.md") || n.to_lowercase().ends_with(".md"))
+            .unwrap_or(false);
+
+        if is_dir || (!looks_like_file && !p.exists()) {
+            // 目录（或看起来像目录的不存在路径）
+            p.join("CLAUDE.md")
+        } else {
+            // 明确的文件路径
+            p
+        }
     } else {
         // 默认使用 ~/.claude/CLAUDE.md（和 settings.json 同目录）
         get_claude_config_dir()?.join("CLAUDE.md")
     };
+
+    // 确保父目录存在
+    if let Some(parent) = claude_md_path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("创建目标目录失败: {}", e))?;
+        }
+    }
 
     // 3. 备份现有文件（如果存在）- 使用时间戳避免触发文件监视
     if claude_md_path.exists() {
@@ -512,4 +538,3 @@ pub async fn prompt_files_import_batch(
 
     Ok(imported)
 }
-

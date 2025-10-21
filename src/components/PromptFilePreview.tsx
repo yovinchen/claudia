@@ -1,4 +1,7 @@
 import React from 'react';
+import { save } from '@tauri-apps/plugin-dialog';
+import { usePromptFilesStore } from '@/stores/promptFilesStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Edit, Play, Tag as TagIcon, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +31,8 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
   onEdit,
   onApply,
 }) => {
+  const { applyFile } = usePromptFilesStore();
+  const { t } = useTranslation();
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('zh-CN', {
       year: 'numeric',
@@ -36,6 +41,19 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const handleApplyToCustom = async () => {
+    const selectedPath = await save({
+      defaultPath: 'CLAUDE.md',
+      filters: [
+        { name: 'Markdown', extensions: ['md'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+    if (!selectedPath) return;
+    await applyFile(file.id, String(selectedPath));
+    onOpenChange(false);
   };
 
   return (
@@ -100,6 +118,11 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
                 使用此文件
               </Button>
             )}
+            <Button variant="outline" onClick={handleApplyToCustom}>
+              <Play className="mr-2 h-4 w-4" />
+              {/** 使用管理页 i18n key，避免重复 */}
+              {t('promptFiles.applyToCustomPath')}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
@@ -108,4 +131,3 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
 };
 
 export default PromptFilePreview;
-

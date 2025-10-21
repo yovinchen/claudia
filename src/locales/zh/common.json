@@ -118,7 +118,7 @@
     "usage": "用量仪表板",
     "mcp": "MCP 管理器",
     "relayStations": "中转站",
-    "promptFiles": "提示词文件",
+    "promptFiles": "CLAUDE.md",
     "about": "关于"
   },
   "welcome": {
@@ -134,8 +134,8 @@
     "mcpBrokerDesc": "管理 MCP 服务器",
     "claudeMd": "CLAUDE.md",
     "claudeMdDesc": "编辑 Claude 配置文件",
-    "promptFiles": "提示词管理",
-    "promptFilesDesc": "管理和切换 CLAUDE.md 提示词文件",
+    "promptFiles": "CLAUDE.md",
+    "promptFilesDesc": "管理和切换 CLAUDE.md 文件",
     "settings": "设置",
     "settingsDesc": "应用设置和配置",
     "quickStartSession": "快速开始新会话",
@@ -308,8 +308,8 @@
     "createFirstCommand": "创建您的第一个命令"
   },
   "promptFiles": {
-    "title": "提示词文件管理",
-    "description": "管理和切换 Claude 项目提示词文件",
+    "title": "CLAUDE.md",
+    "description": "管理和切换 CLAUDE.md 文件",
     "create": "新建",
     "createFile": "创建提示词文件",
     "editFile": "编辑提示词文件",
@@ -351,7 +351,9 @@
     "syncToClaudeDir": "同步到 .claude",
     "syncing": "同步中...",
     "syncSuccess": "已同步到 {{path}}",
-    "syncFailed": "同步失败"
+    "syncFailed": "同步失败",
+    "applyToCustomPath": "应用到自定义路径",
+    "applyToCustomPathFailed": "应用到自定义路径失败"
   },
   "hooks": {
     "hooksConfiguration": "钩子配置",

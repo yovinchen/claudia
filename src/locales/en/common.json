@@ -123,7 +123,7 @@
     "usage": "Usage Dashboard",
     "mcp": "MCP Manager",
     "relayStations": "Relay Stations",
-    "promptFiles": "Prompt Files",
+    "promptFiles": "CLAUDE.md",
     "about": "About"
   },
   "welcome": {
@@ -139,8 +139,8 @@
     "mcpBrokerDesc": "Manage MCP servers",
     "claudeMd": "CLAUDE.md",
     "claudeMdDesc": "Edit Claude configuration files",
-    "promptFiles": "Prompt Files",
-    "promptFilesDesc": "Manage and switch CLAUDE.md prompt files",
+    "promptFiles": "CLAUDE.md",
+    "promptFilesDesc": "Manage and switch CLAUDE.md files",
     "settings": "Settings",
     "settingsDesc": "App settings and configuration",
     "quickStartSession": "Quick Start New Session",
@@ -321,8 +321,8 @@
     "createFirstCommand": "Create your first command"
   },
   "promptFiles": {
-    "title": "Prompt Files Management",
-    "description": "Manage and switch Claude project prompt files",
+    "title": "CLAUDE.md",
+    "description": "Manage and switch CLAUDE.md files",
     "create": "New",
     "createFile": "Create Prompt File",
     "editFile": "Edit Prompt File",
@@ -358,6 +358,8 @@
     "preview": "Preview",
     "edit": "Edit",
     "inUse": "In Use",
+    "applyToCustomPath": "Apply to Custom Path",
+    "applyToCustomPathFailed": "Apply to Custom Path Failed",
     "lastUsed": "Last Used",
     "createdAt": "Created At",
     "updatedAt": "Updated At",

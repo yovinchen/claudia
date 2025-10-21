@@ -37,6 +37,7 @@ import type { PromptFile } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { PromptFileEditor } from './PromptFileEditor';
 import { PromptFilePreview } from './PromptFilePreview';
+import { save } from '@tauri-apps/plugin-dialog';
 
 interface PromptFilesManagerProps {
   onBack?: () => void;
@@ -91,6 +92,29 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
       showToast(`已应用到: ${path}`, 'success');
     } catch (error) {
       showToast('应用失败', 'error');
+    } finally {
+      setApplyingFileId(null);
+    }
+  };
+
+  // 应用到自定义路径（文件路径），跨平台
+  const handleApplyToCustom = async (file: PromptFile) => {
+    try {
+      const selectedPath = await save({
+        defaultPath: 'CLAUDE.md',
+        filters: [
+          { name: 'Markdown', extensions: ['md'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+      if (!selectedPath) return; // 用户取消
+
+      setApplyingFileId(file.id);
+      const resultPath = await applyFile(file.id, String(selectedPath));
+      showToast(`已应用到: ${resultPath}`, 'success');
+      await loadFiles();
+    } catch (error) {
+      showToast(t('promptFiles.applyToCustomPathFailed'), 'error');
     } finally {
       setApplyingFileId(null);
     }
@@ -183,8 +207,8 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                 </Button>
               )}
               <div>
-                <h1 className="text-3xl font-bold">提示词文件管理</h1>
-                <p className="text-muted-foreground">管理和切换 Claude 项目提示词文件</p>
+                <h1 className="text-3xl font-bold">{t('promptFiles.title')}</h1>
+                <p className="text-muted-foreground">{t('promptFiles.description')}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -289,6 +313,15 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                           </>
                         )}
                       </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleApplyToCustom(file)}
+                        disabled={applyingFileId === file.id}
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        {t('promptFiles.applyToCustomPath')}
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openPreview(file)}>
                         <Eye className="mr-2 h-4 w-4" />
                         查看内容
@@ -373,6 +406,16 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                               使用此文件
                             </>
                           )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleApplyToCustom(file)}
+                          disabled={applyingFileId === file.id}
+                        >
+                          <Play className="mr-2 h-4 w-4" />
+                          {t('promptFiles.applyToCustomPath')}
                         </Button>
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -586,4 +629,3 @@ const ImportFromClaudeMdDialog: React.FC<{
 };
 
 export default PromptFilesManager;
-
