@@ -10,7 +10,6 @@ import { ProjectList } from "@/components/ProjectList";
 import { SessionList } from "@/components/SessionList";
 import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
 import { Topbar } from "@/components/Topbar";
-import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
 import { CCAgents } from "@/components/CCAgents";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
@@ -37,7 +36,6 @@ const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ def
 type View = 
   | "welcome" 
   | "projects" 
-  | "claude-file-editor" 
   | "settings"
   | "cc-agents"
   | "create-agent"
@@ -70,7 +68,7 @@ function AppContent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [editingClaudeFile, setEditingClaudeFile] = useState<ClaudeMdFile | null>(null);
+  // Removed: project-level ClaudeFileEditor state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
@@ -390,18 +388,7 @@ function AppContent() {
   /**
    * Handles editing a CLAUDE.md file from a project
    */
-  const handleEditClaudeFile = (file: ClaudeMdFile) => {
-    setEditingClaudeFile(file);
-    handleViewChange("claude-file-editor");
-  };
-
-  /**
-   * Returns from CLAUDE.md file editor to projects view
-   */
-  const handleBackFromClaudeFileEditor = () => {
-    setEditingClaudeFile(null);
-    handleViewChange("projects");
-  };
+  // Removed project-level ClaudeFileEditor routes and handlers
 
   /**
    * Handles view changes with navigation protection
@@ -533,7 +520,6 @@ function AppContent() {
                         sessions={sessions}
                         projectPath={selectedProject.path}
                         onBack={handleBack}
-                        onEditClaudeFile={handleEditClaudeFile}
                         onSessionClick={(session) => {
                           // Navigate to session detail view in tabs mode
                           setView("tabs");
@@ -585,15 +571,7 @@ function AppContent() {
           </div>
         );
       
-      case "claude-file-editor":
-        return editingClaudeFile ? (
-          <div className="h-full overflow-hidden">
-            <ClaudeFileEditor
-              file={editingClaudeFile}
-              onBack={handleBackFromClaudeFileEditor}
-            />
-          </div>
-        ) : null;
+      // Removed: claude-file-editor view
       
       case "tabs":
         return (

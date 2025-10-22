@@ -20,7 +20,7 @@ interface UseTabStateReturn {
   createUsageTab: () => string | null;
   createMCPTab: () => string | null;
   createSettingsTab: () => string | null;
-  createClaudeFileTab: (fileId: string, fileName: string) => string;
+  // Removed: createClaudeFileTab
   createCreateAgentTab: () => string;
   createImportAgentTab: () => string;
   closeTab: (id: string, force?: boolean) => Promise<boolean>;
@@ -162,23 +162,7 @@ export const useTabState = (): UseTabStateReturn => {
 
   // Removed createClaudeMdTab: using Prompt Files manager instead
 
-  const createClaudeFileTab = useCallback((fileId: string, fileName: string): string => {
-    // Check if tab already exists for this file
-    const existingTab = tabs.find(tab => tab.type === 'claude-file' && tab.claudeFileId === fileId);
-    if (existingTab) {
-      setActiveTab(existingTab.id);
-      return existingTab.id;
-    }
-
-    return addTab({
-      type: 'claude-file',
-      title: fileName,
-      claudeFileId: fileId,
-      status: 'idle',
-      hasUnsavedChanges: false,
-      icon: 'file-text'
-    });
-  }, [addTab, tabs, setActiveTab]);
+  // Removed: project-level CLAUDE.md file tab creation
 
   const createAgentExecutionTab = useCallback((agent: any, _tabId: string): string => {
     return addTab({
@@ -312,7 +296,6 @@ export const useTabState = (): UseTabStateReturn => {
     createUsageTab,
     createMCPTab,
     createSettingsTab,
-    createClaudeFileTab,
     createCreateAgentTab,
     createImportAgentTab,
     closeTab,

@@ -146,12 +146,6 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                             initialProjectPath: session.project_path,
                           });
                         }}
-                        onEditClaudeFile={(file: ClaudeMdFile) => {
-                          // Open CLAUDE.md file in a new tab
-                          window.dispatchEvent(new CustomEvent('open-claude-file', { 
-                            detail: { file } 
-                          }));
-                        }}
                       />
                     </motion.div>
                   ) : (
@@ -236,13 +230,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       // Removed 'claude-md' tab type
       
-      case 'claude-file':
-        if (!tab.claudeFileId) {
-          return <div className="p-4">{t('messages.noClaudeFileIdSpecified')}</div>;
-        }
-        // Note: We need to get the actual file object for ClaudeFileEditor
-        // For now, returning a placeholder
-        return <div className="p-4">{t('messages.claudeFileEditorNotImplemented')}</div>;
+      // Removed 'claude-file' tab type
       
       case 'agent-execution':
         if (!tab.agentData) {
@@ -301,7 +289,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 
 export const TabContent: React.FC = () => {
   const { t } = useTranslation();
-  const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  const { tabs, activeTabId, createChatTab, findTabBySessionId, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   const [hasInitialized, setHasInitialized] = React.useState(false);
 
   // Debug: Monitor activeTabId changes
@@ -347,11 +335,6 @@ export const TabContent: React.FC = () => {
           initialProjectPath: session.project_path
         });
       }
-    };
-
-    const handleOpenClaudeFile = (event: CustomEvent) => {
-      const { file } = event.detail;
-      createClaudeFileTab(file.id, file.name || 'CLAUDE.md');
     };
 
     const handleOpenAgentExecution = (event: CustomEvent) => {
@@ -413,7 +396,6 @@ export const TabContent: React.FC = () => {
     };
 
     window.addEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
-    window.addEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
     window.addEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
     window.addEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
     window.addEventListener('open-import-agent-tab', handleOpenImportAgentTab);
@@ -422,7 +404,6 @@ export const TabContent: React.FC = () => {
     window.addEventListener('create-smart-session-tab', handleCreateSmartSessionTab as EventListener);
     return () => {
       window.removeEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
-      window.removeEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
       window.removeEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
       window.removeEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
       window.removeEventListener('open-import-agent-tab', handleOpenImportAgentTab);
@@ -430,7 +411,7 @@ export const TabContent: React.FC = () => {
       window.removeEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
       window.removeEventListener('create-smart-session-tab', handleCreateSmartSessionTab as EventListener);
     };
-  }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
+  }, [createChatTab, findTabBySessionId, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
   
   return (
     <div className="flex-1 h-full relative">
