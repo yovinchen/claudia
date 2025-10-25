@@ -138,6 +138,17 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     return `${start}${'*'.repeat(middleLength)}${end}`;
   };
 
+  // 从中间截断长文本函数
+  const truncateMiddle = (text: string, maxLength: number = 60): string => {
+    if (!text || text.length <= maxLength) {
+      return text;
+    }
+    const half = Math.floor(maxLength / 2) - 1;
+    const start = text.substring(0, half);
+    const end = text.substring(text.length - half);
+    return `${start}…${end}`;
+  };
+
   // 显示Toast
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -637,21 +648,21 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               </div>
             </div>
           ) : (
-            <div className="flex gap-4">
+            <div className="flex gap-4 max-w-full overflow-hidden">
               {/* 左侧数据展示 */}
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 min-w-0 space-y-2">
                 <div className="text-sm font-medium mb-2">{t('relayStation.configPreview')}</div>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">API URL:</span>
-                    <span className="font-mono text-xs break-all">
-                      {currentConfig.api_url || t('relayStation.notConfigured')}
+                    <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API URL:</span>
+                    <span className="font-mono text-xs">
+                      {currentConfig.api_url ? truncateMiddle(currentConfig.api_url, 50) : t('relayStation.notConfigured')}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">API Token:</span>
+                    <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API Token:</span>
                     <span className="font-mono text-xs">
-                      {currentConfig.api_token ? maskToken(currentConfig.api_token) : t('relayStation.notConfigured')}
+                      {currentConfig.api_token ? truncateMiddle(maskToken(currentConfig.api_token), 40) : t('relayStation.notConfigured')}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
@@ -661,7 +672,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               </div>
 
               {/* 右侧按钮区域 */}
-              <div className="flex flex-col gap-2 min-w-[100px]">
+              <div className="flex flex-col gap-2 w-[140px] flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -677,7 +688,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
                   )}
-                  <span className="text-xs">{t('relayStation.syncConfig')}</span>
+                  <span className="text-xs truncate">{t('relayStation.syncConfig')}</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -691,7 +702,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
                   )}
-                  <span className="text-xs">{t('relayStation.flushDns')}</span>
+                  <span className="text-xs truncate">{t('relayStation.flushDns')}</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -700,7 +711,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   className="w-full h-9 justify-start"
                 >
                   <Eye className="h-4 w-4 mr-2" />
-                  <span className="text-xs">{t('relayStation.viewJson')}</span>
+                  <span className="text-xs truncate">{t('relayStation.viewJson')}</span>
                 </Button>
               </div>
             </div>
