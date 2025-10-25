@@ -625,13 +625,13 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       
       {/* 当前配置状态 */}
       <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
-        <CardHeader className="pb-3">
+        <CardHeader className="py-1.5">
           <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <CardTitle className="text-lg">{t('relayStation.currentConfig')}</CardTitle>
+            <Settings className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-sm">{t('relayStation.currentConfig')}</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 pb-1.5">
           {jsonConfigView || showSourceFile ? (
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
@@ -647,10 +647,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     }}
                   >
                     <ArrowLeft className="h-4 w-4 mr-1" />
-                    {t('common.back')}
+                    {t('app.back')}
                   </Button>
                   <div className="text-sm font-medium flex items-center">
-                    {showSourceFile ? '源文件 (settings.backup.json)' : t('relayStation.viewJson')}
+                    {showSourceFile ? 'settings.backup.json' : 'settings.json'}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -763,31 +763,34 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               </div>
             </div>
           ) : (
-            <div className="flex gap-4 max-w-full overflow-hidden">
+            <div className="flex gap-6 max-w-full overflow-hidden items-start">
               {/* 左侧数据展示 */}
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="text-sm font-medium mb-2">{t('relayStation.configPreview')}</div>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API URL:</span>
-                    <span className="font-mono text-xs break-all">
-                      {currentConfig.api_url || t('relayStation.notConfigured')}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium mb-2 text-foreground">{t('relayStation.configPreview')}</div>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <span className="text-muted-foreground min-w-[90px] flex-shrink-0 text-xs font-medium">API URL</span>
+                    <span className="font-mono text-xs break-all leading-relaxed text-foreground">
+                      {currentConfig.api_url || <span className="text-muted-foreground italic">{t('relayStation.notConfigured')}</span>}
                     </span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API Token:</span>
-                    <span className="font-mono text-xs">
-                      {currentConfig.api_token ? truncateMiddle(maskToken(currentConfig.api_token), 40) : t('relayStation.notConfigured')}
+                  <div className="flex items-start gap-3">
+                    <span className="text-muted-foreground min-w-[90px] flex-shrink-0 text-xs font-medium">API Token</span>
+                    <span className="font-mono text-xs leading-relaxed text-foreground">
+                      {currentConfig.api_token ? truncateMiddle(maskToken(currentConfig.api_token), 40) : <span className="text-muted-foreground italic">{t('relayStation.notConfigured')}</span>}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    {t('relayStation.configLocation')}: ~/.claude/settings.json
+                  <div className="flex items-start gap-3 pt-1">
+                    <span className="text-muted-foreground min-w-[90px] flex-shrink-0 text-xs font-medium">配置位置</span>
+                    <span className="text-xs text-muted-foreground font-mono leading-relaxed">
+                      ~/.claude/settings.json
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* 右侧按钮区域 */}
-              <div className="flex flex-col gap-2 w-[140px] flex-shrink-0">
+              <div className="flex flex-col gap-1.5 w-[150px] flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -796,12 +799,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     syncConfig();
                   }}
                   disabled={loadingConfig}
-                  className="w-full h-9 justify-start"
+                  className="w-full h-8 justify-start px-3"
                 >
                   {loadingConfig ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-current mr-2" />
                   ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
                   )}
                   <span className="text-xs truncate">{t('relayStation.syncConfig')}</span>
                 </Button>
@@ -810,12 +813,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   size="sm"
                   onClick={handleFlushDns}
                   disabled={flushingDns}
-                  className="w-full h-9 justify-start"
+                  className="w-full h-8 justify-start px-3"
                 >
                   {flushingDns ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-current mr-2" />
                   ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
                   )}
                   <span className="text-xs truncate">{t('relayStation.flushDns')}</span>
                 </Button>
@@ -823,9 +826,9 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   variant="outline"
                   size="sm"
                   onClick={() => setJsonConfigView(true)}
-                  className="w-full h-9 justify-start"
+                  className="w-full h-8 justify-start px-3"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
+                  <Eye className="h-3.5 w-3.5 mr-2" />
                   <span className="text-xs truncate">{t('relayStation.viewJson')}</span>
                 </Button>
                 <Button
@@ -833,12 +836,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   size="sm"
                   onClick={handleViewSourceFile}
                   disabled={loadingSourceFile}
-                  className="w-full h-9 justify-start"
+                  className="w-full h-8 justify-start px-3"
                 >
                   {loadingSourceFile ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-current mr-2" />
                   ) : (
-                    <Edit3 className="h-4 w-4 mr-2" />
+                    <Edit3 className="h-3.5 w-3.5 mr-2" />
                   )}
                   <span className="text-xs truncate">查看源文件</span>
                 </Button>
