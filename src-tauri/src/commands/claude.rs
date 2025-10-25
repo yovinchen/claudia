@@ -738,6 +738,48 @@ pub async fn save_claude_settings(settings: serde_json::Value) -> Result<String,
     Ok("Settings saved successfully".to_string())
 }
 
+/// Reads the Claude settings backup file
+#[tauri::command]
+pub async fn get_claude_settings_backup() -> Result<ClaudeSettings, String> {
+    log::info!("Reading Claude settings backup");
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let backup_path = claude_dir.join("settings.backup.json");
+
+    if !backup_path.exists() {
+        log::warn!("Settings backup file not found, returning empty settings");
+        return Ok(ClaudeSettings {
+            data: serde_json::json!({}),
+        });
+    }
+
+    let content = fs::read_to_string(&backup_path)
+        .map_err(|e| format!("Failed to read settings backup file: {}", e))?;
+
+    let data: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse settings backup JSON: {}", e))?;
+
+    Ok(ClaudeSettings { data })
+}
+
+/// Saves the Claude settings backup file
+#[tauri::command]
+pub async fn save_claude_settings_backup(settings: serde_json::Value) -> Result<String, String> {
+    log::info!("Saving Claude settings backup");
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let backup_path = claude_dir.join("settings.backup.json");
+
+    // Pretty print the JSON with 2-space indentation
+    let json_string = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings backup: {}", e))?;
+
+    fs::write(&backup_path, json_string)
+        .map_err(|e| format!("Failed to write settings backup file: {}", e))?;
+
+    Ok("Settings backup saved successfully".to_string())
+}
+
 /// Recursively finds all CLAUDE.md files in a project directory
 #[tauri::command]
 pub async fn find_claude_md_files(project_path: String) -> Result<Vec<ClaudeMdFile>, String> {

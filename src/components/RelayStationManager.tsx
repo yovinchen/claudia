@@ -89,6 +89,13 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [savingConfig, setSavingConfig] = useState(false);
   const [flushingDns, setFlushingDns] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // 源文件备份相关状态
+  const [showSourceFile, setShowSourceFile] = useState(false);
+  const [editingSourceFile, setEditingSourceFile] = useState(false);
+  const [sourceFileJson, setSourceFileJson] = useState<string>('');
+  const [savingSourceFile, setSavingSourceFile] = useState(false);
+  const [loadingSourceFile, setLoadingSourceFile] = useState(false);
   
   // 导入进度相关状态
   const [importing, setImporting] = useState(false);
@@ -253,6 +260,47 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     } finally {
       setFlushingDns(false);
     }
+  };
+
+  // 加载源文件备份
+  const loadSourceFile = async () => {
+    try {
+      setLoadingSourceFile(true);
+      const settings = await api.getClaudeSettingsBackup();
+      setSourceFileJson(JSON.stringify(settings, null, 2));
+    } catch (error) {
+      console.error('Failed to load source file:', error);
+      showToast('加载源文件失败', 'error');
+    } finally {
+      setLoadingSourceFile(false);
+    }
+  };
+
+  // 保存源文件备份
+  const saveSourceFile = async () => {
+    try {
+      setSavingSourceFile(true);
+      const parsedSettings = JSON.parse(sourceFileJson);
+      await api.saveClaudeSettingsBackup(parsedSettings);
+      showToast('源文件保存成功', 'success');
+      setEditingSourceFile(false);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        showToast('JSON 格式无效', 'error');
+      } else {
+        console.error('Failed to save source file:', error);
+        showToast('保存源文件失败', 'error');
+      }
+    } finally {
+      setSavingSourceFile(false);
+    }
+  };
+
+  // 打开源文件查看
+  const handleViewSourceFile = async () => {
+    await loadSourceFile();
+    setShowSourceFile(true);
+    setEditingSourceFile(false);
   };
 
 
@@ -584,7 +632,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
           </div>
         </CardHeader>
         <CardContent>
-          {jsonConfigView ? (
+          {jsonConfigView || showSourceFile ? (
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex gap-2">
@@ -593,49 +641,98 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     size="sm"
                     onClick={() => {
                       setJsonConfigView(false);
+                      setShowSourceFile(false);
                       setEditingConfig(false);
+                      setEditingSourceFile(false);
                     }}
                   >
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     {t('common.back')}
                   </Button>
+                  <div className="text-sm font-medium flex items-center">
+                    {showSourceFile ? '源文件 (settings.backup.json)' : t('relayStation.viewJson')}
+                  </div>
                 </div>
                 <div className="flex gap-2">
-                  {!editingConfig ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingConfig(true)}
-                    >
-                      <Edit3 className="h-4 w-4 mr-1" />
-                      {t('common.edit')}
-                    </Button>
+                  {showSourceFile ? (
+                    <>
+                      {!editingSourceFile ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingSourceFile(true)}
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          {t('common.edit')}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingSourceFile(false);
+                              setSourceFileJson(sourceFileJson);
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            {t('common.cancel')}
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={saveSourceFile}
+                            disabled={savingSourceFile}
+                          >
+                            {savingSourceFile ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white mr-1" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-1" />
+                            )}
+                            {t('common.save')}
+                          </Button>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingConfig(false);
-                          setConfigJson(JSON.stringify(currentConfig, null, 2));
-                        }}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        {t('common.cancel')}
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={saveJsonConfig}
-                        disabled={savingConfig}
-                      >
-                        {savingConfig ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white mr-1" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-1" />
-                        )}
-                        {t('common.save')}
-                      </Button>
+                      {!editingConfig ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingConfig(true)}
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          {t('common.edit')}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingConfig(false);
+                              setConfigJson(JSON.stringify(currentConfig, null, 2));
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            {t('common.cancel')}
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={saveJsonConfig}
+                            disabled={savingConfig}
+                          >
+                            {savingConfig ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white mr-1" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-1" />
+                            )}
+                            {t('common.save')}
+                          </Button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -644,10 +741,16 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 <MonacoEditor
                   language="json"
                   theme="vs-dark"
-                  value={configJson}
-                  onChange={(value) => setConfigJson(value || '')}
+                  value={showSourceFile ? sourceFileJson : configJson}
+                  onChange={(value) => {
+                    if (showSourceFile) {
+                      setSourceFileJson(value || '');
+                    } else {
+                      setConfigJson(value || '');
+                    }
+                  }}
                   options={{
-                    readOnly: !editingConfig,
+                    readOnly: showSourceFile ? !editingSourceFile : !editingConfig,
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     fontSize: 12,
@@ -724,6 +827,20 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   <span className="text-xs truncate">{t('relayStation.viewJson')}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleViewSourceFile}
+                  disabled={loadingSourceFile}
+                  className="w-full h-9 justify-start"
+                >
+                  {loadingSourceFile ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current mr-2" />
+                  ) : (
+                    <Edit3 className="h-4 w-4 mr-2" />
+                  )}
+                  <span className="text-xs truncate">查看源文件</span>
                 </Button>
               </div>
             </div>

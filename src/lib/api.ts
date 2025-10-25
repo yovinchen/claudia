@@ -830,6 +830,40 @@ export const api = {
   },
 
   /**
+   * Reads the Claude settings backup file
+   * @returns Promise resolving to the backup settings object
+   */
+  async getClaudeSettingsBackup(): Promise<ClaudeSettings> {
+    try {
+      const result = await invoke<{ data: ClaudeSettings }>("get_claude_settings_backup");
+      console.log("Raw result from get_claude_settings_backup:", result);
+
+      if (result && typeof result === 'object' && 'data' in result) {
+        return result.data;
+      }
+
+      return result as ClaudeSettings;
+    } catch (error) {
+      console.error("Failed to get Claude settings backup:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Saves the Claude settings backup file
+   * @param settings - The backup settings object to save
+   * @returns Promise resolving when the backup settings are saved
+   */
+  async saveClaudeSettingsBackup(settings: ClaudeSettings): Promise<string> {
+    try {
+      return await invoke<string>("save_claude_settings_backup", { settings });
+    } catch (error) {
+      console.error("Failed to save Claude settings backup:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Finds all CLAUDE.md files in a project directory
    * @param projectPath - The absolute path to the project
    * @returns Promise resolving to an array of CLAUDE.md files
