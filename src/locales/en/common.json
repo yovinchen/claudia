@@ -1092,7 +1092,10 @@
     "importSuccess": "Success",
     "importSkipped": "Skipped (duplicate)",
     "importFailed": "Failed",
-    "allDuplicate": "All configurations already exist, nothing imported"
+    "allDuplicate": "All configurations already exist, nothing imported",
+    "customJson": "Custom JSON Configuration",
+    "customJsonOptional": "Optional",
+    "customJsonNote": "Enter JSON to merge into adapter_config; clear input to remove all custom config"
   },
   "status": {
     "connected": "Connected",

@@ -189,7 +189,7 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
     // 读取当前配置
     let mut config = read_claude_config()?;
 
-    // 仅更新这三个关键字段，保留其他所有配置不变：
+    // 更新三个关键字段：
     // 1. ANTHROPIC_BASE_URL
     config.env.anthropic_base_url = Some(station.api_url.clone());
 
@@ -198,6 +198,29 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
 
     // 3. apiKeyHelper - 设置为 echo 格式
     config.api_key_helper = Some(format!("echo '{}'", station.system_token));
+
+    // 处理 adapter_config 中的自定义字段
+    if let Some(ref adapter_config) = station.adapter_config {
+        log::info!("[CLAUDE_CONFIG] Applying adapter_config: {:?}", adapter_config);
+
+        // 遍历 adapter_config 中的所有字段
+        for (key, value) in adapter_config {
+            match key.as_str() {
+                // 已知的字段直接写入对应位置
+                "model" => {
+                    if let Some(model_value) = value.as_str() {
+                        config.model = Some(model_value.to_string());
+                        log::info!("[CLAUDE_CONFIG] Set model: {}", model_value);
+                    }
+                }
+                // 其他字段写入到 extra_fields 中
+                _ => {
+                    config.extra_fields.insert(key.clone(), value.clone());
+                    log::info!("[CLAUDE_CONFIG] Set extra field {}: {:?}", key, value);
+                }
+            }
+        }
+    }
 
     // 如果是特定适配器，可能需要特殊处理 URL 格式
     match station.adapter.as_str() {
@@ -213,7 +236,7 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
     // 写入更新后的配置
     write_claude_config(&config)?;
 
-    log::info!("已将中转站 {} 的 API 配置（apiKeyHelper, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN）应用到 Claude 配置文件", station.name);
+    log::info!("已将中转站 {} 的 API 配置（apiKeyHelper, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN）及自定义配置应用到 Claude 配置文件", station.name);
     Ok(())
 }
 
@@ -241,13 +264,22 @@ pub fn clear_relay_station_from_config() -> Result<(), String> {
     // 恢复原始的 apiKeyHelper（如果有备份的话）
     if let Some(backup) = backup_config {
         config.api_key_helper = backup.api_key_helper;
+        config.model = backup.model.clone();
         // 如果备份中有 ANTHROPIC_AUTH_TOKEN，也恢复它
         if backup.env.anthropic_auth_token.is_some() {
             config.env.anthropic_auth_token = backup.env.anthropic_auth_token;
         }
+        // 恢复备份中的 extra_fields
+        config.extra_fields = backup.extra_fields.clone();
+        log::info!("[CLAUDE_CONFIG] Restored model from backup: {:?}", backup.model);
+        log::info!("[CLAUDE_CONFIG] Restored {} extra fields from backup", config.extra_fields.len());
     } else {
-        // 如果没有备份，清除 apiKeyHelper
+        // 如果没有备份，清除 apiKeyHelper 和 model
         config.api_key_helper = None;
+        config.model = None;
+        // 清除所有额外的自定义字段
+        config.extra_fields.clear();
+        log::info!("[CLAUDE_CONFIG] Cleared model and all extra fields (no backup found)");
     }
 
     // 写入更新后的配置

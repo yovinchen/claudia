@@ -853,6 +853,8 @@ const CreateStationDialog: React.FC<{
   const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
   const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
   const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com'); // 滴滴车节点
+  const [customJson, setCustomJson] = useState<string>(''); // 自定义JSON配置
+  const [originalCustomJson] = useState<string>(''); // 原始JSON配置（用于比较是否修改）
 
   // 测速弹出框状态
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
@@ -1012,11 +1014,43 @@ const CreateStationDialog: React.FC<{
 
     try {
       setSubmitting(true);
-      
+
+      // 处理自定义JSON配置
+      let adapterConfig: Record<string, any> = {};
+      let shouldUpdateConfig = false;
+
+      console.log('[DEBUG] Custom JSON Input:', customJson);
+      console.log('[DEBUG] Original Custom JSON:', originalCustomJson);
+
+      if (customJson.trim()) {
+        // 用户输入了JSON内容
+        try {
+          const parsed = JSON.parse(customJson);
+          adapterConfig = parsed;
+          shouldUpdateConfig = true;
+          console.log('[DEBUG] Parsed JSON config:', adapterConfig);
+        } catch (error) {
+          setFormToast({ message: t('relayStation.invalidJson'), type: "error" });
+          return;
+        }
+      } else if (customJson === '' && originalCustomJson !== '') {
+        // 用户清空了输入框（原不为空，现为空）
+        shouldUpdateConfig = true;
+        adapterConfig = {};
+        console.log('[DEBUG] User cleared custom config');
+      } else if (customJson === '' && originalCustomJson === '') {
+        // 一直为空（创建新中转站或未修改）
+        shouldUpdateConfig = false;
+        console.log('[DEBUG] No custom config update needed');
+      }
+
+      console.log('[DEBUG] Should update config:', shouldUpdateConfig);
+      console.log('[DEBUG] Adapter config to send:', shouldUpdateConfig ? adapterConfig : 'undefined');
+
       // PackyCode 保存时自动选择最佳节点
       if (formData.adapter === 'packycode') {
         let finalApiUrl = formData.api_url;
-        
+
         if (packycodeService === 'bus') {
           // 公交车自动选择
           const busNodes = [
@@ -1026,7 +1060,7 @@ const CreateStationDialog: React.FC<{
             { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
             { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
           ];
-          
+
           await performSpeedTest(busNodes, (bestNode) => {
             finalApiUrl = bestNode.url;
             setPackycodeNode(bestNode.url);
@@ -1040,26 +1074,38 @@ const CreateStationDialog: React.FC<{
             { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
             { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
           ];
-          
+
           await performSpeedTest(taxiNodes, (bestNode) => {
             finalApiUrl = bestNode.url;
             setPackycodeTaxiNode(bestNode.url);
           });
         }
-        
+
+        const finalConfig = shouldUpdateConfig ? {
+          service_type: packycodeService,
+          ...adapterConfig
+        } : undefined;
+
+        console.log('[DEBUG] Final adapter_config for PackyCode:', finalConfig);
+
         // 使用选择的最佳节点创建中转站
         await api.relayStationCreate({
           ...formData,
           api_url: finalApiUrl,
-          adapter_config: {
-            service_type: packycodeService
-          }
+          adapter_config: finalConfig
         });
       } else {
+        const finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
+
+        console.log('[DEBUG] Final adapter_config for non-PackyCode:', finalConfig);
+
         // 非 PackyCode 适配器直接创建
-        await api.relayStationCreate(formData);
+        await api.relayStationCreate({
+          ...formData,
+          adapter_config: finalConfig
+        });
       }
-      
+
       onSuccess();
     } catch (error) {
       console.error('Failed to create station:', error);
@@ -1467,6 +1513,25 @@ const CreateStationDialog: React.FC<{
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.packycodeTokenNote')}
               </p>
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
+              </div>
             </div>
           ) : (
             // 其他适配器显示认证方式选择
@@ -1518,6 +1583,25 @@ const CreateStationDialog: React.FC<{
                   className="w-full font-mono text-sm"
                 />
               </div>
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
+              </div>
             </>
           )}
         </div>
@@ -1554,6 +1638,9 @@ const CreateStationDialog: React.FC<{
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
+            <DialogDescription>
+              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
@@ -1644,7 +1731,29 @@ const EditStationDialog: React.FC<{
     }
     return 'https://share-api.packycode.com';
   });
-  
+  const [customJson, setCustomJson] = useState<string>(() => {
+    // 从 adapter_config 中提取自定义JSON
+    if (station.adapter_config) {
+      // 排除 service_type 等已知字段
+      const { service_type, ...customFields } = station.adapter_config as any;
+      if (Object.keys(customFields).length > 0) {
+        return JSON.stringify(customFields, null, 2);
+      }
+    }
+    return '';
+  });
+  const [originalCustomJson] = useState<string>(() => {
+    // 从 adapter_config 中提取自定义JSON
+    if (station.adapter_config) {
+      // 排除 service_type 等已知字段
+      const { service_type, ...customFields } = station.adapter_config as any;
+      if (Object.keys(customFields).length > 0) {
+        return JSON.stringify(customFields, null, 2);
+      }
+    }
+    return '';
+  });
+
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
   const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
   const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
@@ -1790,11 +1899,43 @@ const EditStationDialog: React.FC<{
 
     try {
       setSubmitting(true);
-      
+
+      // 处理自定义JSON配置
+      let adapterConfig: Record<string, any> = {};
+      let shouldUpdateConfig = false;
+
+      console.log('[DEBUG-EDIT] Custom JSON Input:', customJson);
+      console.log('[DEBUG-EDIT] Original Custom JSON:', originalCustomJson);
+
+      if (customJson.trim()) {
+        // 用户输入了JSON内容
+        try {
+          const parsed = JSON.parse(customJson);
+          adapterConfig = parsed;
+          shouldUpdateConfig = true;
+          console.log('[DEBUG-EDIT] Parsed JSON config:', adapterConfig);
+        } catch (error) {
+          setFormToast({ message: t('relayStation.invalidJson'), type: "error" });
+          return;
+        }
+      } else if (customJson === '' && originalCustomJson !== '') {
+        // 用户清空了输入框（原不为空，现为空）
+        shouldUpdateConfig = true;
+        adapterConfig = {};
+        console.log('[DEBUG-EDIT] User cleared custom config');
+      } else if (customJson === '' && originalCustomJson === '') {
+        // 一直为空（未修改）
+        shouldUpdateConfig = false;
+        console.log('[DEBUG-EDIT] No custom config update needed');
+      }
+
+      console.log('[DEBUG-EDIT] Should update config:', shouldUpdateConfig);
+      console.log('[DEBUG-EDIT] Adapter config to send:', shouldUpdateConfig ? adapterConfig : 'undefined');
+
       // PackyCode 保存时自动选择最佳节点
       if (formData.adapter === 'packycode') {
         let finalApiUrl = formData.api_url;
-        
+
         if (packycodeService === 'bus') {
           // 公交车自动选择
           const busNodes = [
@@ -1804,7 +1945,7 @@ const EditStationDialog: React.FC<{
             { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
             { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
           ];
-          
+
           await new Promise<void>((resolve) => {
             // 内联的测速逻辑
             setShowSpeedTestModal(true);
@@ -1870,7 +2011,7 @@ const EditStationDialog: React.FC<{
             { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
             { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
           ];
-          
+
           await new Promise<void>((resolve) => {
             // 内联的测速逻辑
             setShowSpeedTestModal(true);
@@ -1929,20 +2070,32 @@ const EditStationDialog: React.FC<{
             });
           });
         }
-        
+
+        const finalConfig = shouldUpdateConfig ? {
+          service_type: packycodeService,
+          ...adapterConfig
+        } : undefined;
+
+        console.log('[DEBUG-EDIT] Final adapter_config for PackyCode:', finalConfig);
+
         // 使用选择的最佳节点更新中转站
         await api.relayStationUpdate({
           ...formData,
           api_url: finalApiUrl,
-          adapter_config: {
-            service_type: packycodeService
-          }
+          adapter_config: finalConfig
         });
       } else {
+        const finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
+
+        console.log('[DEBUG-EDIT] Final adapter_config for non-PackyCode:', finalConfig);
+
         // 非 PackyCode 适配器直接更新
-        await api.relayStationUpdate(formData);
+        await api.relayStationUpdate({
+          ...formData,
+          adapter_config: finalConfig
+        });
       }
-      
+
       onSuccess();
     } catch (error) {
       console.error('Failed to update station:', error);
@@ -2407,6 +2560,25 @@ const EditStationDialog: React.FC<{
               <p className="text-xs text-muted-foreground">
                 {t('relayStation.packycodeTokenNote')}
               </p>
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="edit-custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
+              </div>
             </div>
           ) : (
             // 其他适配器显示认证方式选择
@@ -2457,6 +2629,25 @@ const EditStationDialog: React.FC<{
                   placeholder={t('relayStation.tokenPlaceholder')}
                   className="w-full font-mono text-sm"
                 />
+              </div>
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="edit-custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
               </div>
             </>
           )}
@@ -2514,6 +2705,9 @@ const EditStationDialog: React.FC<{
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
+            <DialogDescription>
+              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">

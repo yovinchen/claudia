@@ -1017,7 +1017,10 @@
     "importSuccess": "成功",
     "importSkipped": "跳过（重复）",
     "importFailed": "失败",
-    "allDuplicate": "所有配置都已存在，未导入任何新配置"
+    "allDuplicate": "所有配置都已存在，未导入任何新配置",
+    "customJson": "自定义JSON配置",
+    "customJsonOptional": "可选",
+    "customJsonNote": "输入JSON将合并到adapter_config中；清空输入框将清除所有自定义配置"
   },
   "status": {
     "connected": "已连接",

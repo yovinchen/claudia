@@ -17,6 +17,24 @@ try {
   console.error("[Monaco] loader.config failed:", e);
 }
 
+// 全局捕获未处理的Promise拒绝，防止Monaco Editor错误
+window.addEventListener('unhandledrejection', (event) => {
+  const error = event.reason;
+  if (error && error.message && error.message.includes('URL is not valid')) {
+    event.preventDefault();
+    console.warn('[Monaco] Suppressed URL validation error:', error);
+  }
+});
+
+// 全局捕获window.onerror
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.message && event.error.message.includes('URL is not valid')) {
+    console.warn('[Monaco] Suppressed URL validation error:', event.error);
+    event.preventDefault();
+    return true;
+  }
+});
+
 // Initialize analytics before rendering (will no-op if no consent or no key)
 analytics.initialize();
 

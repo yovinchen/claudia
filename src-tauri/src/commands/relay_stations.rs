@@ -351,12 +351,17 @@ pub async fn relay_station_create(
         .trim_matches('"')
         .to_string();
 
+    // 记录adapter_config日志
+    log::info!("[CREATE] Received adapter_config: {:?}", request.adapter_config);
+
     let adapter_config_str = request
         .adapter_config
         .as_ref()
         .map(|config| serde_json::to_string(config))
         .transpose()
         .map_err(|_| i18n::t("relay_station.invalid_config"))?;
+
+    log::info!("[CREATE] Serialized adapter_config_str: {:?}", adapter_config_str);
 
     // 如果要启用这个新中转站，先禁用所有其他中转站
     if request.enabled {
@@ -408,7 +413,8 @@ pub async fn relay_station_create(
         updated_at: now,
     };
 
-    log::info!("Created relay station: {} ({})", station.name, id);
+    log::info!("[CREATE] Created relay station: {} ({})", station.name, id);
+    log::info!("[CREATE] Final station.adapter_config: {:?}", station.adapter_config);
     Ok(station)
 }
 
@@ -438,12 +444,17 @@ pub async fn relay_station_update(
         .trim_matches('"')
         .to_string();
 
+    // 记录adapter_config日志
+    log::info!("[UPDATE] Received adapter_config: {:?}", request.adapter_config);
+
     let adapter_config_str = request
         .adapter_config
         .as_ref()
         .map(|config| serde_json::to_string(config))
         .transpose()
         .map_err(|_| i18n::t("relay_station.invalid_config"))?;
+
+    log::info!("[UPDATE] Serialized adapter_config_str: {:?}", adapter_config_str);
 
     // 如果要启用这个中转站，先禁用所有其他中转站
     if request.enabled {
@@ -504,7 +515,8 @@ pub async fn relay_station_update(
         updated_at: now,
     };
 
-    log::info!("Updated relay station: {} ({})", station.name, request.id);
+    log::info!("[UPDATE] Updated relay station: {} ({})", station.name, request.id);
+    log::info!("[UPDATE] Final station.adapter_config: {:?}", station.adapter_config);
     Ok(station)
 }
 
