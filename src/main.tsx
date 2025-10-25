@@ -20,16 +20,14 @@ try {
 // 全局捕获未处理的Promise拒绝，防止Monaco Editor错误
 window.addEventListener('unhandledrejection', (event) => {
   const error = event.reason;
-  if (error && error.message && error.message.includes('URL is not valid')) {
+  if (error && (error.message || error.toString()).includes('URL is not valid')) {
     event.preventDefault();
-    console.warn('[Monaco] Suppressed URL validation error:', error);
   }
 });
 
 // 全局捕获window.onerror
 window.addEventListener('error', (event) => {
-  if (event.error && event.error.message && event.error.message.includes('URL is not valid')) {
-    console.warn('[Monaco] Suppressed URL validation error:', event.error);
+  if (event.error && (event.error.message || event.error.toString()).includes('URL is not valid')) {
     event.preventDefault();
     return true;
   }

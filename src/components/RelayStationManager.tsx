@@ -507,6 +507,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t('relayStation.createTitle')}</DialogTitle>
+                <DialogDescription>
+                  {t('relayStation.description')}
+                </DialogDescription>
+              </DialogHeader>
               <CreateStationDialog
                 onSuccess={() => {
                   setShowCreateDialog(false);
@@ -766,6 +772,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       {selectedStation && (
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{t('relayStation.editTitle')}</DialogTitle>
+              <DialogDescription>
+                {t('relayStation.description')}
+              </DialogDescription>
+            </DialogHeader>
             <EditStationDialog
               station={selectedStation}
               onSuccess={() => {
