@@ -654,10 +654,19 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 <div className="text-sm font-medium mb-2">{t('relayStation.configPreview')}</div>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API URL:</span>
+                    <span className="font-mono text-xs break-all">
+                      {currentConfig.api_url || t('relayStation.notConfigured')}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
                     <span className="text-muted-foreground min-w-[80px] flex-shrink-0">API Token:</span>
                     <span className="font-mono text-xs">
                       {currentConfig.api_token ? truncateMiddle(maskToken(currentConfig.api_token), 40) : t('relayStation.notConfigured')}
                     </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    {t('relayStation.configLocation')}: ~/.claude/settings.json
                   </div>
                 </div>
               </div>
