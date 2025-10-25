@@ -7,7 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Claude 配置文件结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ClaudeConfig {
     #[serde(default)]
     pub env: ClaudeEnv,
@@ -24,7 +24,7 @@ pub struct ClaudeConfig {
     pub extra_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StatusLineConfig {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub config_type: Option<String>,
@@ -181,27 +181,51 @@ pub fn restore_claude_config() -> Result<(), String> {
     Ok(())
 }
 
-/// 根据中转站配置更新 Claude 配置（仅更新 API 相关字段）
+/// 根据中转站配置更新 Claude 配置（先恢复源文件，再应用配置）
 pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), String> {
-    // 先备份当前配置
-    backup_claude_config()?;
+    log::info!("[CLAUDE_CONFIG] Applying relay station: {}", station.name);
 
-    // 读取当前配置
+    // 第一步：确保源文件备份存在（如果不存在则创建）
+    let backup_path = get_config_backup_path()?;
+    let config_path = get_claude_config_path()?;
+
+    if !backup_path.exists() {
+        if config_path.exists() {
+            log::info!("[CLAUDE_CONFIG] Creating source backup on first use");
+            init_source_backup()?;
+        } else {
+            log::warn!("[CLAUDE_CONFIG] No source config found, will create default");
+        }
+    }
+
+    // 第二步：恢复源文件备份（确保使用干净的基准配置）
+    if backup_path.exists() {
+        log::info!("[CLAUDE_CONFIG] Restoring source config from backup");
+        fs::copy(&backup_path, &config_path).map_err(|e| {
+            log::error!("[CLAUDE_CONFIG] Failed to restore source config: {}", e);
+            format!("恢复源配置文件失败: {}", e)
+        })?;
+    }
+
+    // 第三步：读取恢复后的配置（现在是源文件或默认配置）
     let mut config = read_claude_config()?;
 
-    // 更新三个关键字段：
+    // 第四步：仅更新中转站相关字段，保留其他所有配置
     // 1. ANTHROPIC_BASE_URL
     config.env.anthropic_base_url = Some(station.api_url.clone());
+    log::info!("[CLAUDE_CONFIG] Set ANTHROPIC_BASE_URL: {}", station.api_url);
 
     // 2. ANTHROPIC_AUTH_TOKEN
     config.env.anthropic_auth_token = Some(station.system_token.clone());
+    log::info!("[CLAUDE_CONFIG] Set ANTHROPIC_AUTH_TOKEN");
 
     // 3. apiKeyHelper - 设置为 echo 格式
     config.api_key_helper = Some(format!("echo '{}'", station.system_token));
+    log::info!("[CLAUDE_CONFIG] Set apiKeyHelper");
 
-    // 处理 adapter_config 中的自定义字段
+    // 第五步：处理 adapter_config 中的自定义字段（合并而非覆盖）
     if let Some(ref adapter_config) = station.adapter_config {
-        log::info!("[CLAUDE_CONFIG] Applying adapter_config: {:?}", adapter_config);
+        log::info!("[CLAUDE_CONFIG] Merging adapter_config: {:?}", adapter_config);
 
         // 遍历 adapter_config 中的所有字段
         for (key, value) in adapter_config {
@@ -222,70 +246,52 @@ pub fn apply_relay_station_to_config(station: &RelayStation) -> Result<(), Strin
         }
     }
 
-    // 如果是特定适配器，可能需要特殊处理 URL 格式
-    match station.adapter.as_str() {
-        "packycode" => {
-            // PackyCode 使用原始配置，不做特殊处理
-        }
-        "custom" => {
-            // 自定义适配器，使用原始配置
-        }
-        _ => {}
-    }
-
-    // 写入更新后的配置
+    // 第六步：写入更新后的配置
     write_claude_config(&config)?;
 
-    log::info!("已将中转站 {} 的 API 配置（apiKeyHelper, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN）及自定义配置应用到 Claude 配置文件", station.name);
+    log::info!("[CLAUDE_CONFIG] Successfully applied station config (merged with source config)");
     Ok(())
 }
 
-/// 清除中转站配置（恢复默认）
+/// 清除中转站配置（恢复源文件备份）
 pub fn clear_relay_station_from_config() -> Result<(), String> {
-    // 尝试从备份恢复原始的配置
-    let backup_config = if let Ok(backup_path) = get_config_backup_path() {
-        if backup_path.exists() {
-            let content = fs::read_to_string(&backup_path).ok();
-            content.and_then(|c| serde_json::from_str::<ClaudeConfig>(&c).ok())
-        } else {
-            None
-        }
+    log::info!("[CLAUDE_CONFIG] Clearing relay station config");
+
+    // 恢复源文件备份
+    let backup_path = get_config_backup_path()?;
+    let config_path = get_claude_config_path()?;
+
+    if backup_path.exists() {
+        log::info!("[CLAUDE_CONFIG] Restoring from source backup");
+        fs::copy(&backup_path, &config_path).map_err(|e| {
+            log::error!("[CLAUDE_CONFIG] Failed to restore: {}", e);
+            format!("恢复源配置文件失败: {}", e)
+        })?;
+        log::info!("[CLAUDE_CONFIG] Successfully restored source config");
     } else {
-        None
-    };
-
-    // 读取当前配置
-    let mut config = read_claude_config()?;
-
-    // 清除 API URL 和 Token
-    config.env.anthropic_base_url = None;
-    config.env.anthropic_auth_token = None;
-
-    // 恢复原始的 apiKeyHelper（如果有备份的话）
-    if let Some(backup) = backup_config {
-        config.api_key_helper = backup.api_key_helper;
-        config.model = backup.model.clone();
-        // 如果备份中有 ANTHROPIC_AUTH_TOKEN，也恢复它
-        if backup.env.anthropic_auth_token.is_some() {
-            config.env.anthropic_auth_token = backup.env.anthropic_auth_token;
-        }
-        // 恢复备份中的 extra_fields
-        config.extra_fields = backup.extra_fields.clone();
-        log::info!("[CLAUDE_CONFIG] Restored model from backup: {:?}", backup.model);
-        log::info!("[CLAUDE_CONFIG] Restored {} extra fields from backup", config.extra_fields.len());
-    } else {
-        // 如果没有备份，清除 apiKeyHelper 和 model
-        config.api_key_helper = None;
-        config.model = None;
-        // 清除所有额外的自定义字段
-        config.extra_fields.clear();
-        log::info!("[CLAUDE_CONFIG] Cleared model and all extra fields (no backup found)");
+        log::warn!("[CLAUDE_CONFIG] No source backup found, creating empty config");
+        // 如果没有备份，创建一个最小配置
+        let empty_config = ClaudeConfig::default();
+        write_claude_config(&empty_config)?;
     }
 
-    // 写入更新后的配置
-    write_claude_config(&config)?;
+    Ok(())
+}
 
-    log::info!("已清除 Claude 配置文件中的中转站设置");
+/// 初始化源文件备份（仅在首次启用中转站时调用）
+pub fn init_source_backup() -> Result<(), String> {
+    let config_path = get_claude_config_path()?;
+    let backup_path = get_config_backup_path()?;
+
+    if !backup_path.exists() && config_path.exists() {
+        log::info!("[CLAUDE_CONFIG] Creating initial source backup");
+        fs::copy(&config_path, &backup_path).map_err(|e| {
+            log::error!("[CLAUDE_CONFIG] Failed to create source backup: {}", e);
+            format!("创建源文件备份失败: {}", e)
+        })?;
+        log::info!("[CLAUDE_CONFIG] Source backup created at: {:?}", backup_path);
+    }
+
     Ok(())
 }
 

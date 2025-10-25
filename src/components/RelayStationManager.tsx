@@ -75,6 +75,12 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stationToDelete, setStationToDelete] = useState<RelayStation | null>(null);
   const [togglingEnable, setTogglingEnable] = useState<Record<string, boolean>>({});
+
+  // 处理选中中转站的逻辑（用于切换时恢复自定义JSON）
+  const handleSelectStation = (station: RelayStation) => {
+    setSelectedStation(station);
+    setShowEditDialog(true);
+  };
   const [currentConfig, setCurrentConfig] = useState<Record<string, string | null>>({});
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [jsonConfigView, setJsonConfigView] = useState(false);
@@ -757,7 +763,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 station={station}
                 getStatusBadge={getStatusBadge}
                 getAdapterDisplayName={getAdapterDisplayName}
-                setSelectedStation={setSelectedStation}
+                setSelectedStation={handleSelectStation}
                 setShowEditDialog={setShowEditDialog}
                 openDeleteDialog={openDeleteDialog}
                 quotaData={quotaData}
@@ -1765,6 +1771,20 @@ const EditStationDialog: React.FC<{
     }
     return '';
   });
+
+  // 监听station变化，更新自定义JSON
+  useEffect(() => {
+    if (station.adapter_config) {
+      const { service_type, ...customFields } = station.adapter_config as any;
+      if (Object.keys(customFields).length > 0) {
+        setCustomJson(JSON.stringify(customFields, null, 2));
+      } else {
+        setCustomJson('');
+      }
+    } else {
+      setCustomJson('');
+    }
+  }, [station.id]); // 只监听station.id变化，避免循环更新
 
   const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
   const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);

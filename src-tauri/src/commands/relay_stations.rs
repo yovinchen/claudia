@@ -571,7 +571,7 @@ pub async fn relay_station_toggle_enable(
         // 获取要启用的中转站信息
         let station = relay_station_get_internal(&conn, &id)?;
 
-        // 将中转站配置应用到 Claude 配置文件
+        // 将中转站配置应用到 Claude 配置文件（会自动确保源文件备份存在）
         claude_config::apply_relay_station_to_config(&station).map_err(|e| {
             log::error!("Failed to apply relay station config: {}", e);
             format!("配置文件写入失败: {}", e)

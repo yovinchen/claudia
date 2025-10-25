@@ -4,7 +4,7 @@ import { useTabState } from '@/hooks/useTabState';
 import { useScreenTracking } from '@/hooks/useAnalytics';
 import { Tab } from '@/contexts/TabContext';
 import { Loader2 } from 'lucide-react';
-import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
+import { api, type Project, type Session } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';

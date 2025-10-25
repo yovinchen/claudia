@@ -20,18 +20,39 @@ try {
 // 全局捕获未处理的Promise拒绝，防止Monaco Editor错误
 window.addEventListener('unhandledrejection', (event) => {
   const error = event.reason;
-  if (error && (error.message || error.toString()).includes('URL is not valid')) {
+  if (error && (error.message || error.toString() || '').toLowerCase().includes('url is not valid')) {
     event.preventDefault();
+    // 不输出任何日志，完全静默
   }
 });
 
 // 全局捕获window.onerror
 window.addEventListener('error', (event) => {
-  if (event.error && (event.error.message || event.error.toString()).includes('URL is not valid')) {
+  if (event.error && (event.error.message || event.error.toString() || '').toLowerCase().includes('url is not valid')) {
     event.preventDefault();
     return true;
   }
 });
+
+// 捕获console.error并过滤Monaco错误
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const message = args.join(' ');
+  if (message.includes('URL is not valid')) {
+    return; // 静默过滤
+  }
+  originalConsoleError.apply(console, args);
+};
+
+// 捕获console.warn并过滤Monaco警告
+const originalConsoleWarn = console.warn;
+console.warn = (...args) => {
+  const message = args.join(' ');
+  if (message.includes('Monaco') && message.includes('URL')) {
+    return; // 静默过滤
+  }
+  originalConsoleWarn.apply(console, args);
+};
 
 // Initialize analytics before rendering (will no-op if no consent or no key)
 analytics.initialize();
