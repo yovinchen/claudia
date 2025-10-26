@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod api_nodes;
 pub mod ccr;
 pub mod claude;
 pub mod filesystem;

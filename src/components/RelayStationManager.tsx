@@ -68,6 +68,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableStationItem } from './SortableStationItem';
+import { NodeSelector } from '@/components/NodeManager';
 
 interface RelayStationManagerProps {
   onBack: () => void;
@@ -500,6 +501,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       case 'glm': return '智谱GLM';
       case 'qwen': return '千问Qwen';
       case 'kimi': return 'Kimi k2';
+      case 'minimax': return 'MiniMax M2';
       case 'custom': return t('relayStation.custom');
       default: return adapter;
     }
@@ -1055,21 +1057,21 @@ const CreateStationDialog: React.FC<{
   });
   const [submitting, setSubmitting] = useState(false);
   const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [packycodeService, setPackycodeService] = useState<string>('bus'); // 默认公交车
-  const [packycodeNode, setPackycodeNode] = useState<string>('https://api.packycode.com'); // 默认节点（公交车用）
-  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>('https://share-api.packycode.com'); // 滴滴车节点
   const [customJson, setCustomJson] = useState<string>(''); // 自定义JSON配置
   const [originalCustomJson] = useState<string>(''); // 原始JSON配置（用于比较是否修改）
 
-  // 测速弹出框状态
-  const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
-  const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
-  const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
-
   const { t } = useTranslation();
 
+  // Toast 显示函数
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setFormToast({ message, type });
+    setTimeout(() => {
+      setFormToast(null);
+    }, 3000);
+  };
+
   // 获取API Key获取地址
-  const getApiKeyUrl = (adapter: string, service?: string): string | null => {
+  const getApiKeyUrl = (adapter: string): string | null => {
     switch (adapter) {
       case 'deepseek':
         return 'https://platform.deepseek.com/api_keys';
@@ -1080,10 +1082,9 @@ const CreateStationDialog: React.FC<{
       case 'kimi':
         return 'https://platform.moonshot.cn/console/api-keys';
       case 'packycode':
-        if (service === 'taxi') {
-          return 'https://share.packycode.com/api-management';
-        }
         return 'https://www.packycode.com/api-management';
+      case 'minimax':
+        return 'https://platform.minimaxi.com/user-center/basic-information/interface-key';
       default:
         return null;
     }
@@ -1095,74 +1096,6 @@ const CreateStationDialog: React.FC<{
       await open(url);
     } catch (error) {
       console.error('Failed to open URL:', error);
-    }
-  };
-
-  // 通用测速函数
-  const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
-    setShowSpeedTestModal(true);
-    setSpeedTestInProgress(true);
-
-    // 初始化测速结果
-    const initialResults = nodes.map(node => ({
-      url: node.url,
-      name: node.name,
-      responseTime: null,
-      status: 'testing' as const
-    }));
-    setSpeedTestResults(initialResults);
-
-    let bestNode = nodes[0];
-    let minTime = Infinity;
-
-    // 并行测试所有节点
-    const testPromises = nodes.map(async (node, index) => {
-      try {
-        const startTime = Date.now();
-        await fetch(node.url, {
-          method: 'HEAD',
-          mode: 'no-cors'
-        });
-        const responseTime = Date.now() - startTime;
-
-        // 更新单个节点的测试结果
-        setSpeedTestResults(prev => prev.map((result, i) =>
-          i === index ? { ...result, responseTime, status: 'success' } : result
-        ));
-
-        if (responseTime < minTime) {
-          minTime = responseTime;
-          bestNode = node;
-        }
-
-        return { node, responseTime };
-      } catch (error) {
-        console.log(`Node ${node.url} failed:`, error);
-        // 标记节点为失败
-        setSpeedTestResults(prev => prev.map((result, i) =>
-          i === index ? { ...result, responseTime: null, status: 'failed' } : result
-        ));
-        return { node, responseTime: null };
-      }
-    });
-
-    try {
-      await Promise.all(testPromises);
-      // 测试完成后等待2秒让用户看到结果
-      setTimeout(() => {
-        setSpeedTestInProgress(false);
-        onComplete(bestNode);
-        // 再等1秒后关闭弹框
-        setTimeout(() => {
-          setShowSpeedTestModal(false);
-        }, 1000);
-      }, 2000);
-    } catch (error) {
-      console.error('Speed test failed:', error);
-      setSpeedTestInProgress(false);
-      setTimeout(() => {
-        setShowSpeedTestModal(false);
-      }, 1000);
     }
   };
 
@@ -1185,18 +1118,6 @@ const CreateStationDialog: React.FC<{
       }));
     }
   }, [formData.adapter]);
-
-  // 自动填充中转站名称
-  const fillStationName = (serviceType: string) => {
-    const serviceName = serviceType === 'taxi' ? t('relayStation.taxiService') : t('relayStation.busService');
-    const newName = `PackyCode ${serviceName}`;
-
-    // 当选择PackyCode服务类型时，始终更新名称
-    setFormData(prev => ({
-      ...prev,
-      name: newName
-    }));
-  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1252,64 +1173,21 @@ const CreateStationDialog: React.FC<{
       console.log('[DEBUG] Should update config:', shouldUpdateConfig);
       console.log('[DEBUG] Adapter config to send:', shouldUpdateConfig ? adapterConfig : 'undefined');
 
-      // PackyCode 保存时自动选择最佳节点
-      if (formData.adapter === 'packycode') {
-        let finalApiUrl = formData.api_url;
+      // 统一处理所有适配器的创建逻辑
+      let finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
 
-        if (packycodeService === 'bus') {
-          // 公交车自动选择
-          const busNodes = [
-            { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
-            { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
-            { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
-            { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
-          ];
-
-          await performSpeedTest(busNodes, (bestNode) => {
-            finalApiUrl = bestNode.url;
-            setPackycodeNode(bestNode.url);
-          });
-        } else if (packycodeService === 'taxi') {
-          // 滴滴车自动选择
-          const taxiNodes = [
-            { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
-            { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
-            { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
-            { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
-          ];
-
-          await performSpeedTest(taxiNodes, (bestNode) => {
-            finalApiUrl = bestNode.url;
-            setPackycodeTaxiNode(bestNode.url);
-          });
-        }
-
-        const finalConfig = shouldUpdateConfig ? {
-          service_type: packycodeService,
-          ...adapterConfig
-        } : undefined;
-
-        console.log('[DEBUG] Final adapter_config for PackyCode:', finalConfig);
-
-        // 使用选择的最佳节点创建中转站
-        await api.relayStationCreate({
-          ...formData,
-          api_url: finalApiUrl,
-          adapter_config: finalConfig
-        });
-      } else {
-        const finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
-
-        console.log('[DEBUG] Final adapter_config for non-PackyCode:', finalConfig);
-
-        // 非 PackyCode 适配器直接创建
-        await api.relayStationCreate({
-          ...formData,
-          adapter_config: finalConfig
-        });
+      // MiniMax 适配器默认模型配置
+      if (formData.adapter === 'minimax' && !shouldUpdateConfig) {
+        finalConfig = { model: "MiniMax-M2-Preview" };
       }
+
+      console.log('[DEBUG] Final adapter_config:', finalConfig);
+
+      // 创建中转站
+      await api.relayStationCreate({
+        ...formData,
+        adapter_config: finalConfig
+      });
 
       onSuccess();
     } catch (error) {
@@ -1322,9 +1200,6 @@ const CreateStationDialog: React.FC<{
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t('relayStation.createTitle')}</DialogTitle>
-      </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-6">
 
@@ -1344,13 +1219,12 @@ const CreateStationDialog: React.FC<{
                   ...prev,
                   adapter: 'packycode',
                   name: 'PackyCode',
-                  api_url: 'https://api.packycode.com'
+                  api_url: 'https://www.packyapi.com'
                 }))}
               >
                 <div className="text-xl">📦</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">PackyCode</div>
-                  <div className="text-xs opacity-80 mt-1">推荐使用</div>
                 </div>
               </Button>
 
@@ -1372,7 +1246,7 @@ const CreateStationDialog: React.FC<{
                 <div className="text-xl">🚀</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">DeepSeek</div>
-                  <div className="text-xs opacity-80 mt-1">v3.1</div>
+                  <div className="text-xs opacity-80 mt-1">深度求索</div>
                 </div>
               </Button>
 
@@ -1393,7 +1267,7 @@ const CreateStationDialog: React.FC<{
               >
                 <div className="text-xl">🤖</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">智谱GLM</div>
+                  <div className="font-semibold text-sm">GLM</div>
                   <div className="text-xs opacity-80 mt-1">清华智谱</div>
                 </div>
               </Button>
@@ -1416,7 +1290,7 @@ const CreateStationDialog: React.FC<{
               >
                 <div className="text-xl">🎯</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">千问Qwen</div>
+                  <div className="font-semibold text-sm">Qwen</div>
                   <div className="text-xs opacity-80 mt-1">阿里通义</div>
                 </div>
               </Button>
@@ -1438,8 +1312,30 @@ const CreateStationDialog: React.FC<{
               >
                 <div className="text-xl">🌙</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">Kimi k2</div>
+                  <div className="font-semibold text-sm">Kimi</div>
                   <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'minimax' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'minimax'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
+                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  adapter: 'minimax',
+                  name: 'MiniMax M2',
+                  api_url: 'https://api.minimaxi.com/anthropic'
+                }))}
+              >
+                <div className="text-xl">✨</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">MiniMax</div>
+                  <div className="text-xs opacity-80 mt-1">海螺AI</div>
                 </div>
               </Button>
 
@@ -1452,12 +1348,16 @@ const CreateStationDialog: React.FC<{
                     ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ ...prev, adapter: 'custom' }))}
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  adapter: 'custom',
+                  name: '',
+                  api_url: ''
+                }))}
               >
                 <div className="text-xl">⚙️</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
-                  <div className="text-xs opacity-80 mt-1">自定义</div>
                 </div>
               </Button>
             </div>
@@ -1478,186 +1378,16 @@ const CreateStationDialog: React.FC<{
           </div>
         )}
 
-        {formData.adapter === 'packycode' && (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">{t('relayStation.serviceType')}</Label>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant={packycodeService === 'taxi' ? 'default' : 'outline'}
-                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                    packycodeService === 'taxi' 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                      : 'hover:bg-blue-50 dark:hover:bg-blue-950'
-                  }`}
-                  onClick={() => {
-                    setPackycodeService('taxi');
-                    fillStationName('taxi');
-                    setFormData(prev => ({ ...prev, api_url: packycodeTaxiNode }));
-                  }}
-                >
-                  <div className="text-xl">🚗</div>
-                  <div className="text-center">
-                    <div className="font-semibold text-sm">{t('relayStation.taxiService')}</div>
-                    <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
-                  </div>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant={packycodeService === 'bus' ? 'default' : 'outline'}
-                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                    packycodeService === 'bus' 
-                      ? 'bg-green-600 hover:bg-green-700 text-white' 
-                      : 'hover:bg-green-50 dark:hover:bg-green-950'
-                  }`}
-                  onClick={() => {
-                    setPackycodeService('bus');
-                    fillStationName('bus');
-                    setFormData(prev => ({ ...prev, api_url: packycodeNode }));
-                  }}
-                >
-                  <div className="text-xl">🚌</div>
-                  <div className="text-center">
-                    <div className="font-semibold text-sm">{t('relayStation.busService')}</div>
-                    <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
-                  </div>
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                {packycodeService === 'taxi'
-                  ? t('relayStation.taxiServiceNote')
-                  : t('relayStation.busServiceNote')
-                }
-              </p>
-            </div>
-          </div>
-        )}
-
-        {formData.adapter === 'packycode' && packycodeService === 'bus' && (
-          <div className="space-y-2">
-            <Label>{t('relayStation.nodeSelection')}</Label>
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={packycodeNode}
-                    onValueChange={(value: string) => {
-                      setPackycodeNode(value);
-                      setFormData(prev => ({ ...prev, api_url: value }));
-                    }}
-                  >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('relayStation.selectNode')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="https://api.packycode.com">
-                      🚌 公交车默认节点
-                    </SelectItem>
-                    <SelectItem value="https://api-hk-cn2.packycode.com">
-                      🇭🇰 公交车 HK-CN2
-                    </SelectItem>
-                    <SelectItem value="https://api-hk-g.packycode.com">
-                      🇭🇰 公交车 HK-G
-                    </SelectItem>
-                    <SelectItem value="https://api-cf-pro.packycode.com">
-                      ☁️ 公交车 CF-Pro
-                    </SelectItem>
-                    <SelectItem value="https://api-us-cn2.packycode.com">
-                      🇺🇸 公交车 US-CN2
-                    </SelectItem>
-                  </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    const busNodes = [
-                      { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
-                      { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
-                      { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-                      { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" }
-                    ];
-
-                    await performSpeedTest(busNodes, (bestNode) => {
-                      setPackycodeNode(bestNode.url);
-                    });
-                  }}
-                >
-                  自动选择
-                </Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.selectedNode') + ': ' + packycodeNode}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {formData.adapter === 'packycode' && packycodeService === 'taxi' && (
-          <div className="space-y-2">
-            <Label>{t('relayStation.nodeSelection')}</Label>
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={packycodeTaxiNode}
-                    onValueChange={(value: string) => {
-                      setPackycodeTaxiNode(value);
-                      setFormData(prev => ({ ...prev, api_url: value }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('relayStation.selectNode')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="https://share-api.packycode.com">
-                        🚗 滴滴车默认节点
-                      </SelectItem>
-                      <SelectItem value="https://share-api-hk-cn2.packycode.com">
-                        🇭🇰 滴滴车 HK-CN2
-                      </SelectItem>
-                      <SelectItem value="https://share-api-hk-g.packycode.com">
-                        🇭🇰 滴滴车 HK-G
-                      </SelectItem>
-                      <SelectItem value="https://share-api-cf-pro.packycode.com">
-                        ☁️ 滴滴车 CF-Pro
-                      </SelectItem>
-                      <SelectItem value="https://share-api-us-cn2.packycode.com">
-                        🇺🇸 滴滴车 US-CN2
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    const taxiNodes = [
-                      { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
-                      { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
-                      { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-                      { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" }
-                    ];
-
-                    await performSpeedTest(taxiNodes, (bestNode) => {
-                      setPackycodeTaxiNode(bestNode.url);
-                    });
-                  }}
-                >
-                  自动选择
-                </Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.selectedNode') + ': ' + packycodeTaxiNode}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* 节点地址选择 - 使用通用 NodeSelector */}
+        <div className="col-span-2">
+          <NodeSelector
+            adapter={formData.adapter}
+            value={formData.api_url}
+            onChange={(url) => setFormData(prev => ({ ...prev, api_url: url }))}
+            showToast={showToast}
+            allowManualInput={true}
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="description">{t('relayStation.description')}</Label>
@@ -1671,75 +1401,9 @@ const CreateStationDialog: React.FC<{
           />
         </div>
 
-        {formData.adapter !== 'packycode' && (
-          <div className="space-y-2">
-            <Label htmlFor="api_url">{t('relayStation.apiUrl')}</Label>
-            <Input
-              id="api_url"
-              type="url"
-              value={formData.api_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-              placeholder="https://api.example.com"
-              className="w-full"
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-6">
-          {formData.adapter === 'packycode' ? (
-            // PackyCode 固定使用 API Key，不显示选择器
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
-                {getApiKeyUrl(formData.adapter, packycodeService) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={async () => {
-                      const url = getApiKeyUrl(formData.adapter, packycodeService);
-                      if (url) await openExternalLink(url);
-                    }}
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    {t('relayStation.getApiKey')}
-                  </Button>
-                )}
-              </div>
-              <Input
-                id="system_token"
-                type="password"
-                value={formData.system_token}
-                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
-                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                className="w-full font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.packycodeTokenNote')}
-              </p>
-
-              {/* 自定义JSON配置 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="custom-json">{t('relayStation.customJson')}</Label>
-                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
-                </div>
-                <Textarea
-                  id="custom-json"
-                  value={customJson}
-                  onChange={(e) => setCustomJson(e.target.value)}
-                  placeholder='{"key": "value"}'
-                  rows={3}
-                  className="w-full font-mono text-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('relayStation.customJsonNote')}
-                </p>
-              </div>
-            </div>
-          ) : (
-            // 其他适配器显示认证方式选择
+          {formData.adapter === 'custom' ? (
+            // 自定义适配器显示认证方式选择
             <>
               <div className="space-y-2">
                 <Label htmlFor="auth_method">{t('relayStation.authMethod')}</Label>
@@ -1763,21 +1427,6 @@ const CreateStationDialog: React.FC<{
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
-                  {getApiKeyUrl(formData.adapter) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={async () => {
-                        const url = getApiKeyUrl(formData.adapter);
-                        if (url) await openExternalLink(url);
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      {t('relayStation.getApiKey')}
-                    </Button>
-                  )}
                 </div>
                 <Input
                   id="system_token"
@@ -1808,6 +1457,60 @@ const CreateStationDialog: React.FC<{
                 </p>
               </div>
             </>
+          ) : (
+            // 其他适配器（PackyCode、DeepSeek、GLM、Qwen、Kimi）只显示系统令牌
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="system_token">{t('relayStation.systemToken')} *</Label>
+                {getApiKeyUrl(formData.adapter) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      const url = getApiKeyUrl(formData.adapter);
+                      if (url) await openExternalLink(url);
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t('relayStation.getApiKey')}
+                  </Button>
+                )}
+              </div>
+              <Input
+                id="system_token"
+                type="password"
+                value={formData.system_token}
+                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                placeholder={formData.adapter === 'packycode' ? 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' : t('relayStation.tokenPlaceholder')}
+                className="w-full font-mono text-sm"
+              />
+              {formData.adapter === 'packycode' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.packycodeTokenNote')}
+                </p>
+              )}
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
@@ -1837,59 +1540,6 @@ const CreateStationDialog: React.FC<{
           onDismiss={() => setFormToast(null)}
         />
       )}
-
-      {/* 测速弹出框 */}
-      <Dialog open={showSpeedTestModal} onOpenChange={setShowSpeedTestModal}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
-            <DialogDescription>
-              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
-            </div>
-            <div className="space-y-3">
-              {speedTestResults.map((result, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium">{result.name}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {result.status === 'testing' && (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                        <span className="text-sm text-blue-600">{t('relayStation.testing')}</span>
-                      </>
-                    )}
-                    {result.status === 'success' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <span className="text-sm text-green-600">{result.responseTime}ms</span>
-                      </>
-                    )}
-                    {result.status === 'failed' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                        <span className="text-sm text-red-600">{t('relayStation.failed')}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {!speedTestInProgress && speedTestResults.length > 0 && (
-              <div className="pt-2 text-center">
-                <div className="text-sm text-green-600">
-                  {t('relayStation.bestNodeSelected')}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
@@ -1914,47 +1564,17 @@ const EditStationDialog: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [formToast, setFormToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // PackyCode 特定状态
-  const [packycodeService, setPackycodeService] = useState<string>(() => {
-    // 从API URL判断服务类型
-    if (station.adapter === 'packycode' && (station.api_url.includes('share-api') || station.api_url.includes('codex-api'))) {
-      return 'taxi';
-    }
-    return 'bus';
-  });
-  const [packycodeNode, setPackycodeNode] = useState<string>(() => {
-    // 如果是PackyCode，使用当前的API URL
-    if (station.adapter === 'packycode') {
-      return station.api_url;
-    }
-    return 'https://api.packycode.com';
-  });
-  const [packycodeTaxiNode, setPackycodeTaxiNode] = useState<string>(() => {
-    // 如果是PackyCode滴滴车，使用当前的API URL
-    if (station.adapter === 'packycode' && (station.api_url.includes('share-api') || station.api_url.includes('codex-api'))) {
-      return station.api_url;
-    }
-    return 'https://share-api.packycode.com';
-  });
   const [customJson, setCustomJson] = useState<string>(() => {
     // 从 adapter_config 中提取自定义JSON
     if (station.adapter_config) {
-      // 排除 service_type 等已知字段
-      const { service_type, ...customFields } = station.adapter_config as any;
-      if (Object.keys(customFields).length > 0) {
-        return JSON.stringify(customFields, null, 2);
-      }
+      return JSON.stringify(station.adapter_config, null, 2);
     }
     return '';
   });
   const [originalCustomJson] = useState<string>(() => {
     // 从 adapter_config 中提取自定义JSON
     if (station.adapter_config) {
-      // 排除 service_type 等已知字段
-      const { service_type, ...customFields } = station.adapter_config as any;
-      if (Object.keys(customFields).length > 0) {
-        return JSON.stringify(customFields, null, 2);
-      }
+      return JSON.stringify(station.adapter_config, null, 2);
     }
     return '';
   });
@@ -1962,25 +1582,24 @@ const EditStationDialog: React.FC<{
   // 监听station变化，更新自定义JSON
   useEffect(() => {
     if (station.adapter_config) {
-      const { service_type, ...customFields } = station.adapter_config as any;
-      if (Object.keys(customFields).length > 0) {
-        setCustomJson(JSON.stringify(customFields, null, 2));
-      } else {
-        setCustomJson('');
-      }
+      setCustomJson(JSON.stringify(station.adapter_config, null, 2));
     } else {
       setCustomJson('');
     }
   }, [station.id]); // 只监听station.id变化，避免循环更新
 
-  const [showSpeedTestModal, setShowSpeedTestModal] = useState(false);
-  const [speedTestResults, setSpeedTestResults] = useState<{ url: string; name: string; responseTime: number | null; status: 'testing' | 'success' | 'failed' }[]>([]);
-  const [speedTestInProgress, setSpeedTestInProgress] = useState(false);
-
   const { t } = useTranslation();
 
+  // Toast 显示函数
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setFormToast({ message, type });
+    setTimeout(() => {
+      setFormToast(null);
+    }, 3000);
+  };
+
   // 获取API Key获取地址
-  const getApiKeyUrl = (adapter: string, service?: string): string | null => {
+  const getApiKeyUrl = (adapter: string): string | null => {
     switch (adapter) {
       case 'deepseek':
         return 'https://platform.deepseek.com/api_keys';
@@ -1991,10 +1610,9 @@ const EditStationDialog: React.FC<{
       case 'kimi':
         return 'https://platform.moonshot.cn/console/api-keys';
       case 'packycode':
-        if (service === 'taxi') {
-          return 'https://share.packycode.com/api-management';
-        }
         return 'https://www.packycode.com/api-management';
+      case 'minimax':
+        return 'https://platform.minimaxi.com/user-center/basic-information/interface-key';
       default:
         return null;
     }
@@ -2006,74 +1624,6 @@ const EditStationDialog: React.FC<{
       await open(url);
     } catch (error) {
       console.error('Failed to open URL:', error);
-    }
-  };
-
-  // 通用测速函数
-  const performSpeedTest = async (nodes: { url: string; name: string }[], onComplete: (bestNode: { url: string; name: string }) => void) => {
-    setShowSpeedTestModal(true);
-    setSpeedTestInProgress(true);
-
-    // 初始化测速结果
-    const initialResults = nodes.map(node => ({
-      url: node.url,
-      name: node.name,
-      responseTime: null,
-      status: 'testing' as const
-    }));
-    setSpeedTestResults(initialResults);
-
-    let bestNode = nodes[0];
-    let minTime = Infinity;
-
-    // 并行测试所有节点
-    const testPromises = nodes.map(async (node, index) => {
-      try {
-        const startTime = Date.now();
-        await fetch(node.url, {
-          method: 'HEAD',
-          mode: 'no-cors'
-        });
-        const responseTime = Date.now() - startTime;
-
-        // 更新单个节点的测试结果
-        setSpeedTestResults(prev => prev.map((result, i) =>
-          i === index ? { ...result, responseTime, status: 'success' } : result
-        ));
-
-        if (responseTime < minTime) {
-          minTime = responseTime;
-          bestNode = node;
-        }
-
-        return { node, responseTime };
-      } catch (error) {
-        console.log(`Node ${node.url} failed:`, error);
-        // 标记节点为失败
-        setSpeedTestResults(prev => prev.map((result, i) =>
-          i === index ? { ...result, responseTime: null, status: 'failed' } : result
-        ));
-        return { node, responseTime: null };
-      }
-    });
-
-    try {
-      await Promise.all(testPromises);
-      // 测试完成后等待2秒让用户看到结果
-      setTimeout(() => {
-        setSpeedTestInProgress(false);
-        onComplete(bestNode);
-        // 再等1秒后关闭弹框
-        setTimeout(() => {
-          setShowSpeedTestModal(false);
-        }, 1000);
-      }, 2000);
-    } catch (error) {
-      console.error('Speed test failed:', error);
-      setSpeedTestInProgress(false);
-      setTimeout(() => {
-        setShowSpeedTestModal(false);
-      }, 1000);
     }
   };
 
@@ -2151,169 +1701,21 @@ const EditStationDialog: React.FC<{
       console.log('[DEBUG-EDIT] Should update config:', shouldUpdateConfig);
       console.log('[DEBUG-EDIT] Adapter config to send:', shouldUpdateConfig ? adapterConfig : 'undefined');
 
-      // PackyCode 保存时自动选择最佳节点
-      if (formData.adapter === 'packycode') {
-        let finalApiUrl = formData.api_url;
+      // 统一处理所有适配器的更新逻辑
+      let finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
 
-        if (packycodeService === 'bus') {
-          // 公交车自动选择
-          const busNodes = [
-            { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
-            { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
-            { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-            { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" },
-            { url: "https://api-us-cn2.packycode.com", name: "🇺🇸 公交车 US-CN2" }
-          ];
-
-          await new Promise<void>((resolve) => {
-            // 内联的测速逻辑
-            setShowSpeedTestModal(true);
-            setSpeedTestInProgress(true);
-
-            const initialResults = busNodes.map(node => ({
-              url: node.url,
-              name: node.name,
-              responseTime: null,
-              status: 'testing' as const
-            }));
-            setSpeedTestResults(initialResults);
-
-            let bestNode = busNodes[0];
-            let minTime = Infinity;
-
-            const testPromises = busNodes.map(async (node, index) => {
-              try {
-                const startTime = Date.now();
-                await fetch(node.url, {
-                  method: 'HEAD',
-                  mode: 'no-cors'
-                });
-                const responseTime = Date.now() - startTime;
-
-                setSpeedTestResults(prev => prev.map((result, i) =>
-                  i === index ? { ...result, responseTime, status: 'success' } : result
-                ));
-
-                if (responseTime < minTime) {
-                  minTime = responseTime;
-                  bestNode = node;
-                }
-
-                return { node, responseTime };
-              } catch (error) {
-                console.log(`Node ${node.url} failed:`, error);
-                setSpeedTestResults(prev => prev.map((result, i) =>
-                  i === index ? { ...result, responseTime: null, status: 'failed' } : result
-                ));
-                return { node, responseTime: null };
-              }
-            });
-
-            Promise.all(testPromises).then(() => {
-              setTimeout(() => {
-                setSpeedTestInProgress(false);
-                finalApiUrl = bestNode.url;
-                setPackycodeNode(bestNode.url);
-                setTimeout(() => {
-                  setShowSpeedTestModal(false);
-                  resolve();
-                }, 1000);
-              }, 2000);
-            });
-          });
-        } else if (packycodeService === 'taxi') {
-          // 滴滴车自动选择
-          const taxiNodes = [
-            { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
-            { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
-            { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-            { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" },
-            { url: "https://share-api-us-cn2.packycode.com", name: "🇺🇸 滴滴车 US-CN2" }
-          ];
-
-          await new Promise<void>((resolve) => {
-            // 内联的测速逻辑
-            setShowSpeedTestModal(true);
-            setSpeedTestInProgress(true);
-
-            const initialResults = taxiNodes.map(node => ({
-              url: node.url,
-              name: node.name,
-              responseTime: null,
-              status: 'testing' as const
-            }));
-            setSpeedTestResults(initialResults);
-
-            let bestNode = taxiNodes[0];
-            let minTime = Infinity;
-
-            const testPromises = taxiNodes.map(async (node, index) => {
-              try {
-                const startTime = Date.now();
-                await fetch(node.url, {
-                  method: 'HEAD',
-                  mode: 'no-cors'
-                });
-                const responseTime = Date.now() - startTime;
-
-                setSpeedTestResults(prev => prev.map((result, i) =>
-                  i === index ? { ...result, responseTime, status: 'success' } : result
-                ));
-
-                if (responseTime < minTime) {
-                  minTime = responseTime;
-                  bestNode = node;
-                }
-
-                return { node, responseTime };
-              } catch (error) {
-                console.log(`Node ${node.url} failed:`, error);
-                setSpeedTestResults(prev => prev.map((result, i) =>
-                  i === index ? { ...result, responseTime: null, status: 'failed' } : result
-                ));
-                return { node, responseTime: null };
-              }
-            });
-
-            Promise.all(testPromises).then(() => {
-              setTimeout(() => {
-                setSpeedTestInProgress(false);
-                finalApiUrl = bestNode.url;
-                setPackycodeTaxiNode(bestNode.url);
-                setFormData(prev => ({ ...prev, api_url: bestNode.url }));
-                setTimeout(() => {
-                  setShowSpeedTestModal(false);
-                  resolve();
-                }, 1000);
-              }, 2000);
-            });
-          });
-        }
-
-        const finalConfig = shouldUpdateConfig ? {
-          service_type: packycodeService,
-          ...adapterConfig
-        } : undefined;
-
-        console.log('[DEBUG-EDIT] Final adapter_config for PackyCode:', finalConfig);
-
-        // 使用选择的最佳节点更新中转站
-        await api.relayStationUpdate({
-          ...formData,
-          api_url: finalApiUrl,
-          adapter_config: finalConfig
-        });
-      } else {
-        const finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
-
-        console.log('[DEBUG-EDIT] Final adapter_config for non-PackyCode:', finalConfig);
-
-        // 非 PackyCode 适配器直接更新
-        await api.relayStationUpdate({
-          ...formData,
-          adapter_config: finalConfig
-        });
+      // MiniMax 适配器默认模型配置
+      if (formData.adapter === 'minimax' && !shouldUpdateConfig) {
+        finalConfig = { model: "MiniMax-M2-Preview" };
       }
+
+      console.log('[DEBUG-EDIT] Final adapter_config:', finalConfig);
+
+      // 更新中转站
+      await api.relayStationUpdate({
+        ...formData,
+        adapter_config: finalConfig
+      });
 
       onSuccess();
     } catch (error) {
@@ -2326,9 +1728,6 @@ const EditStationDialog: React.FC<{
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t('relayStation.editTitle')}</DialogTitle>
-      </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-6">
           <div className="col-span-2 space-y-2">
@@ -2347,13 +1746,12 @@ const EditStationDialog: React.FC<{
                   ...prev,
                   adapter: 'packycode',
                   name: 'PackyCode',
-                  api_url: 'https://api.packycode.com'
+                  api_url: 'https://www.packyapi.com'
                 }))}
               >
                 <div className="text-xl">📦</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">PackyCode</div>
-                  <div className="text-xs opacity-80 mt-1">推荐使用</div>
                 </div>
               </Button>
 
@@ -2375,7 +1773,7 @@ const EditStationDialog: React.FC<{
                 <div className="text-xl">🚀</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">DeepSeek</div>
-                  <div className="text-xs opacity-80 mt-1">v3.1</div>
+                  <div className="text-xs opacity-80 mt-1">深度求索</div>
                 </div>
               </Button>
 
@@ -2396,7 +1794,7 @@ const EditStationDialog: React.FC<{
               >
                 <div className="text-xl">🤖</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">智谱GLM</div>
+                  <div className="font-semibold text-sm">GLM</div>
                   <div className="text-xs opacity-80 mt-1">清华智谱</div>
                 </div>
               </Button>
@@ -2419,7 +1817,7 @@ const EditStationDialog: React.FC<{
               >
                 <div className="text-xl">🎯</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">千问Qwen</div>
+                  <div className="font-semibold text-sm">Qwen</div>
                   <div className="text-xs opacity-80 mt-1">阿里通义</div>
                 </div>
               </Button>
@@ -2441,8 +1839,30 @@ const EditStationDialog: React.FC<{
               >
                 <div className="text-xl">🌙</div>
                 <div className="text-center">
-                  <div className="font-semibold text-sm">Kimi k2</div>
+                  <div className="font-semibold text-sm">Kimi</div>
                   <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant={formData.adapter === 'minimax' ? 'default' : 'outline'}
+                className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
+                  formData.adapter === 'minimax'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
+                    : 'hover:bg-purple-50 dark:hover:bg-purple-950 border-2 border-transparent'
+                }`}
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  adapter: 'minimax',
+                  name: 'MiniMax M2',
+                  api_url: 'https://api.minimaxi.com/anthropic'
+                }))}
+              >
+                <div className="text-xl">✨</div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">MiniMax</div>
+                  <div className="text-xs opacity-80 mt-1">海螺AI</div>
                 </div>
               </Button>
 
@@ -2455,12 +1875,16 @@ const EditStationDialog: React.FC<{
                     ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-950 border-2 border-transparent'
                 }`}
-                onClick={() => setFormData(prev => ({ ...prev, adapter: 'custom' }))}
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  adapter: 'custom',
+                  name: '',
+                  api_url: ''
+                }))}
               >
                 <div className="text-xl">⚙️</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
-                  <div className="text-xs opacity-80 mt-1">自定义</div>
                 </div>
               </Button>
             </div>
@@ -2481,244 +1905,16 @@ const EditStationDialog: React.FC<{
           </div>
         )}
 
-        {formData.adapter === 'packycode' && (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">{t('relayStation.serviceType')}</Label>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant={packycodeService === 'taxi' ? 'default' : 'outline'}
-                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                    packycodeService === 'taxi' 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                      : 'hover:bg-blue-50 dark:hover:bg-blue-950'
-                  }`}
-                  onClick={() => {
-                    setPackycodeService('taxi');
-                    setFormData(prev => ({
-                      ...prev,
-                      api_url: 'https://share-api.packycode.com'
-                    }));
-                  }}
-                >
-                  <div className="text-xl">🚗</div>
-                  <div className="text-center">
-                    <div className="font-semibold text-sm">{t('relayStation.taxiService')}</div>
-                    <div className="text-xs opacity-80 mt-1">{t('relayStation.taxiServiceDesc')}</div>
-                  </div>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant={packycodeService === 'bus' ? 'default' : 'outline'}
-                  className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
-                    packycodeService === 'bus' 
-                      ? 'bg-green-600 hover:bg-green-700 text-white' 
-                      : 'hover:bg-green-50 dark:hover:bg-green-950'
-                  }`}
-                  onClick={() => {
-                    setPackycodeService('bus');
-                    setFormData(prev => ({ ...prev, api_url: packycodeNode }));
-                  }}
-                >
-                  <div className="text-xl">🚌</div>
-                  <div className="text-center">
-                    <div className="font-semibold text-sm">{t('relayStation.busService')}</div>
-                    <div className="text-xs opacity-80 mt-1">{t('relayStation.busServiceDesc')}</div>
-                  </div>
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                {packycodeService === 'taxi'
-                  ? t('relayStation.taxiServiceNote')
-                  : t('relayStation.busServiceNote')
-                }
-              </p>
-            </div>
-          </div>
-        )}
-
-        {formData.adapter === 'packycode' && packycodeService === 'bus' && (
-          <div className="space-y-2">
-            <Label>{t('relayStation.nodeSelection')}</Label>
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={packycodeNode}
-                    onValueChange={(value: string) => {
-                      setPackycodeNode(value);
-                      setFormData(prev => ({ ...prev, api_url: value }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('relayStation.selectNode')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="https://api.packycode.com">
-                        🚌 公交车默认节点
-                      </SelectItem>
-                      <SelectItem value="https://api-hk-cn2.packycode.com">
-                        🇭🇰 公交车 HK-CN2
-                      </SelectItem>
-                      <SelectItem value="https://api-hk-g.packycode.com">
-                        🇭🇰 公交车 HK-G
-                      </SelectItem>
-                      <SelectItem value="https://api-us-cn2.packycode.com">
-                        🇺🇸 公交车 US-CN2
-                      </SelectItem>
-                      <SelectItem value="https://api-cf-pro.packycode.com">
-                        ☁️ 公交车 CF-Pro
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    const busNodes = [
-                      { url: "https://api.packycode.com", name: "🚌 公交车默认节点" },
-                      { url: "https://api-hk-cn2.packycode.com", name: "🇭🇰 公交车 HK-CN2" },
-                      { url: "https://api-hk-g.packycode.com", name: "🇭🇰 公交车 HK-G" },
-                      { url: "https://api-cf-pro.packycode.com", name: "☁️ 公交车 CF-Pro" }
-                    ];
-
-                    await performSpeedTest(busNodes, (bestNode) => {
-                      setPackycodeNode(bestNode.url);
-                    });
-                  }}
-                >
-                  自动选择
-                </Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.selectedNode') + ': ' + packycodeNode}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {formData.adapter === 'packycode' && packycodeService === 'taxi' && (
-          <div className="space-y-2">
-            <Label>{t('relayStation.nodeSelection')}</Label>
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select
-                    value={packycodeTaxiNode}
-                    onValueChange={(value: string) => {
-                      setPackycodeTaxiNode(value);
-                      setFormData(prev => ({ ...prev, api_url: value }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('relayStation.selectNode')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="https://share-api.packycode.com">
-                        🚗 滴滴车默认节点
-                      </SelectItem>
-                      <SelectItem value="https://share-api-hk-cn2.packycode.com">
-                        🇭🇰 滴滴车 HK-CN2
-                      </SelectItem>
-                      <SelectItem value="https://share-api-hk-g.packycode.com">
-                        🇭🇰 滴滴车 HK-G
-                      </SelectItem>
-                      <SelectItem value="https://share-api-cf-pro.packycode.com">
-                        ☁️ 滴滴车 CF-Pro
-                      </SelectItem>
-                      <SelectItem value="https://share-api-us-cn2.packycode.com">
-                        🇺🇸 滴滴车 US-CN2
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    const taxiNodes = [
-                      { url: "https://share-api.packycode.com", name: "🚗 滴滴车默认节点" },
-                      { url: "https://share-api-hk-cn2.packycode.com", name: "🇭🇰 滴滴车 HK-CN2" },
-                      { url: "https://share-api-hk-g.packycode.com", name: "🇭🇰 滴滴车 HK-G" },
-                      { url: "https://share-api-cf-pro.packycode.com", name: "☁️ 滴滴车 CF-Pro" }
-                    ];
-
-                    // 复制 performSpeedTest 逻辑，因为它在这个作用域中不可用
-                    setShowSpeedTestModal(true);
-                    setSpeedTestInProgress(true);
-
-                    const initialResults = taxiNodes.map(node => ({
-                      url: node.url,
-                      name: node.name,
-                      responseTime: null,
-                      status: 'testing' as const
-                    }));
-                    setSpeedTestResults(initialResults);
-
-                    let bestNode = taxiNodes[0];
-                    let minTime = Infinity;
-
-                    const testPromises = taxiNodes.map(async (node, index) => {
-                      try {
-                        const startTime = Date.now();
-                        await fetch(node.url, {
-                          method: 'HEAD',
-                          mode: 'no-cors'
-                        });
-                        const responseTime = Date.now() - startTime;
-
-                        setSpeedTestResults(prev => prev.map((result, i) =>
-                          i === index ? { ...result, responseTime, status: 'success' } : result
-                        ));
-
-                        if (responseTime < minTime) {
-                          minTime = responseTime;
-                          bestNode = node;
-                        }
-
-                        return { node, responseTime };
-                      } catch (error) {
-                        console.log(`Node ${node.url} failed:`, error);
-                        setSpeedTestResults(prev => prev.map((result, i) =>
-                          i === index ? { ...result, responseTime: null, status: 'failed' } : result
-                        ));
-                        return { node, responseTime: null };
-                      }
-                    });
-
-                    try {
-                      await Promise.all(testPromises);
-                      setTimeout(() => {
-                        setSpeedTestInProgress(false);
-                        setPackycodeTaxiNode(bestNode.url);
-                        setFormData(prev => ({ ...prev, api_url: bestNode.url }));
-                        setTimeout(() => {
-                          setShowSpeedTestModal(false);
-                        }, 1000);
-                      }, 2000);
-                    } catch (error) {
-                      console.error('Speed test failed:', error);
-                      setSpeedTestInProgress(false);
-                      setTimeout(() => {
-                        setShowSpeedTestModal(false);
-                      }, 1000);
-                    }
-                  }}
-                >
-                  自动选择
-                </Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.selectedNode') + ': ' + packycodeTaxiNode}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* 节点地址选择 - 使用通用 NodeSelector */}
+        <div className="col-span-2">
+          <NodeSelector
+            adapter={formData.adapter}
+            value={formData.api_url}
+            onChange={(url) => setFormData(prev => ({ ...prev, api_url: url }))}
+            showToast={showToast}
+            allowManualInput={true}
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="edit-description">{t('relayStation.description')}</Label>
@@ -2732,75 +1928,9 @@ const EditStationDialog: React.FC<{
           />
         </div>
 
-        {formData.adapter !== 'packycode' && (
-          <div className="space-y-2">
-            <Label htmlFor="edit-api_url">{t('relayStation.apiUrl')}</Label>
-            <Input
-              id="edit-api_url"
-              type="url"
-              value={formData.api_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, api_url: e.target.value }))}
-              placeholder="https://api.example.com"
-              className="w-full"
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-6">
-          {formData.adapter === 'packycode' ? (
-            // PackyCode 固定使用 API Key，不显示选择器
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
-                {getApiKeyUrl(formData.adapter, packycodeService) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={async () => {
-                      const url = getApiKeyUrl(formData.adapter, packycodeService);
-                      if (url) await openExternalLink(url);
-                    }}
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    {t('relayStation.getApiKey')}
-                  </Button>
-                )}
-              </div>
-              <Input
-                id="edit-system_token"
-                type="password"
-                value={formData.system_token}
-                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
-                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                className="w-full font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('relayStation.packycodeTokenNote')}
-              </p>
-
-              {/* 自定义JSON配置 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="edit-custom-json">{t('relayStation.customJson')}</Label>
-                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
-                </div>
-                <Textarea
-                  id="edit-custom-json"
-                  value={customJson}
-                  onChange={(e) => setCustomJson(e.target.value)}
-                  placeholder='{"key": "value"}'
-                  rows={3}
-                  className="w-full font-mono text-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('relayStation.customJsonNote')}
-                </p>
-              </div>
-            </div>
-          ) : (
-            // 其他适配器显示认证方式选择
+          {formData.adapter === 'custom' ? (
+            // 自定义适配器显示认证方式选择
             <>
               <div className="space-y-2">
                 <Label htmlFor="edit-auth_method">{t('relayStation.authMethod')}</Label>
@@ -2824,21 +1954,6 @@ const EditStationDialog: React.FC<{
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
-                  {getApiKeyUrl(formData.adapter) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={async () => {
-                        const url = getApiKeyUrl(formData.adapter);
-                        if (url) await openExternalLink(url);
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      {t('relayStation.getApiKey')}
-                    </Button>
-                  )}
                 </div>
                 <Input
                   id="edit-system_token"
@@ -2869,6 +1984,60 @@ const EditStationDialog: React.FC<{
                 </p>
               </div>
             </>
+          ) : (
+            // 其他适配器（PackyCode、DeepSeek、GLM、Qwen、Kimi）只显示系统令牌
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="edit-system_token">{t('relayStation.systemToken')} *</Label>
+                {getApiKeyUrl(formData.adapter) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      const url = getApiKeyUrl(formData.adapter);
+                      if (url) await openExternalLink(url);
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t('relayStation.getApiKey')}
+                  </Button>
+                )}
+              </div>
+              <Input
+                id="edit-system_token"
+                type="password"
+                value={formData.system_token}
+                onChange={(e) => setFormData(prev => ({ ...prev, system_token: e.target.value }))}
+                placeholder={formData.adapter === 'packycode' ? 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' : t('relayStation.tokenPlaceholder')}
+                className="w-full font-mono text-sm"
+              />
+              {formData.adapter === 'packycode' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.packycodeTokenNote')}
+                </p>
+              )}
+
+              {/* 自定义JSON配置 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-custom-json">{t('relayStation.customJson')}</Label>
+                  <span className="text-xs text-muted-foreground">{t('relayStation.customJsonOptional')}</span>
+                </div>
+                <Textarea
+                  id="edit-custom-json"
+                  value={customJson}
+                  onChange={(e) => setCustomJson(e.target.value)}
+                  placeholder='{"key": "value"}'
+                  rows={3}
+                  className="w-full font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('relayStation.customJsonNote')}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
@@ -2918,59 +2087,6 @@ const EditStationDialog: React.FC<{
           onDismiss={() => setFormToast(null)}
         />
       )}
-
-      {/* 测速弹出框 */}
-      <Dialog open={showSpeedTestModal} onOpenChange={setShowSpeedTestModal}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{t('relayStation.speedTest')}</DialogTitle>
-            <DialogDescription>
-              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              {speedTestInProgress ? t('relayStation.testingNodes') : t('relayStation.testCompleted')}
-            </div>
-            <div className="space-y-3">
-              {speedTestResults.map((result, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium">{result.name}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {result.status === 'testing' && (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                        <span className="text-sm text-blue-600">{t('relayStation.testing')}</span>
-                      </>
-                    )}
-                    {result.status === 'success' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <span className="text-sm text-green-600">{result.responseTime}ms</span>
-                      </>
-                    )}
-                    {result.status === 'failed' && (
-                      <>
-                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                        <span className="text-sm text-red-600">{t('relayStation.failed')}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {!speedTestInProgress && speedTestResults.length > 0 && (
-              <div className="pt-2 text-center">
-                <div className="text-sm text-green-600">
-                  {t('relayStation.bestNodeSelected')}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

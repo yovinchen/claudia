@@ -224,6 +224,10 @@ fn main() {
             // Initialize agents database
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
 
+            // Initialize API nodes database
+            commands::api_nodes::init_nodes_db()
+                .expect("Failed to initialize API nodes database");
+
             // Load and apply proxy settings from the database
             {
                 let db = AgentDb(Mutex::new(conn));
@@ -500,6 +504,14 @@ fn main() {
             test_all_packycode_nodes,
             auto_select_best_node,
             get_packycode_nodes,
+            // API Nodes Management
+            commands::api_nodes::init_default_nodes,
+            commands::api_nodes::list_api_nodes,
+            commands::api_nodes::create_api_node,
+            commands::api_nodes::update_api_node,
+            commands::api_nodes::delete_api_node,
+            commands::api_nodes::test_api_node,
+            commands::api_nodes::test_all_api_nodes,
             // File System
             read_directory_tree,
             search_files_by_name,

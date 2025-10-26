@@ -515,6 +515,7 @@ export type RelayStationAdapter =
   | 'glm'       // 智谱GLM
   | 'qwen'      // 千问Qwen
   | 'kimi'      // Kimi k2
+  | 'minimax'   // MiniMax M2
   | 'custom';   // 自定义简单配置
 
 /** 认证方式 */
@@ -3249,4 +3250,98 @@ export interface SmartSession {
   last_accessed: string;
   /** 会话类型 */
   session_type: string;
+}
+
+// ============================================================
+// API Nodes Management
+// ============================================================
+
+export interface ApiNode {
+  id: string;
+  name: string;
+  url: string;
+  adapter: RelayStationAdapter;
+  description?: string;
+  enabled: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateApiNodeRequest {
+  name: string;
+  url: string;
+  adapter: RelayStationAdapter;
+  description?: string;
+}
+
+export interface UpdateApiNodeRequest {
+  name?: string;
+  url?: string;
+  description?: string;
+  enabled?: boolean;
+}
+
+export interface NodeTestResult {
+  node_id: string;
+  url: string;
+  name: string;
+  response_time: number | null;
+  status: 'testing' | 'success' | 'failed';
+  error?: string;
+}
+
+/**
+ * 初始化预设节点
+ */
+export async function initDefaultNodes(): Promise<void> {
+  return invoke('init_default_nodes');
+}
+
+/**
+ * 获取节点列表
+ */
+export async function listApiNodes(
+  adapter?: RelayStationAdapter,
+  enabledOnly?: boolean
+): Promise<ApiNode[]> {
+  return invoke('list_api_nodes', { adapter, enabledOnly });
+}
+
+/**
+ * 创建节点
+ */
+export async function createApiNode(request: CreateApiNodeRequest): Promise<ApiNode> {
+  return invoke('create_api_node', { request });
+}
+
+/**
+ * 更新节点
+ */
+export async function updateApiNode(id: string, request: UpdateApiNodeRequest): Promise<ApiNode> {
+  return invoke('update_api_node', { id, request });
+}
+
+/**
+ * 删除节点（预设节点不可删除）
+ */
+export async function deleteApiNode(id: string): Promise<void> {
+  return invoke('delete_api_node', { id });
+}
+
+/**
+ * 测试单个节点
+ */
+export async function testApiNode(url: string, timeoutMs?: number): Promise<NodeTestResult> {
+  return invoke('test_api_node', { url, timeoutMs });
+}
+
+/**
+ * 批量测试节点
+ */
+export async function testAllApiNodes(
+  adapter?: RelayStationAdapter,
+  timeoutMs?: number
+): Promise<NodeTestResult[]> {
+  return invoke('test_all_api_nodes', { adapter, timeoutMs });
 }
