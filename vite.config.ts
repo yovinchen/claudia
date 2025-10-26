@@ -40,8 +40,8 @@ export default defineConfig(async () => ({
 
     // Build configuration for code splitting
     build: {
-        // Increase chunk size warning limit to 3000 KB
-        chunkSizeWarningLimit: 3000,
+        // Increase chunk size warning limit to 3500 KB (Monaco Editor is ~3346 KB)
+        chunkSizeWarningLimit: 3500,
 
         rollupOptions: {
             output: {
