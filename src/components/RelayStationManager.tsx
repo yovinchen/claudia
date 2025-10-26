@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { CardDescription } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +45,9 @@ import {
   Save,
   X,
   Download,
-  Upload
+  Upload,
+  GripVertical,
+  Globe,
 } from 'lucide-react';
 import {
   DndContext,
@@ -53,6 +57,9 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -106,19 +113,35 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [quotaData, setQuotaData] = useState<Record<string, PackycodeUserQuota>>({});
   const [loadingQuota, setLoadingQuota] = useState<Record<string, boolean>>({});
 
+  // 拖拽状态
+  const [activeStation, setActiveStation] = useState<RelayStation | null>(null);
+
   const { t } = useTranslation();
 
   // 拖拽传感器配置
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 需要拖动8px才激活，避免误触
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
+  // 拖拽开始处理
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const station = stations.find(s => s.id === active.id);
+    setActiveStation(station || null);
+  };
+
   // 拖拽结束处理
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
+    setActiveStation(null); // 清除拖拽状态
 
     if (over && active.id !== over.id) {
       const oldIndex = stations.findIndex(station => station.id === active.id);
@@ -138,6 +161,17 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
         }
       }
     }
+  };
+
+  // 自定义拖拽动画
+  const dropAnimationConfig = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: '0.4',
+        },
+      },
+    }),
   };
 
   // Token 脱敏函数
@@ -855,6 +889,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <SortableContext
@@ -892,6 +927,38 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
             )}
           </div>
         </SortableContext>
+
+        {/* 拖拽预览层 */}
+        <DragOverlay dropAnimation={dropAnimationConfig}>
+          {activeStation ? (
+            <Card className="shadow-2xl ring-2 ring-blue-500 rotate-3 cursor-grabbing">
+              <CardHeader className="pb-2 pt-3 px-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center flex-1 min-w-0 mr-2">
+                    <div className="mr-2 flex-shrink-0">
+                      <GripVertical className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-sm font-medium">{activeStation.name}</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">
+                        {getAdapterDisplayName(activeStation.adapter)}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant={activeStation.enabled ? "default" : "secondary"} className="text-xs">
+                    {activeStation.enabled ? '已启用' : '已禁用'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1 pb-3 px-3">
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Globe className="mr-1.5 h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{activeStation.api_url}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {/* 编辑对话框 */}
