@@ -6,8 +6,11 @@ mod claude_binary;
 mod claude_config;
 mod commands;
 mod file_watcher;
+mod http_client;
 mod i18n;
 mod process;
+mod types;
+mod utils;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{

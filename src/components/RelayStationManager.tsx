@@ -29,7 +29,6 @@ import {
   UpdateRelayStationRequest,
   RelayStationAdapter,
   AuthMethod,
-  PackycodeUserQuota,
   ImportResult,
   api
 } from '@/lib/api';
@@ -109,10 +108,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-
-  // PackyCode 额度相关状态
-  const [quotaData, setQuotaData] = useState<Record<string, PackycodeUserQuota>>({});
-  const [loadingQuota, setLoadingQuota] = useState<Record<string, boolean>>({});
 
   // 拖拽状态
   const [activeStation, setActiveStation] = useState<RelayStation | null>(null);
@@ -339,20 +334,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
   };
 
 
-  // 查询 PackyCode 额度
-  const fetchPackycodeQuota = async (stationId: string) => {
-    try {
-      setLoadingQuota(prev => ({ ...prev, [stationId]: true }));
-      const quota = await api.getPackycodeUserQuota(stationId);
-      setQuotaData(prev => ({ ...prev, [stationId]: quota }));
-    } catch (error) {
-      console.error('Failed to fetch PackyCode quota:', error);
-      // 不显示错误 Toast，因为可能是出租车服务或 Token 无效
-    } finally {
-      setLoadingQuota(prev => ({ ...prev, [stationId]: false }));
-    }
-  };
-
   // 导出中转站配置
   const handleExportStations = async () => {
     try {
@@ -543,15 +524,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     loadStations();
     loadCurrentConfig();
   }, []);
-
-  // 当中转站加载完成后，自动获取所有 PackyCode 站点的额度
-  useEffect(() => {
-    stations.forEach(station => {
-      if (station.adapter === 'packycode') {
-        fetchPackycodeQuota(station.id);
-      }
-    });
-  }, [stations]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -923,8 +895,6 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                 setSelectedStation={handleSelectStation}
                 setShowEditDialog={setShowEditDialog}
                 openDeleteDialog={openDeleteDialog}
-                quotaData={quotaData}
-                loadingQuota={loadingQuota}
               />)
             )}
           </div>

@@ -1,23 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::time::Duration;
 use tauri::{command, State};
 
 use crate::commands::agents::AgentDb;
 use crate::commands::relay_stations::{RelayStation, RelayStationAdapter};
+use crate::http_client;
 use crate::i18n;
-
-// 创建HTTP客户端的辅助函数
-fn create_http_client() -> Client {
-    Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .expect("Failed to create HTTP client")
-}
 
 /// 中转站信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,7 +134,8 @@ impl StationAdapter for PackycodeAdapter {
         // PackyCode 使用简单的健康检查端点
         let url = format!("{}/health", station.api_url.trim_end_matches('/'));
 
-        let client = create_http_client();
+        let client = http_client::default_client()
+            .map_err(|e| anyhow::anyhow!("创建 HTTP 客户端失败: {}", e))?;
         let response = client
             .get(&url)
             .header("X-API-Key", &station.system_token)
@@ -176,7 +168,8 @@ impl StationAdapter for PackycodeAdapter {
         // PackyCode 用户信息获取
         let url = format!("{}/user/info", station.api_url.trim_end_matches('/'));
 
-        let client = create_http_client();
+        let client = http_client::default_client()
+            .map_err(|e| anyhow::anyhow!("创建 HTTP 客户端失败: {}", e))?;
         let response = client
             .get(&url)
             .header("X-API-Key", &station.system_token)
@@ -330,11 +323,12 @@ impl StationAdapter for CustomAdapter {
         let start_time = std::time::Instant::now();
 
         // 尝试简单的 GET 请求测试连接
-        let client = create_http_client();
+        let client = http_client::create_client(
+            http_client::ClientConfig::new().timeout(5)
+        ).map_err(|e| anyhow::anyhow!("创建 HTTP 客户端失败: {}", e))?;
         let response = client
             .get(&station.api_url)
             .header("Authorization", format!("Bearer {}", station.system_token))
-            .timeout(Duration::from_secs(5))
             .send()
             .await;
 
@@ -621,10 +615,7 @@ pub async fn packycode_get_user_quota(
             "https://www.packycode.com/api/backend/users/info"
         };
 
-    let client = Client::builder()
-        .timeout(Duration::from_secs(30))
-        .no_proxy() // 禁用所有代理
-        .build()
+    let client = http_client::secure_client()
         .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
     log::info!("正在请求 PackyCode 用户信息: {}", url);

@@ -48,7 +48,7 @@ export const NodeSelector: React.FC<NodeSelectorProps> = ({
   value = '',
   onChange,
   allowManualInput = true,
-  showToast = (msg, _type) => alert(msg), // 默认使用 alert
+  showToast = (msg, _type) => console.log(msg), // 默认使用 console.log
 }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [nodes, setNodes] = useState<ApiNode[]>([]);
@@ -191,7 +191,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
   adapter: filterAdapter,
   onSelectNode,
   currentUrl,
-  showToast = (msg) => alert(msg),
+  showToast = (msg) => console.log(msg),
 }) => {
   const [nodes, setNodes] = useState<ApiNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,12 +267,17 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
   };
 
   const handleDelete = async (node: ApiNode) => {
-    if (!confirm(`确定要删除节点 "${node.name}" 吗？`)) return;
-
     try {
       await api.deleteApiNode(node.id);
+      // 直接从列表中移除，不重新加载
+      setNodes(prev => prev.filter(n => n.id !== node.id));
+      // 同时移除测试结果
+      setTestResults(prev => {
+        const newResults = { ...prev };
+        delete newResults[node.id];
+        return newResults;
+      });
       showToast('删除成功', 'success');
-      loadNodes();
     } catch (error) {
       showToast('删除失败', 'error');
       console.error(error);
@@ -492,7 +497,7 @@ const NodeFormDialog: React.FC<NodeFormDialogProps> = ({
   node,
   defaultAdapter,
   onSuccess,
-  showToast = (msg) => alert(msg),
+  showToast = (msg) => console.log(msg),
 }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<CreateApiNodeRequest>({

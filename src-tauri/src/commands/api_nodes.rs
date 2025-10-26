@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
 
+// 导入公共模块
+use crate::http_client;
+use crate::types::node_test::NodeTestResult;
+use crate::utils::node_tester;
+
 /// API 节点数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiNode {
@@ -34,17 +39,6 @@ pub struct UpdateApiNodeRequest {
     pub url: Option<String>,
     pub description: Option<String>,
     pub enabled: Option<bool>,
-}
-
-/// 节点测试结果
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeTestResult {
-    pub node_id: String,
-    pub url: String,
-    pub name: String,
-    pub response_time: Option<u64>,
-    pub status: String,
-    pub error: Option<String>,
 }
 
 /// 获取数据库连接
@@ -333,50 +327,16 @@ pub async fn delete_api_node(id: String) -> Result<(), String> {
 /// 测试单个节点
 #[tauri::command]
 pub async fn test_api_node(url: String, timeout_ms: Option<u64>) -> Result<NodeTestResult, String> {
-    let timeout = std::time::Duration::from_millis(timeout_ms.unwrap_or(5000));
-    let start = std::time::Instant::now();
+    let timeout = timeout_ms.unwrap_or(5000);
 
-    let client = reqwest::Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|e| e.to_string())?;
+    // 使用公共节点测试器
+    let mut result = node_tester::test_node_connectivity(&url, timeout).await;
 
-    // 使用 HEAD 请求测试连通性，更轻量且不会触发 API 调用
-    match client.head(&url).send().await {
-        Ok(response) => {
-            let response_time = start.elapsed().as_millis() as u64;
-            // 允许 2xx, 3xx, 4xx 状态码，说明服务器在线（5xx 视为失败）
-            let status_code = response.status();
-            let status = if status_code.is_success()
-                || status_code.is_redirection()
-                || status_code.is_client_error() {
-                "success"
-            } else {
-                "failed"
-            };
+    // 添加节点 ID 和名称（如果有）
+    result.node_id = Some(String::new());
+    result.node_name = Some(String::new());
 
-            Ok(NodeTestResult {
-                node_id: String::new(),
-                url: url.clone(),
-                name: String::new(),
-                response_time: Some(response_time),
-                status: status.to_string(),
-                error: if status == "failed" {
-                    Some(format!("HTTP {}", status_code))
-                } else {
-                    None
-                },
-            })
-        }
-        Err(e) => Ok(NodeTestResult {
-            node_id: String::new(),
-            url: url.clone(),
-            name: String::new(),
-            response_time: None,
-            status: "failed".to_string(),
-            error: Some(e.to_string()),
-        }),
-    }
+    Ok(result)
 }
 
 /// 批量测试节点
@@ -386,15 +346,20 @@ pub async fn test_all_api_nodes(
     timeout_ms: Option<u64>,
 ) -> Result<Vec<NodeTestResult>, String> {
     let nodes = list_api_nodes(adapter, Some(true)).await?;
-    let mut results = Vec::new();
+    let timeout = timeout_ms.unwrap_or(5000);
 
-    for node in nodes {
-        let result = test_api_node(node.url.clone(), timeout_ms).await?;
-        results.push(NodeTestResult {
-            node_id: node.id.clone(),
-            name: node.name.clone(),
-            ..result
-        });
+    // 提取所有节点的 URL
+    let urls: Vec<String> = nodes.iter().map(|n| n.url.clone()).collect();
+
+    // 使用公共节点测试器批量测试
+    let mut results = node_tester::test_nodes_batch(urls, timeout).await;
+
+    // 添加节点 ID 和名称
+    for (i, result) in results.iter_mut().enumerate() {
+        if let Some(node) = nodes.get(i) {
+            result.node_id = Some(node.id.clone());
+            result.node_name = Some(node.name.clone());
+        }
     }
 
     Ok(results)
