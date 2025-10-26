@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import {
   Trash2,
   Globe,
   GripVertical,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import {
   RelayStation,
@@ -50,11 +52,25 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
     isDragging,
   } = useSortable({ id: station.id });
 
+  // 展开/收起状态，从 localStorage 读取
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const saved = localStorage.getItem(`relay-station-expanded-${station.id}`);
+    return saved !== null ? JSON.parse(saved) : true; // 默认展开
+  });
+
+  // 保存展开状态到 localStorage
+  useEffect(() => {
+    localStorage.setItem(`relay-station-expanded-${station.id}`, JSON.stringify(isExpanded));
+  }, [isExpanded, station.id]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  // 是否有详情内容需要显示
+  const hasDetails = station.description || station.adapter === 'packycode';
 
   return (
     <Card ref={setNodeRef} style={style} className="relative">
@@ -105,141 +121,161 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
       </CardHeader>
       <CardContent className="pt-1 pb-3 px-3">
         <div className="space-y-2">
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Globe className="mr-1.5 h-3 w-3" />
-            <span className="truncate">{station.api_url}</span>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center flex-1 min-w-0">
+              <Globe className="mr-1.5 h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{station.api_url}</span>
+            </div>
+            {hasDetails && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="ml-2 p-0.5 hover:bg-accent rounded transition-colors flex-shrink-0"
+                aria-label={isExpanded ? "收起详情" : "展开详情"}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
           </div>
 
-          {station.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {station.description}
-            </p>
-          )}
+          {/* 详情内容（可折叠） */}
+          {isExpanded && hasDetails && (
+            <>
+              {station.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {station.description}
+                </p>
+              )}
 
-          {/* PackyCode 额度显示 */}
-          {station.adapter === 'packycode' && (
-            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
-              {loadingQuota[station.id] ? (
-                <div className="flex items-center justify-center py-1">
-                  <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-xs text-muted-foreground">加载中...</span>
-                </div>
-              ) : quotaData[station.id] ? (
-                <div className="space-y-2">
-                  {/* 用户信息和计划 */}
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      {quotaData[station.id].username && (
-                        <span className="text-muted-foreground">{quotaData[station.id].username}</span>
-                      )}
-                      <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                        {quotaData[station.id].plan_type.toUpperCase()}
-                      </Badge>
-                      {quotaData[station.id].opus_enabled && (
-                        <Badge variant="default" className="text-xs h-5 px-1.5 bg-purple-600">
-                          Opus
-                        </Badge>
-                      )}
+              {/* PackyCode 额度显示 */}
+              {station.adapter === 'packycode' && (
+                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                  {loadingQuota[station.id] ? (
+                    <div className="flex items-center justify-center py-1">
+                      <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-xs text-muted-foreground">加载中...</span>
                     </div>
-                  </div>
+                  ) : quotaData[station.id] ? (
+                    <div className="space-y-2">
+                      {/* 用户信息和计划 */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          {quotaData[station.id].username && (
+                            <span className="text-muted-foreground">{quotaData[station.id].username}</span>
+                          )}
+                          <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                            {quotaData[station.id].plan_type.toUpperCase()}
+                          </Badge>
+                          {quotaData[station.id].opus_enabled && (
+                            <Badge variant="default" className="text-xs h-5 px-1.5 bg-purple-600">
+                              Opus
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* 账户余额 */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">余额:</span>
-                    <span className="font-medium text-blue-600">
-                      ${Number(quotaData[station.id].balance_usd).toFixed(2)}
-                    </span>
-                  </div>
+                      {/* 账户余额 */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">余额:</span>
+                        <span className="font-medium text-blue-600">
+                          ${Number(quotaData[station.id].balance_usd).toFixed(2)}
+                        </span>
+                      </div>
 
-                  {/* 日额度 */}
-                  <div className="space-y-0.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">日额度:</span>
-                      <div className="flex items-center gap-1">
-                        {(() => {
-                          const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                          const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                          return (
-                            <>
-                              <span className={daily_spent > daily_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                ${daily_spent.toFixed(2)}
-                              </span>
-                              <span className="text-muted-foreground">/ ${daily_budget.toFixed(2)}</span>
-                            </>
-                          );
-                        })()}
+                      {/* 日额度 */}
+                      <div className="space-y-0.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">日额度:</span>
+                          <div className="flex items-center gap-1">
+                            {(() => {
+                              const daily_spent = Number(quotaData[station.id].daily_spent_usd);
+                              const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                              return (
+                                <>
+                                  <span className={daily_spent > daily_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                    ${daily_spent.toFixed(2)}
+                                  </span>
+                                  <span className="text-muted-foreground">/ ${daily_budget.toFixed(2)}</span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              (() => {
+                                const daily_spent = Number(quotaData[station.id].daily_spent_usd);
+                                const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                                return daily_spent / daily_budget > 0.8;
+                              })() ? 'bg-orange-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(
+                              (() => {
+                                const daily_spent = Number(quotaData[station.id].daily_spent_usd);
+                                const daily_budget = Number(quotaData[station.id].daily_budget_usd);
+                                return (daily_spent / daily_budget) * 100;
+                              })(), 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* 月额度 */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">月额度:</span>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
+                              const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                              return (
+                                <>
+                                  <span className={monthly_spent > monthly_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
+                                    ${monthly_spent.toFixed(2)}
+                                  </span>
+                                  <span className="text-muted-foreground">/</span>
+                                  <span className="text-muted-foreground">${monthly_budget.toFixed(2)}</span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              (() => {
+                                const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
+                                const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                                return monthly_spent / monthly_budget > 0.8;
+                              })() ? 'bg-orange-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(
+                              (() => {
+                                const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
+                                const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
+                                return (monthly_spent / monthly_budget) * 100;
+                              })(), 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* 总消费 */}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+                        <span>总消费:</span>
+                        <span className="font-medium">${Number(quotaData[station.id].total_spent_usd).toFixed(2)}</span>
                       </div>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${
-                          (() => {
-                            const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                            const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                            return daily_spent / daily_budget > 0.8;
-                          })() ? 'bg-orange-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${Math.min(
-                          (() => {
-                            const daily_spent = Number(quotaData[station.id].daily_spent_usd);
-                            const daily_budget = Number(quotaData[station.id].daily_budget_usd);
-                            return (daily_spent / daily_budget) * 100;
-                          })(), 100)}%` }}
-                      />
+                  ) : (
+                    <div className="text-xs text-center text-muted-foreground py-2">
+                      额度信息加载失败
                     </div>
-                  </div>
-
-                  {/* 月额度 */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">月额度:</span>
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                          const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                          return (
-                            <>
-                              <span className={monthly_spent > monthly_budget * 0.8 ? 'text-orange-600' : 'text-green-600'}>
-                                ${monthly_spent.toFixed(2)}
-                              </span>
-                              <span className="text-muted-foreground">/</span>
-                              <span className="text-muted-foreground">${monthly_budget.toFixed(2)}</span>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${
-                          (() => {
-                            const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                            const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                            return monthly_spent / monthly_budget > 0.8;
-                          })() ? 'bg-orange-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${Math.min(
-                          (() => {
-                            const monthly_spent = Number(quotaData[station.id].monthly_spent_usd);
-                            const monthly_budget = Number(quotaData[station.id].monthly_budget_usd);
-                            return (monthly_spent / monthly_budget) * 100;
-                          })(), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 总消费 */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                    <span>总消费:</span>
-                    <span className="font-medium">${Number(quotaData[station.id].total_spent_usd).toFixed(2)}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-center text-muted-foreground py-2">
-                  额度信息加载失败
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </CardContent>
