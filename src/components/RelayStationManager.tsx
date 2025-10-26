@@ -1119,6 +1119,42 @@ const CreateStationDialog: React.FC<{
     }
   }, [formData.adapter]);
 
+  // 当适配器改变时自动填充默认 JSON 配置
+  useEffect(() => {
+    const getDefaultConfig = (adapter: string): string => {
+      switch (adapter) {
+        case 'minimax':
+          // MiniMax 需要指定默认模型
+          return JSON.stringify({ model: "MiniMax-M2-Preview" }, null, 2);
+        case 'deepseek':
+          // DeepSeek 兼容 Anthropic API，使用服务端默认模型 deepseek-chat
+          // 通常不需要配置，但可以通过 adapter_config 覆盖
+          return '';
+        case 'glm':
+          // 智谱 GLM 兼容 Anthropic API，使用服务端默认模型
+          // 通常不需要配置
+          return '';
+        case 'qwen':
+          // 千问使用应用代理，URL 中已包含应用 ID
+          // 不需要额外配置
+          return '';
+        case 'kimi':
+          // Kimi 兼容 Anthropic API，使用服务端默认模型 moonshot-v1
+          // 通常不需要配置
+          return '';
+        case 'packycode':
+          // PackyCode 是中转服务，不需要模型配置
+          return '';
+        case 'custom':
+          // 自定义适配器，用户可以自行配置
+          return '';
+        default:
+          return '';
+      }
+    };
+    setCustomJson(getDefaultConfig(formData.adapter));
+  }, [formData.adapter]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1175,11 +1211,6 @@ const CreateStationDialog: React.FC<{
 
       // 统一处理所有适配器的创建逻辑
       let finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
-
-      // MiniMax 适配器默认模型配置
-      if (formData.adapter === 'minimax' && !shouldUpdateConfig) {
-        finalConfig = { model: "MiniMax-M2-Preview" };
-      }
 
       console.log('[DEBUG] Final adapter_config:', finalConfig);
 
@@ -1486,11 +1517,6 @@ const CreateStationDialog: React.FC<{
                 placeholder={formData.adapter === 'packycode' ? 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' : t('relayStation.tokenPlaceholder')}
                 className="w-full font-mono text-sm"
               />
-              {formData.adapter === 'packycode' && (
-                <p className="text-xs text-muted-foreground">
-                  {t('relayStation.packycodeTokenNote')}
-                </p>
-              )}
 
               {/* 自定义JSON配置 */}
               <div className="space-y-2">
@@ -1647,6 +1673,42 @@ const EditStationDialog: React.FC<{
     }
   }, [formData.adapter]);
 
+  // 当适配器改变时自动填充默认 JSON 配置
+  useEffect(() => {
+    const getDefaultConfig = (adapter: string): string => {
+      switch (adapter) {
+        case 'minimax':
+          // MiniMax 需要指定默认模型
+          return JSON.stringify({ model: "MiniMax-M2-Preview" }, null, 2);
+        case 'deepseek':
+          // DeepSeek 兼容 Anthropic API，使用服务端默认模型 deepseek-chat
+          // 通常不需要配置，但可以通过 adapter_config 覆盖
+          return '';
+        case 'glm':
+          // 智谱 GLM 兼容 Anthropic API，使用服务端默认模型
+          // 通常不需要配置
+          return '';
+        case 'qwen':
+          // 千问使用应用代理，URL 中已包含应用 ID
+          // 不需要额外配置
+          return '';
+        case 'kimi':
+          // Kimi 兼容 Anthropic API，使用服务端默认模型 moonshot-v1
+          // 通常不需要配置
+          return '';
+        case 'packycode':
+          // PackyCode 是中转服务，不需要模型配置
+          return '';
+        case 'custom':
+          // 自定义适配器，用户可以自行配置
+          return '';
+        default:
+          return '';
+      }
+    };
+    setCustomJson(getDefaultConfig(formData.adapter));
+  }, [formData.adapter]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1703,11 +1765,6 @@ const EditStationDialog: React.FC<{
 
       // 统一处理所有适配器的更新逻辑
       let finalConfig = shouldUpdateConfig ? adapterConfig : undefined;
-
-      // MiniMax 适配器默认模型配置
-      if (formData.adapter === 'minimax' && !shouldUpdateConfig) {
-        finalConfig = { model: "MiniMax-M2-Preview" };
-      }
 
       console.log('[DEBUG-EDIT] Final adapter_config:', finalConfig);
 
@@ -2013,11 +2070,6 @@ const EditStationDialog: React.FC<{
                 placeholder={formData.adapter === 'packycode' ? 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' : t('relayStation.tokenPlaceholder')}
                 className="w-full font-mono text-sm"
               />
-              {formData.adapter === 'packycode' && (
-                <p className="text-xs text-muted-foreground">
-                  {t('relayStation.packycodeTokenNote')}
-                </p>
-              )}
 
               {/* 自定义JSON配置 */}
               <div className="space-y-2">
