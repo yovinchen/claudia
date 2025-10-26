@@ -40,28 +40,88 @@ export default defineConfig(async () => ({
 
   // Build configuration for code splitting
   build: {
-    // Increase chunk size warning limit to 2000 KB
-    chunkSizeWarningLimit: 2000,
-    
+    // Increase chunk size warning limit to 3000 KB
+    chunkSizeWarningLimit: 3000,
+
     rollupOptions: {
       output: {
         // Manual chunks for better code splitting
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-switch', '@radix-ui/react-popover'],
-          'editor-vendor': ['@uiw/react-md-editor'],
-          'monaco-editor': ['monaco-editor', '@monaco-editor/react'],
-          'syntax-vendor': ['react-syntax-highlighter'],
-          // Animation and motion
-          'framer-motion': ['framer-motion'],
-          // Tauri and other utilities
-          'tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog', '@tauri-apps/plugin-shell', '@tauri-apps/plugin-fs', '@tauri-apps/plugin-clipboard-manager'],
-          'utils': ['date-fns', 'clsx', 'tailwind-merge'],
-          // Charts and visualization
-          'recharts': ['recharts'],
+        manualChunks: (id) => {
+          // React core
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
+
+          // Monaco Editor - split into separate chunks
+          if (id.includes('node_modules/monaco-editor/')) {
+            return 'monaco-editor';
+          }
+          if (id.includes('node_modules/@monaco-editor/')) {
+            return 'monaco-react';
+          }
+
+          // Radix UI - split into smaller chunks
+          if (id.includes('node_modules/@radix-ui/')) {
+            if (id.includes('react-dialog') || id.includes('react-dropdown-menu')) {
+              return 'radix-overlay';
+            }
+            if (id.includes('react-select') || id.includes('react-tabs')) {
+              return 'radix-navigation';
+            }
+            return 'radix-base';
+          }
+
+          // Tauri
+          if (id.includes('node_modules/@tauri-apps/')) {
+            return 'tauri';
+          }
+
+          // Charts
+          if (id.includes('node_modules/recharts/')) {
+            return 'recharts';
+          }
+
+          // Framer Motion
+          if (id.includes('node_modules/framer-motion/')) {
+            return 'framer-motion';
+          }
+
+          // Syntax highlighting
+          if (id.includes('node_modules/react-syntax-highlighter/')) {
+            return 'syntax-vendor';
+          }
+
+          // Markdown editor
+          if (id.includes('node_modules/@uiw/react-md-editor/')) {
+            return 'editor-vendor';
+          }
+
+          // DnD Kit
+          if (id.includes('node_modules/@dnd-kit/')) {
+            return 'dnd-kit';
+          }
+
           // Virtual scrolling
-          'virtual': ['@tanstack/react-virtual'],
+          if (id.includes('node_modules/@tanstack/react-virtual/')) {
+            return 'virtual';
+          }
+
+          // Utilities
+          if (id.includes('node_modules/date-fns/') ||
+              id.includes('node_modules/clsx/') ||
+              id.includes('node_modules/tailwind-merge/')) {
+            return 'utils';
+          }
+
+          // Lucide icons
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'lucide-icons';
+          }
+
+          // Other large node_modules
+          if (id.includes('node_modules/')) {
+            return 'vendor';
+          }
         },
       },
     },

@@ -156,6 +156,7 @@ pub fn write_claude_config(config: &ClaudeConfig) -> Result<(), String> {
 }
 
 /// 备份当前配置
+#[allow(dead_code)]
 pub fn backup_claude_config() -> Result<(), String> {
     let config_path = get_claude_config_path()?;
     let backup_path = get_config_backup_path()?;
