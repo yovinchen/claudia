@@ -24,11 +24,13 @@ impl TestStatus {
     }
 
     /// 判断测试是否失败
+    #[allow(dead_code)]
     pub fn is_failure(&self) -> bool {
         !self.is_success()
     }
 
     /// 转换为字符串
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &'static str {
         match self {
             TestStatus::Success => "success",
@@ -88,6 +90,7 @@ impl NodeTestResult {
     /// assert!(result.status.is_success());
     /// assert_eq!(result.response_time_ms, Some(150));
     /// ```
+    #[allow(dead_code)]
     pub fn success(url: String, response_time: u64) -> Self {
         Self {
             node_id: None,
@@ -180,24 +183,28 @@ impl NodeTestResult {
     }
 
     /// 设置节点 ID
+    #[allow(dead_code)]
     pub fn with_node_id(mut self, node_id: String) -> Self {
         self.node_id = Some(node_id);
         self
     }
 
     /// 设置节点名称
+    #[allow(dead_code)]
     pub fn with_node_name(mut self, node_name: String) -> Self {
         self.node_name = Some(node_name);
         self
     }
 
     /// 设置元数据
+    #[allow(dead_code)]
     pub fn with_metadata(mut self, metadata: HashMap<String, serde_json::Value>) -> Self {
         self.metadata = Some(metadata);
         self
     }
 
     /// 添加单个元数据项
+    #[allow(dead_code)]
     pub fn add_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         if self.metadata.is_none() {
             self.metadata = Some(HashMap::new());
@@ -214,16 +221,19 @@ impl NodeTestResult {
     }
 
     /// 判断测试是否失败
+    #[allow(dead_code)]
     pub fn is_failure(&self) -> bool {
         self.status.is_failure()
     }
 
     /// 获取响应时间（如果有）
+    #[allow(dead_code)]
     pub fn response_time(&self) -> Option<u64> {
         self.response_time_ms
     }
 
     /// 获取错误信息（如果有）
+    #[allow(dead_code)]
     pub fn error(&self) -> Option<&str> {
         self.error_details.as_deref()
     }
@@ -250,6 +260,7 @@ pub struct BatchTestSummary {
 
 impl BatchTestSummary {
     /// 从测试结果列表生成统计摘要
+    #[allow(dead_code)]
     pub fn from_results(results: &[NodeTestResult]) -> Self {
         let total = results.len();
         let success = results.iter().filter(|r| r.is_success()).count();
@@ -286,6 +297,7 @@ impl BatchTestSummary {
     }
 
     /// 获取成功率（百分比）
+    #[allow(dead_code)]
     pub fn success_rate(&self) -> f64 {
         if self.total == 0 {
             0.0

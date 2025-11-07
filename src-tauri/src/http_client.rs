@@ -123,6 +123,7 @@ pub fn default_client() -> Result<Client> {
 ///
 /// let client = fast_client()?;
 /// ```
+#[allow(dead_code)]
 pub fn fast_client() -> Result<Client> {
     create_client(
         ClientConfig::default()
@@ -161,6 +162,7 @@ pub fn secure_client() -> Result<Client> {
 /// - 接受无效证书: 否
 /// - 使用代理: 是
 /// - User-Agent: "Claudia/1.0"
+#[allow(dead_code)]
 pub fn long_timeout_client() -> Result<Client> {
     create_client(ClientConfig::default().timeout(60))
 }

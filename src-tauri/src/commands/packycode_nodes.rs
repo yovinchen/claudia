@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::command;
 
 // 导入公共模块
-use crate::types::node_test::{NodeTestResult, TestStatus};
+use crate::types::node_test::NodeTestResult;
 use crate::utils::node_tester;
 
 /// PackyCode 节点类型
@@ -115,6 +115,7 @@ pub fn get_all_nodes() -> Vec<PackycodeNode> {
 }
 
 /// 测试单个节点速度（仅测试网络延时，不需要认证）
+#[allow(dead_code)]
 async fn test_node_speed(node: &PackycodeNode) -> NodeTestResult {
     let url = format!("{}/", node.url.trim_end_matches('/'));
     let mut result = node_tester::test_node_connectivity(&url, 3000).await;

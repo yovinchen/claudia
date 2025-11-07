@@ -132,6 +132,7 @@ pub async fn test_nodes_batch(urls: Vec<String>, timeout_ms: u64) -> Vec<NodeTes
 /// # Arguments
 /// * `urls` - 节点 URL 列表
 /// * `timeout_ms` - 每个节点的超时时间（毫秒）
+#[allow(dead_code)]
 pub async fn test_nodes_sequential(urls: Vec<String>, timeout_ms: u64) -> Vec<NodeTestResult> {
     let mut results = Vec::new();
 
@@ -168,11 +169,13 @@ pub fn find_fastest_node(results: &[NodeTestResult]) -> Option<&NodeTestResult> 
 }
 
 /// 过滤成功的节点
+#[allow(dead_code)]
 pub fn filter_successful_nodes(results: &[NodeTestResult]) -> Vec<&NodeTestResult> {
     results.iter().filter(|r| r.is_success()).collect()
 }
 
 /// 过滤失败的节点
+#[allow(dead_code)]
 pub fn filter_failed_nodes(results: &[NodeTestResult]) -> Vec<&NodeTestResult> {
     results.iter().filter(|r| r.is_failure()).collect()
 }

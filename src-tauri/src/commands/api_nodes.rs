@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 // 导入公共模块
-use crate::http_client;
 use crate::types::node_test::NodeTestResult;
 use crate::utils::node_tester;
 

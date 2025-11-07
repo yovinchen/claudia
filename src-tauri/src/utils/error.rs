@@ -22,6 +22,7 @@ use anyhow::Result;
 ///     to_string_error(some_operation())
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn to_string_error<T>(result: Result<T>) -> Result<T, String> {
     result.map_err(|e| e.to_string())
 }
@@ -45,6 +46,7 @@ pub fn to_string_error<T>(result: Result<T>) -> Result<T, String> {
 ///     )
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn to_string_error_ctx<T>(result: Result<T>, context: &str) -> Result<T, String> {
     result.map_err(|e| format!("{}: {}", context, e))
 }
@@ -63,6 +65,7 @@ pub fn to_string_error_ctx<T>(result: Result<T>, context: &str) -> Result<T, Str
 ///     Ok("result".to_string())
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn db_error_to_string(e: rusqlite::Error) -> String {
     match e {
         rusqlite::Error::QueryReturnedNoRows => "查询未返回任何行".to_string(),
@@ -100,6 +103,7 @@ pub fn db_error_to_string(e: rusqlite::Error) -> String {
 ///     response.text().await.map_err(http_error_to_string)
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn http_error_to_string(e: reqwest::Error) -> String {
     if e.is_timeout() {
         format!("请求超时: {}", e)
@@ -122,11 +126,13 @@ pub fn http_error_to_string(e: reqwest::Error) -> String {
 }
 
 /// 将 serde_json::Error 转换为用户友好的错误消息
+#[allow(dead_code)]
 pub fn json_error_to_string(e: serde_json::Error) -> String {
     format!("JSON 解析错误: {}", e)
 }
 
 /// 将 std::io::Error 转换为用户友好的错误消息
+#[allow(dead_code)]
 pub fn io_error_to_string(e: std::io::Error) -> String {
     use std::io::ErrorKind;
 
@@ -158,6 +164,7 @@ pub fn io_error_to_string(e: std::io::Error) -> String {
 /// let combined = combine_errors(&errors);
 /// // 输出: "发生 2 个错误: 错误 1: 连接失败; 错误 2: 超时"
 /// ```
+#[allow(dead_code)]
 pub fn combine_errors(errors: &[String]) -> String {
     if errors.is_empty() {
         "无错误".to_string()
@@ -169,11 +176,13 @@ pub fn combine_errors(errors: &[String]) -> String {
 }
 
 /// 创建带前缀的错误消息
+#[allow(dead_code)]
 pub fn prefixed_error(prefix: &str, error: &str) -> String {
     format!("{}: {}", prefix, error)
 }
 
 /// 为错误添加建议
+#[allow(dead_code)]
 pub fn error_with_suggestion(error: &str, suggestion: &str) -> String {
     format!("{}。建议: {}", error, suggestion)
 }
