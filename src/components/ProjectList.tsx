@@ -136,6 +136,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           <Input
             type="text"
             placeholder={t('searchProjects')}
+            aria-label={t('searchProjects')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 h-10"
@@ -146,8 +147,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({
               size="sm"
               onClick={() => setSearchQuery("")}
               className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
+              aria-label={t('clearSearch')}
+              title={t('clearSearch')}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </div>
@@ -225,7 +228,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                     )}
                   </div>
                   
-                  <p className="text-xs text-muted-foreground mb-4 font-mono truncate bg-muted/50 rounded px-2 py-1">
+                  <p className="text-xs text-muted-foreground mb-4 font-mono truncate bg-muted/50 rounded px-2 py-1" title={project.path}>
                     {project.path}
                   </p>
                 </div>
@@ -237,17 +240,23 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                       <span>{formatTimeAgo(project.created_at * 1000)}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <FileText className="h-3 w-3" />
-                      <span>{project.sessions.length}</span>
+                      <FileText className="h-3 w-3" aria-hidden="true" />
+                      <span aria-hidden="true">{project.sessions.length}</span>
+                      <span className="sr-only">{t('projects.sessionCount', { count: project.sessions.length })}</span>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                     {onProjectSettings && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            aria-label={t('projects.projectOptions', { name: getProjectName(project.path) })}
+                          >
+                            <MoreVertical className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -258,7 +267,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                             }}
                           >
                             <Settings className="h-4 w-4 mr-2" />
-                            {t('settings.hooks')}
+                            {t('settings.hooksTab')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

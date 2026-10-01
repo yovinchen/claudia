@@ -61,4 +61,13 @@ i18n
         nonExplicitSupportedLngs: true,
     });
 
+// 同步 <html lang>，供屏幕阅读器选择发音与浏览器断字/字体回退使用
+const syncHtmlLang = (lng?: string) => {
+    if (typeof document === "undefined" || !lng) return;
+    document.documentElement.lang = lng.startsWith("zh") ? "zh-CN" : "en";
+};
+
+syncHtmlLang(i18n.resolvedLanguage ?? i18n.language);
+i18n.on("languageChanged", syncHtmlLang);
+
 export default i18n;

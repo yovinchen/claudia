@@ -4,17 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 仅作 CSS 加载前的首帧默认（与默认 theme-gray 一致）；加载后由 styles.css 按 .theme-* 设置 color-scheme。
+         CSP 未允许内联脚本，无法在此提前读取 localStorage 主题缓存。 -->
     <meta name="color-scheme" content="dark" />
     <title>Claudia - Claude Code Session Browser</title>
     <!-- Maple Mono Font (Local) -->
     <style>
-      @font-face {
-        font-family: 'Maple Mono';
-        src: url('/fonts/MapleMono-Light.ttf') format('truetype');
-        font-weight: 300;
-        font-style: normal;
-        font-display: swap;
-      }
       @font-face {
         font-family: 'Maple Mono';
         src: url('/fonts/MapleMono-Regular.ttf') format('truetype');

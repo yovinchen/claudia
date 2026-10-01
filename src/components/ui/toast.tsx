@@ -2,6 +2,7 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -15,7 +16,9 @@ interface ToastProps {
    */
   type?: ToastType;
   /**
-   * Duration in milliseconds before auto-dismiss
+   * Duration in milliseconds before auto-dismiss.
+   * Defaults to 3000 for success/info; error toasts stay until closed
+   * unless a duration is passed explicitly. Use 0 to disable auto-dismiss.
    */
   duration?: number;
   /**
@@ -42,19 +45,22 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({
   message,
   type = "info",
-  duration = 3000,
+  duration,
   onDismiss,
   className,
 }) => {
+  const { t } = useTranslation();
+  const effectiveDuration = duration ?? (type === "error" ? 0 : 3000);
+
   React.useEffect(() => {
-    if (duration && duration > 0) {
+    if (effectiveDuration > 0) {
       const timer = setTimeout(() => {
         onDismiss?.();
-      }, duration);
+      }, effectiveDuration);
       
       return () => clearTimeout(timer);
     }
-  }, [duration, onDismiss]);
+  }, [effectiveDuration, onDismiss]);
   
   const icons = {
     success: <CheckCircle className="h-4 w-4" />,
@@ -74,6 +80,7 @@ export const Toast: React.FC<ToastProps> = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       transition={{ duration: 0.2 }}
+      role={type === "error" ? "alert" : undefined}
       className={cn(
         "flex items-center space-x-3 rounded-lg border border-border bg-card px-4 py-3 shadow-lg",
         className
@@ -83,10 +90,12 @@ export const Toast: React.FC<ToastProps> = ({
       <span className="flex-1 text-sm">{message}</span>
       {onDismiss && (
         <button
+          type="button"
           onClick={onDismiss}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={t('app.close')}
+          className="relative text-muted-foreground hover:text-foreground transition-colors after:absolute after:-inset-1 after:content-['']"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       )}
     </motion.div>
@@ -100,7 +109,11 @@ interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ children }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center p-4 pointer-events-none">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center p-4 pointer-events-none"
+    >
       <div className="pointer-events-auto">
         <AnimatePresence mode="wait">
           {children}

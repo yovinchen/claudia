@@ -6,6 +6,7 @@ import { AnalyticsErrorBoundary } from "./components/AnalyticsErrorBoundary";
 import { analytics, resourceMonitor } from "./lib/analytics";
 import { PostHogProvider } from "posthog-js/react";
 import { loader } from "@monaco-editor/react";
+import { MotionConfig } from "framer-motion";
 import "./lib/i18n"; // 初始化国际化
 import "./assets/shimmer.css";
 import "./styles.css";
@@ -63,33 +64,32 @@ resourceMonitor.startMonitoring(120000);
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 const posthogKey = (import.meta as any).env.VITE_PUBLIC_POSTHOG_KEY as string | undefined;
 
-if (posthogKey) {
-  root.render(
-    <React.StrictMode>
-      <PostHogProvider
-        apiKey={posthogKey}
-        options={{
-          api_host: (import.meta as any).env.VITE_PUBLIC_POSTHOG_HOST,
-          capture_exceptions: true,
-          debug: import.meta.env.MODE === "development",
-        }}
-      >
-        <ErrorBoundary>
-          <AnalyticsErrorBoundary>
-            <App />
-          </AnalyticsErrorBoundary>
-        </ErrorBoundary>
-      </PostHogProvider>
-    </React.StrictMode>
-  );
-} else {
-  root.render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <AnalyticsErrorBoundary>
-          <App />
-        </AnalyticsErrorBoundary>
-      </ErrorBoundary>
-    </React.StrictMode>
-  );
-}
+const app = (
+  <ErrorBoundary>
+    <AnalyticsErrorBoundary>
+      <App />
+    </AnalyticsErrorBoundary>
+  </ErrorBoundary>
+);
+
+// reducedMotion="user"：系统开启“减少动态效果”时，framer-motion 跳过位移/缩放动画，仅保留透明度等
+root.render(
+  <React.StrictMode>
+    <MotionConfig reducedMotion="user">
+      {posthogKey ? (
+        <PostHogProvider
+          apiKey={posthogKey}
+          options={{
+            api_host: (import.meta as any).env.VITE_PUBLIC_POSTHOG_HOST,
+            capture_exceptions: true,
+            debug: import.meta.env.MODE === "development",
+          }}
+        >
+          {app}
+        </PostHogProvider>
+      ) : (
+        app
+      )}
+    </MotionConfig>
+  </React.StrictMode>
+);

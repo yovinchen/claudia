@@ -146,13 +146,22 @@ export function WelcomePage({ onNavigate, onNewSession, onSmartQuickStart }: Wel
               }}
             >
               <div 
-                className="h-full group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
+                className="h-full group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => handleCardClick(feature.view)}
+                role="button"
+                tabIndex={0}
+                aria-label={feature.title}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCardClick(feature.view);
+                  }
+                }}
               >
                 <div className="p-10">
                   <div className="flex items-start gap-6">
                     <div className={`p-4 ${feature.bgColor} rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                      <feature.icon className={`h-10 w-10 ${feature.color}`} strokeWidth={1.5} />
+                      <feature.icon className={`h-10 w-10 ${feature.color}`} strokeWidth={1.5} aria-hidden="true" />
                     </div>
                     <div className="flex-1">
                       <h2 className="text-2xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors">
@@ -184,12 +193,21 @@ export function WelcomePage({ onNavigate, onNewSession, onSmartQuickStart }: Wel
               }}
             >
               <div 
-                className="h-32 group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer" 
+                className="h-32 group bg-card/50 border border-border rounded-lg hover:bg-card hover:border-orange-500/50 transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => handleCardClick(feature.view)}
+                role="button"
+                tabIndex={0}
+                aria-label={feature.title}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCardClick(feature.view);
+                  }
+                }}
               >
                 <div className="h-full flex items-center p-6">
                   <div className={`p-3 ${feature.bgColor} rounded-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 mr-4 flex-shrink-0`}>
-                    <feature.icon className={`h-7 w-7 ${feature.color}`} strokeWidth={1.5} />
+                    <feature.icon className={`h-7 w-7 ${feature.color}`} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold mb-1 text-foreground group-hover:text-primary transition-colors truncate">
@@ -226,7 +244,7 @@ export function WelcomePage({ onNavigate, onNewSession, onSmartQuickStart }: Wel
               disabled={isCreatingSmartSession}
             >
               {/* Shimmer effect on button */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
               </div>
               

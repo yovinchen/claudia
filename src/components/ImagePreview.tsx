@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface ImagePreviewProps {
   /**
@@ -40,6 +41,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   onRemove,
   className,
 }) => {
+  const { t } = useTranslation();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -82,41 +84,51 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
               className="relative flex-shrink-0 group"
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
+              onFocus={() => setHoveredIndex(index)}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                  setHoveredIndex(null);
+                }
+              }}
             >
-              <div
-                className="relative w-16 h-16 rounded-md overflow-hidden border border-border cursor-pointer hover:border-primary transition-colors"
+              <button
+                type="button"
+                className="relative block w-16 h-16 rounded-md overflow-hidden border border-border cursor-pointer hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setSelectedImageIndex(index)}
+                aria-label={t('imagePreview.openImage', { index: index + 1 })}
               >
                 {imageErrors.has(index) ? (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Error</span>
+                    <span className="text-xs text-muted-foreground">{t('app.error')}</span>
                   </div>
                 ) : (
                   <img
                     src={getImageSrc(imagePath)}
-                    alt={`Preview ${index + 1}`}
+                    alt={t('imagePreview.thumbnailAlt', { index: index + 1 })}
                     className="w-full h-full object-cover"
                     onError={() => handleImageError(index)}
                   />
                 )}
                 
                 {/* Hover overlay with maximize icon */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Maximize2 className="h-4 w-4 text-white" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center">
+                  <Maximize2 className="h-4 w-4 text-white" aria-hidden="true" />
                 </div>
-              </div>
+              </button>
 
               {/* Remove button */}
               <AnimatePresence>
                 {hoveredIndex === index && (
                   <motion.button
+                    type="button"
+                    aria-label={t('app.remove')}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                     className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/90 transition-colors"
                     onClick={(e) => handleRemove(e, index)}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3 w-3" aria-hidden="true" />
                   </motion.button>
                 )}
               </AnimatePresence>
@@ -137,12 +149,12 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
         onOpenChange={(open) => !open && setSelectedImageIndex(null)}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <DialogTitle className="sr-only">{t('imagePreview.title')}</DialogTitle>
           {selectedImageIndex !== null && (
             <div className="relative w-full h-full flex items-center justify-center p-4">
               <img
                 src={getImageSrc(displayImages[selectedImageIndex])}
-                alt={`Full preview ${selectedImageIndex + 1}`}
+                alt={t('imagePreview.fullAlt', { index: selectedImageIndex + 1 })}
                 className="max-w-full max-h-full object-contain"
                 onError={() => handleImageError(selectedImageIndex)}
               />
@@ -151,20 +163,24 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
               {displayImages.length > 1 && (
                 <>
                   <button
+                    type="button"
+                    aria-label={t('app.previous')}
                     className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
                     onClick={() => setSelectedImageIndex((prev) => 
                       prev !== null ? (prev - 1 + displayImages.length) % displayImages.length : 0
                     )}
                   >
-                    ←
+                    <span aria-hidden="true">←</span>
                   </button>
                   <button
+                    type="button"
+                    aria-label={t('app.next')}
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
                     onClick={() => setSelectedImageIndex((prev) => 
                       prev !== null ? (prev + 1) % displayImages.length : 0
                     )}
                   >
-                    →
+                    <span aria-hidden="true">→</span>
                   </button>
                 </>
               )}
