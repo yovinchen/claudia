@@ -19,6 +19,7 @@ import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/a
 import { type AgentIconName } from "./CCAgents";
 import { ICON_MAP } from "./IconPicker";
 import { open } from "@tauri-apps/plugin-shell";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface GitHubAgentBrowserProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
   onClose,
   onImportSuccess,
 }) => {
+  const { t, currentLanguage } = useTranslation();
   const [agents, setAgents] = useState<GitHubAgentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       setAgents(agentFiles);
     } catch (err) {
       console.error("Failed to fetch GitHub agents:", err);
-      setError("Failed to fetch agents from GitHub. Please check your internet connection.");
+      setError(t('agents.browser.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
         file,
         data: null,
         loading: false,
-        error: "Failed to load agent details",
+        error: t('agents.browser.loadDetailsFailed'),
       });
     }
   };
@@ -127,7 +129,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       onImportSuccess();
     } catch (err) {
       console.error("Failed to import agent:", err);
-      alert(`Failed to import agent: ${err instanceof Error ? err.message : "Unknown error"}`);
+      alert(t('agents.browser.importFailedWithReason', { reason: err instanceof Error ? err.message : t('messages.unknownError') }));
     } finally {
       setImporting(false);
     }
@@ -163,8 +165,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Import Agent from GitHub
+            <Globe className="h-5 w-5" aria-hidden="true" />
+            {t('agents.browser.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -172,26 +174,27 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
           {/* Repository Info */}
           <div className="px-4 py-3 bg-muted/50 rounded-lg mb-4">
             <p className="text-sm text-muted-foreground">
-              Agents are fetched from{" "}
+              {t('agents.browser.fetchedFrom')}{" "}
               <button
                 onClick={handleGitHubLinkClick}
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 github.com/getAsterisk/claudia/cc_agents
-                <Globe className="h-3 w-3" />
+                <Globe className="h-3 w-3" aria-hidden="true" />
               </button>
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              You can contribute your custom agents to the repository!
+              {t('agents.browser.contributeHint')}
             </p>
           </div>
 
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
-                placeholder="Search agents..."
+                placeholder={t('placeholders.searchAgents')}
+                aria-label={t('placeholders.searchAgents')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -203,21 +206,21 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" role="status" aria-label={t('app.loading')} />
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <AlertCircle className="h-12 w-12 text-destructive mb-4" />
                 <p className="text-sm text-muted-foreground mb-4">{error}</p>
                 <Button onClick={fetchAgents} variant="outline" size="sm">
-                  Try Again
+                  {t('errorBoundary.tryAgain')}
                 </Button>
               </div>
             ) : filteredAgents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <FileJson className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? "No agents found matching your search" : "No agents available"}
+                  {searchQuery ? t('agents.browser.noMatchingAgents') : t('agents.noAgentsAvailable')}
                 </p>
               </div>
             ) : (
@@ -249,8 +252,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                             </div>
                             {isAgentImported(agent.name) && (
                               <Badge variant="secondary" className="ml-2 flex-shrink-0">
-                                <Check className="h-3 w-3 mr-1" />
-                                Imported
+                                <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+                                {t('agents.browser.imported')}
                               </Badge>
                             )}
                           </div>
@@ -268,8 +271,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                               handlePreviewAgent(agent);
                             }}
                           >
-                            <Eye className="h-3 w-3 mr-2" />
-                            Preview
+                            <Eye className="h-3 w-3 mr-2" aria-hidden="true" />
+                            {t('widgets.common.preview')}
                           </Button>
                         </CardFooter>
                       </Card>
@@ -288,13 +291,13 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
           <Dialog open={!!selectedAgent} onOpenChange={() => setSelectedAgent(null)}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
               <DialogHeader>
-                <DialogTitle>Agent Preview</DialogTitle>
+                <DialogTitle>{t('agents.browser.previewTitle')}</DialogTitle>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto">
                 {selectedAgent.loading ? (
                   <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" role="status" aria-label={t('app.loading')} />
                   </div>
                 ) : selectedAgent.error ? (
                   <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -320,7 +323,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
 
                     {/* System Prompt */}
                     <div>
-                      <h4 className="text-sm font-medium mb-2">System Prompt</h4>
+                      <h4 className="text-sm font-medium mb-2">{t('agents.systemPrompt')}</h4>
                       <div className="bg-muted rounded-lg p-3 max-h-48 overflow-y-auto">
                         <pre className="text-xs whitespace-pre-wrap font-mono">
                           {selectedAgent.data.agent.system_prompt}
@@ -331,7 +334,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                     {/* Default Task */}
                     {selectedAgent.data.agent.default_task && (
                       <div>
-                        <h4 className="text-sm font-medium mb-2">Default Task</h4>
+                        <h4 className="text-sm font-medium mb-2">{t('agents.defaultTask')}</h4>
                         <div className="bg-muted rounded-lg p-3">
                           <p className="text-sm">{selectedAgent.data.agent.default_task}</p>
                         </div>
@@ -342,8 +345,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
 
                     {/* Metadata */}
                     <div className="text-xs text-muted-foreground">
-                      <p>Version: {selectedAgent.data.version}</p>
-                      <p>Exported: {new Date(selectedAgent.data.exported_at).toLocaleDateString()}</p>
+                      <p>{t('agents.browser.version', { version: selectedAgent.data.version })}</p>
+                      <p>{t('agents.browser.exportedAt', { date: new Date(selectedAgent.data.exported_at).toLocaleDateString(currentLanguage) })}</p>
                     </div>
                   </div>
                 ) : null}
@@ -356,7 +359,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                     variant="outline"
                     onClick={() => setSelectedAgent(null)}
                   >
-                    Cancel
+                    {t('app.cancel')}
                   </Button>
                   <Button
                     onClick={handleImportAgent}
@@ -365,17 +368,17 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                     {importing ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Importing...
+                        {t('agents.browser.importing')}
                       </>
                     ) : isAgentImported(selectedAgent.file.name) ? (
                       <>
-                        <Check className="h-4 w-4 mr-2" />
-                        Already Imported
+                        <Check className="h-4 w-4 mr-2" aria-hidden="true" />
+                        {t('agents.browser.alreadyImported')}
                       </>
                     ) : (
                       <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Import Agent
+                        <Download className="h-4 w-4 mr-2" aria-hidden="true" />
+                        {t('messages.importAgent')}
                       </>
                     )}
                   </Button>

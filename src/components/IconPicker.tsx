@@ -376,7 +376,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         {/* Search Bar */}
         <div className="px-6 py-3 border-b">
           <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               placeholder={t('agents.searchIcons')}
               value={searchQuery}
@@ -425,7 +425,10 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                             key={item.name}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.95 }}
+                            type="button"
                             onClick={() => handleSelect(item.name)}
+                            aria-label={item.name}
+                            aria-pressed={value === item.name}
                             onMouseEnter={() => setHoveredIcon(item.name)}
                             onMouseLeave={() => setHoveredIcon(null)}
                             className={cn(
@@ -434,7 +437,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                               value === item.name && "bg-primary/10 text-primary"
                             )}
                           >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-5 w-5" aria-hidden="true" />
                             {hoveredIcon === item.name && (
                               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg whitespace-nowrap z-10">
                                 {item.name}

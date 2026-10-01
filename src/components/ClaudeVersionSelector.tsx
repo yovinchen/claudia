@@ -94,7 +94,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
       }
     } catch (err) {
       console.error("Failed to load Claude installations:", err);
-      setError(err instanceof Error ? err.message : "Failed to load Claude installations");
+      setError(err instanceof Error ? err.message : t('messages.loadClaudeInstallationsFailed'));
     } finally {
       setLoading(false);
     }

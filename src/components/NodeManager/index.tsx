@@ -29,6 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import * as api from '@/lib/api';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { ApiNode, CreateApiNodeRequest, NodeTestResult } from '@/lib/api';
 
 interface NodeSelectorProps {
@@ -50,6 +51,7 @@ export const NodeSelector: React.FC<NodeSelectorProps> = ({
   allowManualInput = true,
   showToast = (msg, _type) => console.log(msg), // 默认使用 console.log
 }) => {
+  const { t } = useTranslation();
   const [showDialog, setShowDialog] = useState(false);
   const [nodes, setNodes] = useState<ApiNode[]>([]);
   const [currentNode, setCurrentNode] = useState<ApiNode | null>(null);
@@ -81,37 +83,38 @@ export const NodeSelector: React.FC<NodeSelectorProps> = ({
 
   const handleSaveCustomNode = async () => {
     if (!value.trim() || value.startsWith('http') === false) {
-      showToast('请输入有效的 URL', 'error');
+      showToast(t('nodeManager.invalidUrl'), 'error');
       return;
     }
 
     // 检查是否已存在
     const existingNode = nodes.find(n => n.url === value);
     if (existingNode) {
-      showToast('该节点已存在', 'error');
+      showToast(t('nodeManager.nodeExists'), 'error');
       return;
     }
 
     try {
       await api.createApiNode({
-        name: `自定义节点 - ${new URL(value).hostname}`,
+        name: t('nodeManager.customNodeName', { host: new URL(value).hostname }),
         url: value,
         adapter: adapter,
-        description: '用户手动添加的节点',
+        description: t('nodeManager.customNodeDescription'),
       });
-      showToast('节点保存成功', 'success');
+      showToast(t('nodeManager.saveSuccess'), 'success');
       loadNodes();
     } catch (error) {
-      showToast('保存失败', 'error');
+      showToast(t('nodeManager.saveFailed'), 'error');
       console.error(error);
     }
   };
 
   return (
     <div className="space-y-2">
-      <Label>节点地址 *</Label>
+      <Label htmlFor="node-selector-url">{t('nodeManager.nodeUrl')}</Label>
       <div className="flex gap-2">
         <Input
+          id="node-selector-url"
           value={value}
           onChange={(e) => allowManualInput && onChange(e.target.value)}
           placeholder="https://api.example.com"
@@ -123,9 +126,10 @@ export const NodeSelector: React.FC<NodeSelectorProps> = ({
           variant="outline"
           size="icon"
           onClick={() => setShowDialog(true)}
-          title="管理节点"
+          title={t('nodeManager.manageNodes')}
+          aria-label={t('nodeManager.manageNodes')}
         >
-          <Settings className="h-4 w-4" />
+          <Settings className="h-4 w-4" aria-hidden="true" />
         </Button>
         {allowManualInput && value && !currentNode && value.startsWith('http') && (
           <Button
@@ -133,17 +137,18 @@ export const NodeSelector: React.FC<NodeSelectorProps> = ({
             variant="outline"
             size="icon"
             onClick={handleSaveCustomNode}
-            title="保存为节点"
+            title={t('nodeManager.saveAsNode')}
+            aria-label={t('nodeManager.saveAsNode')}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
       </div>
       {currentNode && adapter !== 'custom' && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>📍 当前节点：{currentNode.name}</span>
+          <span><span aria-hidden="true">📍 </span>{t('nodeManager.currentNode', { name: currentNode.name })}</span>
           {currentNode.is_default && (
-            <Badge variant="secondary" className="text-xs">预设</Badge>
+            <Badge variant="secondary" className="text-xs">{t('nodeManager.preset')}</Badge>
           )}
         </div>
       )}
@@ -193,6 +198,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
   currentUrl,
   showToast = (msg) => console.log(msg),
 }) => {
+  const { t } = useTranslation();
   const [nodes, setNodes] = useState<ApiNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -215,7 +221,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
       const allNodes = await api.listApiNodes(filterAdapter, enabledOnly);
       setNodes(allNodes);
     } catch (error) {
-      showToast('加载节点失败', 'error');
+      showToast(t('nodeManager.loadFailed'), 'error');
       console.error(error);
     } finally {
       setLoading(false);
@@ -233,7 +239,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
       });
       setTestResults(resultsMap);
     } catch (error) {
-      showToast('测速失败', 'error');
+      showToast(t('nodeManager.testFailed'), 'error');
       console.error(error);
     } finally {
       setTesting(false);
@@ -277,9 +283,9 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
         delete newResults[node.id];
         return newResults;
       });
-      showToast('删除成功', 'success');
+      showToast(t('nodeManager.deleteSuccess'), 'success');
     } catch (error) {
-      showToast('删除失败', 'error');
+      showToast(t('nodeManager.deleteFailed'), 'error');
       console.error(error);
     }
   };
@@ -289,7 +295,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
       await api.updateApiNode(node.id, { enabled: !node.enabled });
       loadNodes();
     } catch (error) {
-      showToast('更新失败', 'error');
+      showToast(t('nodeManager.updateFailed'), 'error');
       console.error(error);
     }
   };
@@ -297,13 +303,13 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
   const getStatusBadge = (node: ApiNode) => {
     const result = testResults[node.id];
     if (!result) {
-      return <Badge variant="outline" className="text-xs">未测试</Badge>;
+      return <Badge variant="outline" className="text-xs">{t('nodeManager.notTested')}</Badge>;
     }
     if (result.status === 'testing') {
       return (
         <Badge variant="outline" className="text-xs">
-          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          测试中
+          <Loader2 className="h-3 w-3 animate-spin mr-1" aria-hidden="true" />
+          {t('nodeManager.testing')}
         </Badge>
       );
     }
@@ -317,8 +323,8 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
     }
     return (
       <Badge variant="destructive" className="text-xs">
-        <AlertCircle className="h-3 w-3 mr-1" />
-          失败
+        <AlertCircle className="h-3 w-3 mr-1" aria-hidden="true" />
+          {t('nodeManager.failed')}
       </Badge>
     );
   };
@@ -329,8 +335,8 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle>节点管理</DialogTitle>
-              <DialogDescription>管理 API 节点，支持增删改查和测速</DialogDescription>
+              <DialogTitle>{t('nodeManager.title')}</DialogTitle>
+              <DialogDescription>{t('nodeManager.description')}</DialogDescription>
             </div>
             <div className="flex gap-2">
               <Button
@@ -340,7 +346,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
                 disabled={testing || nodes.length === 0}
               >
                 <Zap className="h-4 w-4 mr-2" />
-                {testing ? '测速中...' : '全部测速'}
+                {testing ? t('nodeManager.testingAll') : t('nodeManager.testAll')}
               </Button>
             </div>
           </div>
@@ -358,14 +364,15 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
               }}
             >
               <Plus className="h-4 w-4 mr-2" />
-              添加节点
+              {t('nodeManager.addNode')}
             </Button>
             <div className="flex items-center gap-2 ml-auto">
               <Switch
+                id="node-manager-enabled-only"
                 checked={enabledOnly}
                 onCheckedChange={setEnabledOnly}
               />
-              <Label className="text-sm">只看启用</Label>
+              <Label htmlFor="node-manager-enabled-only" className="text-sm">{t('nodeManager.enabledOnly')}</Label>
             </div>
           </div>
 
@@ -376,7 +383,7 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
             </div>
           ) : nodes.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              暂无节点
+              {t('nodeManager.noNodes')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -403,13 +410,14 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
                       <Switch
                         checked={node.enabled}
                         onCheckedChange={() => handleToggleEnable(node)}
+                        aria-label={t('nodeManager.toggleNode', { name: node.name })}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{node.name}</span>
                         {node.is_default && (
-                          <Badge variant="secondary" className="text-xs">预设</Badge>
+                          <Badge variant="secondary" className="text-xs">{t('nodeManager.preset')}</Badge>
                         )}
                         {getStatusBadge(node)}
                       </div>
@@ -430,9 +438,10 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
                       size="sm"
                       onClick={() => handleTestOne(node)}
                       disabled={testResults[node.id]?.status === 'testing'}
-                      title="测速"
+                      title={t('nodeManager.testSpeed')}
+                      aria-label={t('nodeManager.testSpeedLabel', { name: node.name })}
                     >
-                      <Zap className="h-4 w-4" />
+                      <Zap className="h-4 w-4" aria-hidden="true" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -441,18 +450,20 @@ const NodeManagerDialog: React.FC<NodeManagerDialogProps> = ({
                         setEditingNode(node);
                         setShowForm(true);
                       }}
-                      title="编辑"
+                      title={t('app.edit')}
+                      aria-label={t('nodeManager.editLabel', { name: node.name })}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4" aria-hidden="true" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(node)}
                       className="text-red-500 hover:text-red-700"
-                      title="删除"
+                      title={t('app.delete')}
+                      aria-label={t('nodeManager.deleteLabel', { name: node.name })}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>
@@ -499,6 +510,7 @@ const NodeFormDialog: React.FC<NodeFormDialogProps> = ({
   onSuccess,
   showToast = (msg) => console.log(msg),
 }) => {
+  const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<CreateApiNodeRequest>({
     name: '',
@@ -536,14 +548,14 @@ const NodeFormDialog: React.FC<NodeFormDialogProps> = ({
           url: formData.url,
           description: formData.description,
         });
-        showToast('更新成功', 'success');
+        showToast(t('nodeManager.updateSuccess'), 'success');
       } else {
         await api.createApiNode(formData);
-        showToast('创建成功', 'success');
+        showToast(t('nodeManager.createSuccess'), 'success');
       }
       onSuccess();
     } catch (error) {
-      showToast(node ? '更新失败' : '创建失败', 'error');
+      showToast(node ? t('nodeManager.updateFailed') : t('nodeManager.createFailed'), 'error');
       console.error(error);
     } finally {
       setSubmitting(false);
@@ -554,22 +566,22 @@ const NodeFormDialog: React.FC<NodeFormDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{node ? '编辑节点' : '添加节点'}</DialogTitle>
+          <DialogTitle>{node ? t('nodeManager.editNode') : t('nodeManager.addNode')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">节点名称 *</Label>
+            <Label htmlFor="name">{t('nodeManager.nodeName')}</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="例如：🚀 我的自定义节点"
+              placeholder={t('nodeManager.nodeNamePlaceholder')}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="url">节点地址 *</Label>
+            <Label htmlFor="url">{t('nodeManager.nodeUrl')}</Label>
             <Input
               id="url"
               type="url"
@@ -582,43 +594,43 @@ const NodeFormDialog: React.FC<NodeFormDialogProps> = ({
 
           {!node && (
             <div className="space-y-2">
-              <Label htmlFor="adapter">适配器类型 *</Label>
+              <Label htmlFor="adapter">{t('nodeManager.adapterType')}</Label>
               <Select
                 value={formData.adapter}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, adapter: value as api.RelayStationAdapter }))}
               >
-                <SelectTrigger>
+                <SelectTrigger id="adapter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="packycode">PackyCode</SelectItem>
                   <SelectItem value="deepseek">DeepSeek</SelectItem>
-                  <SelectItem value="glm">智谱 GLM</SelectItem>
-                  <SelectItem value="qwen">通义千问</SelectItem>
-                  <SelectItem value="kimi">Moonshot Kimi</SelectItem>
+                  <SelectItem value="glm">{t('relayStation.adapters.glm')}</SelectItem>
+                  <SelectItem value="qwen">{t('relayStation.adapters.qwen')}</SelectItem>
+                  <SelectItem value="kimi">{t('relayStation.adapters.kimi')}</SelectItem>
                   <SelectItem value="minimax">MiniMax</SelectItem>
-                  <SelectItem value="custom">自定义</SelectItem>
+                  <SelectItem value="custom">{t('relayStation.adapters.custom')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">描述（可选）</Label>
+            <Label htmlFor="description">{t('nodeManager.descriptionOptional')}</Label>
             <Input
               id="description"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="节点描述信息"
+              placeholder={t('nodeManager.descriptionPlaceholder')}
             />
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              取消
+              {t('app.cancel')}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? '保存中...' : '保存'}
+              {submitting ? t('saving') : t('app.save')}
             </Button>
           </div>
         </form>

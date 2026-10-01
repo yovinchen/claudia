@@ -12,6 +12,19 @@ pub struct FileChangeEvent {
     pub timestamp: u64,
 }
 
+/// 将路径转换为前端可用的字符串：去掉 Windows 逐字路径前缀（`\\?\`、`\\?\UNC\`），
+/// 避免前端按普通路径比较/匹配时失败。
+fn display_path(path: &std::path::Path) -> String {
+    let s = path.to_string_lossy();
+    if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{}", rest)
+    } else if let Some(rest) = s.strip_prefix(r"\\?\") {
+        rest.to_string()
+    } else {
+        s.to_string()
+    }
+}
+
 pub struct FileWatcherManager {
     watchers: Arc<Mutex<HashMap<String, RecommendedWatcher>>>,
     app_handle: AppHandle,
@@ -145,7 +158,7 @@ impl FileWatcherManager {
 
             if should_emit {
                 let change_event = FileChangeEvent {
-                    path: path.to_string_lossy().to_string(),
+                    path: display_path(&path),
                     change_type: change_type.to_string(),
                     timestamp: now
                         .duration_since(SystemTime::UNIX_EPOCH)

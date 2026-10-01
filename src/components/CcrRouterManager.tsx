@@ -8,6 +8,7 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ccrApi, type CcrServiceStatus } from "@/lib/api";
 import { open } from '@tauri-apps/plugin-shell';
 import { useTranslation } from '@/hooks/useTranslation';
+import { Trans } from 'react-i18next';
 
 interface CcrRouterManagerProps {
   onBack: () => void;
@@ -198,14 +199,14 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
     if (!serviceStatus) return null;
 
     const statusColor = serviceStatus.is_running ? "bg-green-500" : "bg-red-500";
-    const statusText = serviceStatus.is_running ? "运行中" : "已停止";
+    const statusText = serviceStatus.is_running ? t('ccr.running') : t('ccr.stopped');
 
     return (
       <div className="flex items-center gap-2">
-        <div className={`w-3 h-3 rounded-full ${statusColor}`}></div>
+        <div className={`w-3 h-3 rounded-full ${statusColor}`} aria-hidden="true"></div>
         <span className="font-medium">{statusText}</span>
         {serviceStatus.is_running && serviceStatus.port && (
-          <Badge variant="secondary">端口 {serviceStatus.port}</Badge>
+          <Badge variant="secondary">{t('ccr.port', { port: serviceStatus.port })}</Badge>
         )}
       </div>
     );
@@ -218,16 +219,16 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
       <div className="flex items-center gap-2">
         {serviceStatus.has_ccr_binary ? (
           <>
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-green-600">已安装</span>
+            <CheckCircle className="w-4 h-4 text-green-500" aria-hidden="true" />
+            <span className="text-green-600">{t('ccr.installed')}</span>
             {serviceStatus.ccr_version && (
               <Badge variant="outline">{serviceStatus.ccr_version}</Badge>
             )}
           </>
         ) : (
           <>
-            <AlertCircle className="w-4 h-4 text-red-500" />
-            <span className="text-red-600">未安装</span>
+            <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
+            <span className="text-red-600">{t('ccr.notInstalled')}</span>
           </>
         )}
       </div>
@@ -253,13 +254,13 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
           className="mb-6"
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={onBack} aria-label={t('app.back')}>
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">CCR 路由管理</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{t('ccr.title')}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                管理 Claude Code Router 服务和配置
+                {t('ccr.subtitle')}
               </p>
             </div>
           </div>
@@ -275,34 +276,34 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>服务状态</span>
+                <span>{t('ccr.serviceStatus')}</span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadServiceStatus}
                   disabled={loading}
                 >
-                  刷新
+                  {t('app.refresh')}
                 </Button>
               </CardTitle>
               <CardDescription>
-                CCR 路由服务当前状态和控制选项
+                {t('ccr.serviceStatusDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">安装状态:</span>
+                <span className="text-sm font-medium">{t('ccr.installStatusLabel')}</span>
                 {renderInstallationStatus()}
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">服务状态:</span>
+                <span className="text-sm font-medium">{t('ccr.serviceStatusLabel')}</span>
                 {renderServiceStatus()}
               </div>
 
               {serviceStatus?.endpoint && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">服务地址:</span>
+                  <span className="text-sm font-medium">{t('ccr.endpointLabel')}</span>
                   <Button
                     variant="link"
                     size="sm"
@@ -310,21 +311,21 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                     className="p-0 h-auto"
                   >
                     {serviceStatus.endpoint}/ui/
-                    <ExternalLink className="w-3 h-3 ml-1" />
+                    <ExternalLink className="w-3 h-3 ml-1" aria-hidden="true" />
                   </Button>
                 </div>
               )}
 
               {serviceStatus?.process_id && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">进程 ID:</span>
+                  <span className="text-sm font-medium">{t('ccr.processIdLabel')}</span>
                   <Badge variant="outline">{serviceStatus.process_id}</Badge>
                 </div>
               )}
 
               {configPath && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">配置文件:</span>
+                  <span className="text-sm font-medium">{t('ccr.configFileLabel')}</span>
                   <span className="text-xs text-muted-foreground font-mono">
                     {configPath}
                   </span>
@@ -343,9 +344,9 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
         >
           <Card>
             <CardHeader>
-              <CardTitle>服务控制</CardTitle>
+              <CardTitle>{t('ccr.serviceControl')}</CardTitle>
               <CardDescription>
-                启动、停止或重启 CCR 路由服务
+                {t('ccr.serviceControlDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -362,7 +363,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                       ) : (
                         <Play className="w-4 h-4" />
                       )}
-                      启动服务
+                      {t('ccr.startService')}
                     </Button>
                   ) : (
                     <Button
@@ -376,7 +377,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                       ) : (
                         <Square className="w-4 h-4" />
                       )}
-                      停止服务
+                      {t('ccr.stopService')}
                     </Button>
                   )}
 
@@ -391,7 +392,7 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                     ) : (
                       <RotateCcw className="w-4 h-4" />
                     )}
-                    重启服务
+                    {t('ccr.restartService')}
                   </Button>
 
                   <Button
@@ -404,22 +405,22 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
                     ) : (
                       <ExternalLink className="w-4 h-4" />
                     )}
-                    {serviceStatus.is_running ? "打开管理界面" : "启动并打开管理界面"}
+                    {serviceStatus.is_running ? t('ccr.openAdmin') : t('ccr.startAndOpenAdmin')}
                   </Button>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">CCR 未安装</h3>
+                  <h3 className="text-lg font-medium mb-2">{t('ccr.notInstalledTitle')}</h3>
                   <p className="text-muted-foreground mb-4">
-                    需要先安装 Claude Code Router 才能使用此功能
+                    {t('ccr.notInstalledDesc')}
                   </p>
                   <Button
                     onClick={() => open("https://github.com/musistudio/claude-code-router/tree/main")}
                     className="gap-2"
                   >
                     <Download className="w-4 h-4" />
-                    安装 CCR
+                    {t('ccr.installCcr')}
                   </Button>
                 </div>
               )}
@@ -435,38 +436,43 @@ export function CcrRouterManager({ onBack }: CcrRouterManagerProps) {
         >
           <Card>
             <CardHeader>
-              <CardTitle>关于 CCR 路由</CardTitle>
+              <CardTitle>{t('ccr.aboutTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>
-                Claude Code Router (CCR) 是一个强大的路由工具，允许您将 Claude Code 请求转发到不同的 LLM 提供商。
+                {t('ccr.aboutDesc')}
               </p>
               <ul className="list-disc list-inside space-y-1">
-                <li>支持多个 LLM 提供商（OpenRouter、DeepSeek、Gemini 等）</li>
-                <li>智能路由规则，根据令牌数量和请求类型自动选择</li>
-                <li>Web UI 管理界面，方便配置和监控</li>
-                <li>无需 Anthropic 账户即可使用 Claude Code</li>
+                <li>{t('ccr.featureProviders')}</li>
+                <li>{t('ccr.featureRouting')}</li>
+                <li>{t('ccr.featureWebUi')}</li>
+                <li>{t('ccr.featureNoAccount')}</li>
               </ul>
               
               {!serviceStatus?.has_ccr_binary && (
                 <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                   <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                    安装说明：
+                    {t('ccr.installInstructions')}
                   </p>
                   <code className="block p-2 bg-black/5 dark:bg-white/5 rounded text-xs">
                     npm install -g @musistudio/claude-code-router
                   </code>
                   <p className="text-xs mt-2 text-muted-foreground">
-                    或访问 <a 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        open("https://github.com/musistudio/claude-code-router/tree/main");
+                    <Trans
+                      i18nKey="ccr.installMoreInfo"
+                      components={{
+                        link: (
+                          <a
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              open("https://github.com/musistudio/claude-code-router/tree/main");
+                            }}
+                            className="text-blue-600 hover:underline"
+                          />
+                        ),
                       }}
-                      className="text-blue-600 hover:underline"
-                    >
-                      GitHub 仓库
-                    </a> 了解更多安装方式
+                    />
                   </p>
                 </div>
               )}

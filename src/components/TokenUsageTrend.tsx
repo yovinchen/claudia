@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import type { DailyUsage } from "@/lib/api";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface TokenUsageTrendProps {
   days: DailyUsage[];
@@ -22,12 +23,13 @@ const fmtUSD = (n: number) =>
  * - Tooltip closely matches the screenshot content
  */
 export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
+  const { t, currentLanguage } = useTranslation();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const { labels, series, maxTokens, maxCost, maxReq } = useMemo(() => {
     const sorted = days.slice().reverse(); // chronological left->right
     const labels = sorted.map((d) =>
-      new Date(d.date.replace(/-/g, "/")).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })
+      new Date(d.date.replace(/-/g, "/")).toLocaleDateString(currentLanguage, { month: "2-digit", day: "2-digit" })
     );
     const series = {
       input: sorted.map((d) => d.input_tokens || 0),
@@ -44,7 +46,7 @@ export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
     const maxCost = Math.max(1, ...series.cost);
     const maxReq = Math.max(1, ...series.reqs);
     return { labels, series, maxTokens, maxCost, maxReq };
-  }, [days]);
+  }, [days, currentLanguage]);
 
   const width = 900;
   const height = 260;
@@ -79,7 +81,7 @@ export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
 
   const renderTooltip = () => {
     if (hovered == null) return null;
-    const dateText = new Date(days.slice().reverse()[hovered].date.replace(/-/g, "/")).toLocaleDateString("zh-CN", {
+    const dateText = new Date(days.slice().reverse()[hovered].date.replace(/-/g, "/")).toLocaleDateString(currentLanguage, {
       month: "2-digit",
       day: "2-digit",
     });
@@ -91,27 +93,27 @@ export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.cost }} />
-              费用（USD）：{fmtUSD(d.total_cost)}
+              {t('usage.costUsd')}: {fmtUSD(d.total_cost)}
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.cacheR }} />
-              缓存读取Token: {fmtTokens(d.cache_read_tokens || 0)} tokens
+              {t('usage.cacheReadTokens')}: {fmtTokens(d.cache_read_tokens || 0)} {t('usage.tokens')}
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.cacheW }} />
-              缓存创建Token: {fmtTokens(d.cache_creation_tokens || 0)} tokens
+              {t('usage.cacheCreationTokens')}: {fmtTokens(d.cache_creation_tokens || 0)} {t('usage.tokens')}
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.output }} />
-              输出Token: {fmtTokens(d.output_tokens || 0)} tokens
+              {t('usage.outputTokens')}: {fmtTokens(d.output_tokens || 0)} {t('usage.tokens')}
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.input }} />
-              输入Token: {fmtTokens(d.input_tokens || 0)} tokens
+              {t('usage.inputTokens')}: {fmtTokens(d.input_tokens || 0)} {t('usage.tokens')}
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-sm" style={{ background: colors.req }} />
-              请求数：{d.request_count || 0} 次
+              {t('usage.requests')}: {d.request_count || 0} {t('usage.times')}
             </div>
           </div>
         </div>
@@ -121,33 +123,33 @@ export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
 
   return (
     <Card className="p-6">
-      <h3 className="text-sm font-semibold mb-4">Token使用趋势</h3>
+      <h3 className="text-sm font-semibold mb-4">{t('usage.tokenUsageTrend')}</h3>
       <div className="relative w-full overflow-x-auto">
-        <svg width={width} height={height} className="min-w-[900px]">
+        <svg width={width} height={height} className="min-w-[900px]" role="img" aria-label={t('usage.tokenUsageTrend')}>
           {/* axes */}
           <line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke={colors.grid} />
           <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke={colors.grid} />
           {/* left ticks (tokens) 0, 25%, 50%, 75%, 100% */}
-          {[0, 0.25, 0.5, 0.75, 1].map((t) => (
-            <g key={t}>
-              <text x={8} y={padT + plotH * (1 - t)} className="text-[10px]" fill={colors.text}>
-                {fmtTokens(Math.round(maxTokens * t))}
+          {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
+            <g key={tick}>
+              <text x={8} y={padT + plotH * (1 - tick)} className="text-[10px]" fill={colors.text}>
+                {fmtTokens(Math.round(maxTokens * tick))}
               </text>
               <line
                 x1={padL}
-                y1={padT + plotH * (1 - t)}
+                y1={padT + plotH * (1 - tick)}
                 x2={padL + plotW}
-                y2={padT + plotH * (1 - t)}
+                y2={padT + plotH * (1 - tick)}
                 stroke={colors.grid}
                 strokeDasharray="2,4"
               />
             </g>
           ))}
           {/* right ticks (cost/requests) */}
-          {[0, 0.5, 1].map((t) => (
-            <g key={`r-${t}`}>
-              <text x={padL + plotW + 4} y={padT + plotH * (1 - t)} className="text-[10px]" fill={colors.text}>
-                {t === 1 ? fmtUSD(maxCost) : t === 0.5 ? fmtUSD(maxCost / 2) : "$0"}
+          {[0, 0.5, 1].map((tick) => (
+            <g key={`r-${tick}`}>
+              <text x={padL + plotW + 4} y={padT + plotH * (1 - tick)} className="text-[10px]" fill={colors.text}>
+                {tick === 1 ? fmtUSD(maxCost) : tick === 0.5 ? fmtUSD(maxCost / 2) : "$0"}
               </text>
             </g>
           ))}
@@ -205,12 +207,12 @@ export const TokenUsageTrend: React.FC<TokenUsageTrendProps> = ({ days }) => {
       </div>
       {/* legend */}
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.input }} />输入Token</div>
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.output }} />输出Token</div>
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cacheW }} />缓存创建Token</div>
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cacheR }} />缓存读取Token</div>
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cost }} />费用（USD）</div>
-        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.req }} />请求数</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.input }} aria-hidden="true" />{t('usage.inputTokens')}</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.output }} aria-hidden="true" />{t('usage.outputTokens')}</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cacheW }} aria-hidden="true" />{t('usage.cacheCreationTokens')}</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cacheR }} aria-hidden="true" />{t('usage.cacheReadTokens')}</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.cost }} aria-hidden="true" />{t('usage.costUsd')}</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-1" style={{ background: colors.req }} aria-hidden="true" />{t('usage.requests')}</div>
       </div>
     </Card>
   );

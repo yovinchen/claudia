@@ -344,13 +344,13 @@ pub async fn cleanup_terminal_sessions(
 fn get_default_shell() -> String {
     if cfg!(target_os = "windows") {
         // Try PowerShell Core (pwsh) first, then Windows PowerShell, fallback to cmd
-        if std::process::Command::new("pwsh")
+        if crate::utils::process::std_command("pwsh")
             .arg("--version")
             .output()
             .is_ok()
         {
             "pwsh".to_string()
-        } else if std::process::Command::new("powershell")
+        } else if crate::utils::process::std_command("powershell")
             .arg("-Version")
             .output()
             .is_ok()

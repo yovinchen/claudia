@@ -18,6 +18,7 @@ const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ d
 const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
 const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
 const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
+const PromptFilesManager = lazy(() => import('@/components/PromptFilesManager').then(m => ({ default: m.PromptFilesManager })));
 // Removed MarkdownEditor (direct CLAUDE.md editor)
 // const ClaudeFileEditor = lazy(() => import('@/components/ClaudeFileEditor').then(m => ({ default: m.ClaudeFileEditor })));
 
@@ -55,7 +56,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
-      setError(t('failedToLoadProjects'));
+      setError(t('messages.failedToLoadProjects'));
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setSelectedProject(project);
     } catch (err) {
       console.error("Failed to load sessions:", err);
-      setError(t('failedToLoadSessions'));
+      setError(t('messages.failedToLoadSessions'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           // Update tab to show this session
                           updateTab(tab.id, {
                             type: 'chat',
-                            title: session.project_path.split('/').pop() || 'Session',
+                            title: session.project_path.split('/').pop() || t('tabs.defaultSessionTitle'),
                             sessionId: session.id,
                             sessionData: session, // Store full session object
                             initialProjectPath: session.project_path,
@@ -175,7 +176,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            {t('noProjectsFound')}
+                            {t('messages.noProjectsFound')}
                           </p>
                         </div>
                       )}
@@ -227,6 +228,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'settings':
         return <Settings onBack={() => {}} />;
+
+      case 'prompt-files':
+        return <PromptFilesManager projectPath={tab.initialProjectPath} />;
       
       // Removed 'claude-md' tab type
       
@@ -322,12 +326,12 @@ export const TabContent: React.FC = () => {
         // Update existing tab with session data and switch to it
         updateTab(existingTab.id, {
           sessionData: session,
-          title: session.project_path.split('/').pop() || 'Session'
+          title: session.project_path.split('/').pop() || t('tabs.defaultSessionTitle')
         });
         window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
       } else {
         // Create new tab for this session
-        const projectName = session.project_path.split('/').pop() || 'Session';
+        const projectName = session.project_path.split('/').pop() || t('tabs.defaultSessionTitle');
         const newTabId = createChatTab(session.id, projectName);
         // Update the new tab with session data
         updateTab(newTabId, {
@@ -362,11 +366,11 @@ export const TabContent: React.FC = () => {
       if (existingTab) {
         updateTab(existingTab.id, {
           sessionData: session,
-          title: session.project_path.split('/').pop() || 'Session',
+          title: session.project_path.split('/').pop() || t('tabs.defaultSessionTitle'),
         });
         window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
       } else {
-        const projectName = session.project_path.split('/').pop() || 'Session';
+        const projectName = session.project_path.split('/').pop() || t('tabs.defaultSessionTitle');
         const newTabId = createChatTab(session.id, projectName);
         updateTab(newTabId, {
           sessionData: session,
@@ -380,7 +384,7 @@ export const TabContent: React.FC = () => {
       console.log('[TabContent] Handling create-smart-session-tab:', { tabId, sessionData });
       
       // Update the existing tab with smart session data and switch immediately
-      const displayName = sessionData.display_name || t('smartSessionDefaultTitle');
+      const displayName = sessionData.display_name || t('messages.smartSessionDefaultTitle');
 
       updateTab(tabId, {
         type: 'chat',

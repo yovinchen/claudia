@@ -16,6 +16,7 @@ import MonacoEditor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import { usePromptFilesStore } from '@/stores/promptFilesStore';
 import type { PromptFile } from '@/lib/api';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface PromptFileEditorProps {
   open: boolean;
@@ -30,6 +31,7 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
   file,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { createFile, updateFile } = usePromptFilesStore();
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -62,7 +64,7 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
   };
 
   const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
+    setTags(tags.filter((existing) => existing !== tag));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -105,9 +107,9 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{file ? '编辑提示词文件' : '创建提示词文件'}</DialogTitle>
+          <DialogTitle>{file ? t('promptFiles.editFile') : t('promptFiles.createFile')}</DialogTitle>
           <DialogDescription>
-            {file ? '修改提示词文件的内容和信息' : '创建一个新的提示词文件模板'}
+            {file ? t('promptFiles.editFileDesc') : t('promptFiles.createFileDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -115,19 +117,19 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">文件名称 *</Label>
+              <Label htmlFor="name">{t('promptFiles.fileName')} *</Label>
               <Input
                 id="name"
-                placeholder="例如: React 项目指南"
+                placeholder={t('promptFiles.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">描述</Label>
+              <Label htmlFor="description">{t('promptFiles.fileDescription')}</Label>
               <Input
                 id="description"
-                placeholder="简短描述..."
+                placeholder={t('promptFiles.descriptionPlaceholder')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -136,27 +138,32 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
 
           {/* Tags */}
           <div className="space-y-2">
-            <Label>标签</Label>
+            <Label htmlFor="prompt-file-tag-input">{t('promptFiles.tags')}</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
                   {tag}
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                  <button
+                    type="button"
+                    className="rounded-sm hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     onClick={() => handleRemoveTag(tag)}
-                  />
+                    aria-label={t('promptFiles.removeTag', { tag })}
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
                 </Badge>
               ))}
             </div>
             <div className="flex gap-2">
               <Input
-                placeholder="添加标签（按 Enter）"
+                id="prompt-file-tag-input"
+                placeholder={t('promptFiles.tagInputPlaceholder')}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
               />
-              <Button type="button" variant="outline" onClick={handleAddTag}>
-                <TagIcon className="h-4 w-4" />
+              <Button type="button" variant="outline" onClick={handleAddTag} aria-label={t('promptFiles.addTag')}>
+                <TagIcon className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -164,7 +171,7 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
           {/* Content Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>文件内容 *</Label>
+              <Label>{t('promptFiles.fileContent')} *</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -173,13 +180,13 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
               >
                 {showPreview ? (
                   <>
-                    <EyeOff className="mr-2 h-4 w-4" />
-                    编辑
+                    <EyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t('promptFiles.edit')}
                   </>
                 ) : (
                   <>
-                    <Eye className="mr-2 h-4 w-4" />
-                    预览
+                    <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t('promptFiles.preview')}
                   </>
                 )}
               </Button>
@@ -212,18 +219,18 @@ export const PromptFileEditor: React.FC<PromptFileEditorProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            取消
+            {t('app.cancel')}
           </Button>
           <Button onClick={handleSave} disabled={!name.trim() || !content.trim() || saving}>
             {saving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                保存中...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                {t('saving')}
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                保存
+                <Save className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('app.save')}
               </>
             )}
           </Button>

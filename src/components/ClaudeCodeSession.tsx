@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useTabState } from "@/hooks/useTabState";
@@ -245,7 +245,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const unlisten = await listen<any>('file-system-change', (event) => {
         if (!isMountedRef.current) return;
         
-        const { path, change_type } = event.payload;
+        const payload = event.payload;
+        if (!payload || typeof payload.path !== 'string') return;
+        const change_type: FileChange['changeType'] = typeof payload.change_type === 'string' ? payload.change_type : 'modified';
+        // Windows: strip the verbatim prefix (\\?\ or \\?\UNC\) and use forward slashes
+        // so the path checks below behave the same on every platform.
+        const path = payload.path
+          .replace(/^\\\\\?\\UNC\\/, '\\\\')
+          .replace(/^\\\\\?\\/, '')
+          .replace(/\\/g, '/');
         console.log('[FileMonitor] File change detected:', { path, change_type });
         
         // 过滤掉隐藏文件和临时文件
@@ -261,7 +269,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const isClaudeProjectFile = path.includes('/.claude/projects/');
         const displayPath = isClaudeProjectFile 
           ? path.replace(/.*\/\.claude\/projects\/[^/]+\//, '[Claude] ') // 简化 Claude 项目文件路径显示
-          : path.replace(projectPath + '/', ''); // 项目文件相对路径
+          : path.replace(projectPath.replace(/\\/g, '/').replace(/\/$/, '') + '/', ''); // 项目文件相对路径
         
         const newChange: FileChange = {
           path: displayPath,
@@ -563,7 +571,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }, 200);
     } catch (err) {
       console.error("Failed to load session history:", err);
-      setError("Failed to load session history");
+      setError(t('claudeSession.loadHistoryFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -787,7 +795,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const message = JSON.parse(payload) as ClaudeStreamMessage;
             
             // Track enhanced tool execution
-            if (message.type === 'assistant' && message.message?.content) {
+            if (message.type === 'assistant' && Array.isArray(message.message?.content)) {
               const toolUses = message.message.content.filter((c: any) => c.type === 'tool_use');
               toolUses.forEach((toolUse: any) => {
                 // Increment tools executed counter
@@ -810,7 +818,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             }
             
             // Track tool results
-            if (message.type === 'user' && message.message?.content) {
+            if (message.type === 'user' && Array.isArray(message.message?.content)) {
               const toolResults = message.message.content.filter((c: any) => c.type === 'tool_result');
               toolResults.forEach((result: any) => {
                 const isError = result.is_error || false;
@@ -835,7 +843,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             }
             
             // Track code blocks generated
-            if (message.type === 'assistant' && message.message?.content) {
+            if (message.type === 'assistant' && Array.isArray(message.message?.content)) {
               const codeBlocks = message.message.content.filter((c: any) => 
                 c.type === 'text' && c.text?.includes('```')
               );
@@ -1042,7 +1050,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
-      setError("Failed to send prompt");
+      setError(t('claudeSession.sendPromptFailed'));
       setIsLoading(false);
       hasActiveSessionRef.current = false;
     }
@@ -1219,7 +1227,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const cancelMessage: ClaudeStreamMessage = {
         type: "system",
         subtype: "info",
-        result: "Session cancelled by user",
+        result: t('claudeSession.sessionCancelled'),
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, cancelMessage]);
@@ -1231,7 +1239,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const errorMessage: ClaudeStreamMessage = {
         type: "system",
         subtype: "error",
-        result: `Failed to cancel execution: ${err instanceof Error ? err.message : 'Unknown error'}. The process may still be running in the background.`,
+        result: t('claudeSession.cancelExecutionFailed', { error: err instanceof Error ? err.message : t('messages.unknownError') }),
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -1280,7 +1288,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setForkSessionName("");
     } catch (err) {
       console.error("Failed to fork checkpoint:", err);
-      setError("Failed to fork checkpoint");
+      setError(t('claudeSession.forkCheckpointFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -1348,7 +1356,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const messageCount = messages.filter(m => m.user_message).length;
         const toolsUsed = new Set<string>();
         messages.forEach(msg => {
-          if (msg.type === 'assistant' && msg.message?.content) {
+          if (msg.type === 'assistant' && Array.isArray(msg.message?.content)) {
             const tools = msg.message.content.filter((c: any) => c.type === 'tool_use');
             tools.forEach((tool: any) => toolsUsed.add(tool.name));
           }
@@ -1411,8 +1419,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <AnimatePresence>
           {displayableMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
-              <TerminalIcon className="h-12 w-12 mb-3 opacity-50" />
-              <p className="text-sm">开始对话或等待消息加载...</p>
+              <TerminalIcon className="h-12 w-12 mb-3 opacity-50" aria-hidden="true" />
+              <p className="text-sm">{t('claudeSession.emptyConversation')}</p>
             </div>
           ) : (
             rowVirtualizer.getVirtualItems().map((virtualItem) => {
@@ -1476,9 +1484,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           >
             {/* 文件监控小绿点 */}
             {isFileWatching && !fileMonitorExpanded && (
-              <div
+              <button
+                type="button"
                 onClick={() => setFileMonitorExpanded(true)}
-                className="relative cursor-pointer group self-center"
+                aria-label={fileChanges.length > 0 ? t('claudeSession.fileMonitorWithCount', { count: fileChanges.length }) : t('claudeSession.fileMonitor')}
+                className="relative cursor-pointer group self-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className={cn(
                   "w-4 h-4 rounded-full shadow-lg border-2 border-background transition-all duration-200 group-hover:scale-110",
@@ -1491,8 +1501,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 </div>
                 
                 {/* 悬浮提示 */}
-                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-background/95 backdrop-blur-sm border rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-                  文件监控 {fileChanges.length > 0 && `(${fileChanges.length})`}
+                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-background/95 backdrop-blur-sm border rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                  {fileChanges.length > 0 ? t('claudeSession.fileMonitorWithCount', { count: fileChanges.length }) : t('claudeSession.fileMonitor')}
                 </div>
                 
                 {/* 变化数量小徽章 */}
@@ -1501,7 +1511,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     {fileChanges.length > 9 ? '9+' : fileChanges.length}
                   </div>
                 )}
-              </div>
+              </button>
             )}
             
             {/* 滚动到顶部按钮 */}
@@ -1514,12 +1524,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={scrollToTop}
                       className="h-9 w-9 rounded-full shadow-lg bg-background/95 backdrop-blur"
+                      aria-label={t('claudeSession.scrollToTop')}
                     >
-                      <ArrowUp className="h-4 w-4" />
+                      <ArrowUp className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                    <p>{t('claudeSession.scrollToTop', 'Scroll to top')}</p>
+                    <p>{t('claudeSession.scrollToTop')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1535,12 +1546,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={scrollToBottom}
                       className="h-9 w-9 rounded-full shadow-lg bg-background/95 backdrop-blur"
+                      aria-label={t('claudeSession.scrollToBottom')}
                     >
-                      <ArrowDown className="h-4 w-4" />
+                      <ArrowDown className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                    <p>{t('claudeSession.scrollToBottom', 'Scroll to bottom')}</p>
+                    <p>{t('claudeSession.scrollToBottom')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1559,14 +1571,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       className="p-4 border-b border-border flex-shrink-0"
     >
       <Label htmlFor="project-path" className="text-sm font-medium">
-        Project Directory
+        {t('claudeSession.projectDirectory')}
       </Label>
       <div className="flex items-center gap-2 mt-1">
         <Input
           id="project-path"
           value={projectPath}
           onChange={(e) => setProjectPath(e.target.value)}
-          placeholder="/path/to/your/project"
+          placeholder={t('claudeSession.projectPathPlaceholder')}
           className="flex-1"
           disabled={isLoading}
         />
@@ -1575,8 +1587,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           size="icon"
           variant="outline"
           disabled={isLoading}
+          aria-label={t('webview.selectProjectDirectory')}
         >
-          <FolderOpen className="h-4 w-4" />
+          <FolderOpen className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </motion.div>
@@ -1645,15 +1658,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               size="icon"
               onClick={onBack}
               className="h-8 w-8"
+              aria-label={t('app.back')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div className="flex items-center gap-2">
-              <TerminalIcon className="h-5 w-5 text-muted-foreground" />
+              <TerminalIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               <div className="flex-1">
                 <h1 className="text-xl font-bold">{t('app.claudeCodeSession')}</h1>
                 <p className="text-sm text-muted-foreground">
-                  {projectPath ? `${projectPath}` : "No project selected"}
+                  {projectPath ? `${projectPath}` : t('claudeSession.noProjectSelected')}
                 </p>
               </div>
             </div>
@@ -1663,7 +1677,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             {/* Token计数器 */}
             {totalTokens > 0 && (
               <div className="flex items-center gap-1.5 text-xs bg-muted/50 rounded-full px-2.5 py-1">
-                <Hash className="h-3 w-3 text-muted-foreground" />
+                <Hash className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
                 <span className="font-mono">{totalTokens.toLocaleString()}</span>
                 <span className="text-muted-foreground">{t('usage.tokens')}</span>
               </div>
@@ -1679,12 +1693,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={openTerminal}
                       className={cn("h-8 w-8", layout.activeView === 'terminal' && "text-primary")}
+                      aria-label={t('widgets.terminal.title')}
+                      aria-pressed={layout.activeView === 'terminal'}
                     >
-                      <Square className="h-4 w-4" />
+                      <Square className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>终端</p>
+                    <p>{t('widgets.terminal.title')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1700,8 +1716,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={toggleFileExplorer}
                       className={cn("h-8 w-8", layout.showFileExplorer && "text-primary")}
+                      aria-label={t('app.fileExplorer')}
+                      aria-pressed={layout.showFileExplorer}
                     >
-                      <PanelLeftOpen className="h-4 w-4" />
+                      <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1721,8 +1739,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={toggleGitPanel}
                       className={cn("h-8 w-8", layout.showGitPanel && "text-primary")}
+                      aria-label={t('app.gitPanel')}
+                      aria-pressed={layout.showGitPanel}
                     >
-                      <PanelRightOpen className="h-4 w-4" />
+                      <PanelRightOpen className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1742,12 +1762,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={toggleFileWatching}
                       className={cn("h-8 w-8", isFileWatching && "text-primary")}
+                      aria-label={isFileWatching ? t('claudeSession.stopFileWatch') : t('claudeSession.startFileWatch')}
+                      aria-pressed={isFileWatching}
                     >
-                      {isFileWatching ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      {isFileWatching ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isFileWatching ? t('claudeSession.stopFileWatch', 'Stop file watching') : t('claudeSession.startFileWatch', 'Start file watching')}</p>
+                    <p>{isFileWatching ? t('claudeSession.stopFileWatch') : t('claudeSession.startFileWatch')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1763,8 +1785,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       onClick={() => onProjectSettings(projectPath)}
                       disabled={isLoading}
                       className="h-8 w-8"
+                      aria-label={t('agents.hooks')}
                     >
-                      <Settings2 className="h-4 w-4" />
+                      <Settings2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1783,8 +1806,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       onClick={() => setShowSlashCommandsSettings(true)}
                       disabled={isLoading}
                       className="h-8 w-8"
+                      aria-label={t('app.commands')}
                     >
-                      <Command className="h-4 w-4" />
+                      <Command className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1802,8 +1826,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="icon"
                       onClick={() => setShowSettings(!showSettings)}
                       className="h-8 w-8"
+                      aria-label={t('checkpoint.checkpointSettingsTitle')}
+                      aria-pressed={showSettings}
                     >
-                      <Settings className={cn("h-4 w-4", showSettings && "text-primary")} />
+                      <Settings className={cn("h-4 w-4", showSettings && "text-primary")} aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1820,12 +1846,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         size="icon"
                         onClick={toggleTimeline}
                         className="h-8 w-8"
+                        aria-label={t('checkpoint.timeline')}
+                        aria-pressed={layout.showTimeline}
                       >
-                        <GitBranch className={cn("h-4 w-4", layout.showTimeline && "text-primary")} />
+                        <GitBranch className={cn("h-4 w-4", layout.showTimeline && "text-primary")} aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('app.timeline')}</p>
+                      <p>{t('checkpoint.timeline')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1838,9 +1866,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       size="sm"
                       className="flex items-center gap-2"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-4 w-4" aria-hidden="true" />
                       {t('app.copyOutput')}
-                      <ChevronDown className="h-3 w-3" />
+                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
                     </Button>
                   }
                   content={
@@ -2001,8 +2029,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3">
                                   <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
-                                      <Clock className="h-4 w-4 text-primary" />
-                                      <span className="text-sm font-medium">文件变化监控</span>
+                                      <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
+                                      <span className="text-sm font-medium">{t('claudeSession.fileChangesMonitor')}</span>
                                       <div className={cn(
                                         "w-2 h-2 rounded-full",
                                         isFileWatching ? "bg-green-500" : "bg-gray-400"
@@ -2014,24 +2042,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                         size="icon"
                                         onClick={() => setFileMonitorCollapsed(!fileMonitorCollapsed)}
                                         className="h-6 w-6"
+                                        aria-label={fileMonitorCollapsed ? t('claudeSession.expandList') : t('claudeSession.collapseList')}
+                                        aria-expanded={!fileMonitorCollapsed}
                                       >
-                                        {fileMonitorCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                        {fileMonitorCollapsed ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={clearFileChanges}
                                         className="h-6 w-6"
+                                        aria-label={t('claudeSession.clearFileChanges')}
                                       >
-                                        <X className="h-3 w-3" />
+                                        <X className="h-3 w-3" aria-hidden="true" />
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setFileMonitorExpanded(false)}
                                         className="h-6 w-6"
+                                        aria-label={t('app.close')}
                                       >
-                                        <X className="h-3 w-3" />
+                                        <X className="h-3 w-3" aria-hidden="true" />
                                       </Button>
                                     </div>
                                   </div>
@@ -2068,7 +2100,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                                 {change.path}
                                               </div>
                                               <div className="text-xs text-muted-foreground">
-                                                {change.changeType} • {new Date(change.timestamp).toLocaleTimeString()}
+                                                {t(`claudeSession.fileChangeTypes.${change.changeType}`, { defaultValue: change.changeType })} • {new Date(change.timestamp).toLocaleTimeString()}
                                               </div>
                                             </div>
                                           </motion.div>
@@ -2077,7 +2109,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                       
                                       {fileChanges.length === 0 && isFileWatching && (
                                         <div className="text-center py-4 text-muted-foreground text-xs">
-                                          监控中，等待文件变化...
+                                          {t('claudeSession.waitingForFileChanges')}
                                         </div>
                                       )}
                                     </div>
@@ -2099,10 +2131,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
                                   <div className="flex items-center justify-between">
                                     <div className="text-xs font-medium text-muted-foreground mb-1">
-                                      Queued Prompts ({queuedPrompts.length})
+                                      {t('claudeSession.queuedPromptsCount', { count: queuedPrompts.length })}
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setQueuedPromptsCollapsed(prev => !prev)}
+                                      aria-label={queuedPromptsCollapsed ? t('claudeSession.expandList') : t('claudeSession.collapseList')}
+                                      aria-expanded={!queuedPromptsCollapsed}
+                                    >
+                                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
                                     </Button>
                                   </div>
                                   {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
@@ -2128,8 +2166,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                                         size="icon"
                                         className="h-6 w-6 flex-shrink-0"
                                         onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                                        aria-label={t('claudeSession.removeQueuedPrompt')}
                                       >
-                                        <X className="h-3 w-3" />
+                                        <X className="h-3 w-3" aria-hidden="true" />
                                       </Button>
                                     </motion.div>
                                   ))}
@@ -2212,18 +2251,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       <Dialog open={showForkDialog} onOpenChange={setShowForkDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fork Session</DialogTitle>
+            <DialogTitle>{t('claudeSession.forkSession')}</DialogTitle>
             <DialogDescription>
-              Create a new session branch from the selected checkpoint.
+              {t('claudeSession.forkSessionDescription')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="fork-name">New Session Name</Label>
+              <Label htmlFor="fork-name">{t('claudeSession.newSessionName')}</Label>
               <Input
                 id="fork-name"
-                placeholder="e.g., Alternative approach"
+                placeholder={t('claudeSession.newSessionNamePlaceholder')}
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
                 onKeyDown={(e) => {
@@ -2241,13 +2280,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               onClick={() => setShowForkDialog(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('app.cancel')}
             </Button>
             <Button
               onClick={handleConfirmFork}
               disabled={isLoading || !forkSessionName.trim()}
             >
-              Create Fork
+              {t('claudeSession.createFork')}
             </Button>
           </DialogFooter>
         </DialogContent>

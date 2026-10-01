@@ -27,7 +27,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   className,
   showText = false 
 }) => {
-  const { changeLanguage, currentLanguage, supportedLanguages } = useTranslation();
+  const { t, changeLanguage, currentLanguage, supportedLanguages } = useTranslation();
 
   const handleLanguageChange = async (languageCode: string) => {
     try {
@@ -58,8 +58,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
           variant="ghost"
           size="sm"
           className={cn("gap-2", className)}
+          title={t('settings.switchLanguage')}
+          aria-label={t('settings.switchLanguageCurrent', { language: getCurrentLanguageDisplay() })}
         >
-          <Globe className="h-4 w-4" />
+          <Globe className="h-4 w-4" aria-hidden="true" />
           {showText && <span className="hidden sm:inline">{getCurrentLanguageDisplay()}</span>}
         </Button>
       </DropdownMenuTrigger>
@@ -75,7 +77,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
               <span className="text-xs text-muted-foreground">{language.name}</span>
             </div>
             {currentLanguage === language.code && (
-              <Check className="h-4 w-4 text-primary" />
+              <>
+                <Check className="h-4 w-4 text-primary" aria-hidden="true" />
+                <span className="sr-only">{t('settings.selected')}</span>
+              </>
             )}
           </DropdownMenuItem>
         ))}

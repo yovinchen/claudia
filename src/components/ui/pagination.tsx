@@ -2,6 +2,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface PaginationProps {
   /**
@@ -38,6 +39,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   className,
 }) => {
+  const { t } = useTranslation();
+
   if (totalPages <= 1) {
     return null;
   }
@@ -48,24 +51,26 @@ export const Pagination: React.FC<PaginationProps> = ({
         variant="outline"
         size="icon"
         onClick={() => onPageChange(currentPage - 1)}
+        aria-label={t('ui.previousPage')}
         disabled={currentPage <= 1}
         className="h-8 w-8"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Button>
       
       <span className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}
+        {t('ui.pageOf', { current: currentPage, total: totalPages })}
       </span>
       
       <Button
         variant="outline"
         size="icon"
         onClick={() => onPageChange(currentPage + 1)}
+        aria-label={t('ui.nextPage')}
         disabled={currentPage >= totalPages}
         className="h-8 w-8"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Button>
     </div>
   );

@@ -2043,16 +2043,21 @@ export const api = {
    */
   async saveSetting(key: string, value: string): Promise<void> {
     try {
-      // Try to update first
-      try {
-        await this.storageUpdateRow(
-          'app_settings',
-          { key },
-          { value }
-        );
-      } catch (updateError) {
-        // If update fails (row doesn't exist), insert new row
-        await this.storageInsertRow('app_settings', { key, value });
+      // storage_update_row does not fail when no row matches (UPDATE affects 0 rows),
+      // so we must check existence explicitly; otherwise first-time saves are silently lost.
+      const result = await this.storageReadTable('app_settings', 1, 1000);
+      const exists = Array.isArray(result?.data)
+        && result.data.some((row: any) => row.key === key);
+
+      if (exists) {
+        await this.storageUpdateRow('app_settings', { key }, { value });
+      } else {
+        try {
+          await this.storageInsertRow('app_settings', { key, value });
+        } catch (insertError) {
+          // Row may have been created concurrently; fall back to update
+          await this.storageUpdateRow('app_settings', { key }, { value });
+        }
       }
     } catch (error) {
       console.error(`Failed to save setting ${key}:`, error);

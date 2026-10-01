@@ -85,7 +85,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       console.error("Failed to check Claude version:", err);
       setVersionStatus({
         is_installed: false,
-        output: "Failed to check version",
+        output: t('messages.failedToCheckVersion'),
       });
     } finally {
       setChecking(false);
@@ -95,9 +95,9 @@ export const Topbar: React.FC<TopbarProps> = ({
   const StatusIndicator = () => {
     if (checking) {
       return (
-        <div className="flex items-center space-x-2 text-xs">
-          <Circle className="h-3 w-3 animate-pulse text-muted-foreground" />
-          <span className="text-muted-foreground">Checking...</span>
+        <div className="flex items-center space-x-2 text-xs" role="status">
+          <Circle className="h-3 w-3 animate-pulse text-muted-foreground" aria-hidden="true" />
+          <span className="text-muted-foreground">{t('status.checkingClaude')}</span>
         </div>
       );
     }
@@ -123,7 +123,11 @@ export const Topbar: React.FC<TopbarProps> = ({
                 ? "fill-green-500 text-green-500" 
                 : "fill-red-500 text-red-500"
             )}
+            aria-hidden="true"
           />
+          <span className="sr-only">
+            {versionStatus.is_installed ? t('status.claudeInstalled') : t('status.claudeNotInstalled')}
+          </span>
           <span>
             {versionStatus.is_installed && versionStatus.version
               ? `Claude Code v${versionStatus.version}`
@@ -160,7 +164,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 className="flex items-center space-x-1 text-xs text-primary hover:underline"
               >
                 <span>{t('messages.installClaudeCode')}</span>
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             </div>
           }
@@ -255,8 +259,9 @@ export const Topbar: React.FC<TopbarProps> = ({
           onClick={onInfoClick}
           className="h-8 w-8"
           title={t('navigation.about')}
+          aria-label={t('navigation.about')}
         >
-          <Info className="h-4 w-4" />
+          <Info className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </motion.div>

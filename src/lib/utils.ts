@@ -15,3 +15,26 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 } 
+
+/**
+ * Coerces an untrusted value (e.g. a tool input parsed from Claude's JSONL output)
+ * into an array. Claude sometimes emits array parameters as JSON-encoded strings
+ * (e.g. TodoWrite `todos: "[{...}]"`), or wraps them in an object. Rendering code
+ * must never call `.map` on such values directly.
+ */
+export function toArray<T = any>(value: unknown, key?: string): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      return toArray<T>(JSON.parse(trimmed), key);
+    } catch {
+      return [];
+    }
+  }
+  if (key && value && typeof value === "object" && Array.isArray((value as any)[key])) {
+    return (value as any)[key] as T[];
+  }
+  return [];
+}

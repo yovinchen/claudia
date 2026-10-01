@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StopCircle, Clock, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface ExecutionControlBarProps {
   isExecuting: boolean;
@@ -23,6 +24,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
   elapsedTime = 0,
   className 
 }) => {
+  const { t } = useTranslation();
   // Format elapsed time
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -62,7 +64,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
           </div>
 
           {/* Status text */}
-          <span className="text-sm font-medium">Executing...</span>
+          <span className="text-sm font-medium">{t('claudeSession.executing')}</span>
 
           {/* Divider */}
           <div className="h-4 w-px bg-border" />
@@ -71,14 +73,14 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {/* Time */}
             <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{formatTime(elapsedTime)}</span>
             </div>
 
             {/* Tokens */}
             <div className="flex items-center gap-1.5">
-              <Hash className="h-3.5 w-3.5" />
-              <span>{formatTokens(totalTokens)} tokens</span>
+              <Hash className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{t('claudeSession.tokensCount', { count: totalTokens, formatted: formatTokens(totalTokens) })}</span>
             </div>
           </div>
 
@@ -92,8 +94,8 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
             onClick={onStop}
             className="gap-2"
           >
-            <StopCircle className="h-3.5 w-3.5" />
-            Stop
+            <StopCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('claudeSession.stop')}
           </Button>
         </motion.div>
       )}

@@ -149,10 +149,10 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
 
         try {
           await api.relayStationUpdateOrder(newStations.map(s => s.id));
-          showToast('排序已更新', 'success');
+          showToast(t('relayStation.sortUpdated'), 'success');
         } catch (error) {
           console.error('Failed to update station order:', error);
-          showToast('更新排序失败', 'error');
+          showToast(t('relayStation.sortUpdateFailed'), 'error');
           setStations(stations);
         }
       }
@@ -300,7 +300,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setSourceFileJson(JSON.stringify(settings, null, 2));
     } catch (error) {
       console.error('Failed to load source file:', error);
-      showToast('加载源文件失败', 'error');
+      showToast(t('relayStation.loadSourceFileFailed'), 'error');
     } finally {
       setLoadingSourceFile(false);
     }
@@ -312,14 +312,14 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
       setSavingSourceFile(true);
       const parsedSettings = JSON.parse(sourceFileJson);
       await api.saveClaudeSettingsBackup(parsedSettings);
-      showToast('源文件保存成功', 'success');
+      showToast(t('relayStation.sourceFileSaved'), 'success');
       setEditingSourceFile(false);
     } catch (error) {
       if (error instanceof SyntaxError) {
-        showToast('JSON 格式无效', 'error');
+        showToast(t('relayStation.invalidJson'), 'error');
       } else {
         console.error('Failed to save source file:', error);
-        showToast('保存源文件失败', 'error');
+        showToast(t('relayStation.saveSourceFileFailed'), 'error');
       }
     } finally {
       setSavingSourceFile(false);
@@ -479,8 +479,8 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
     switch (adapter) {
       case 'packycode': return 'PackyCode';
       case 'deepseek': return 'DeepSeek v3.1';
-      case 'glm': return '智谱GLM';
-      case 'qwen': return '千问Qwen';
+      case 'glm': return t('relayStation.adapters.glm');
+      case 'qwen': return t('relayStation.adapters.qwen');
       case 'kimi': return 'Kimi k2';
       case 'minimax': return 'MiniMax M2';
       case 'custom': return t('relayStation.custom');
@@ -515,6 +515,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
         checked={enabled}
         disabled={isToggling}
         onCheckedChange={() => toggleEnableStatus(station.id, enabled)}
+        aria-label={t('relayStation.toggleStation', { name: station.name })}
         className="data-[state=checked]:bg-green-500"
       />
     );
@@ -789,7 +790,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     </span>
                   </div>
                   <div className="flex items-start gap-3 pt-1">
-                    <span className="text-muted-foreground min-w-[90px] flex-shrink-0 text-xs font-medium">配置位置</span>
+                    <span className="text-muted-foreground min-w-[90px] flex-shrink-0 text-xs font-medium">{t('relayStation.configLocationLabel')}</span>
                     <span className="text-xs text-muted-foreground font-mono leading-relaxed">
                       ~/.claude/settings.json
                     </span>
@@ -851,7 +852,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                   ) : (
                     <Edit3 className="h-3.5 w-3.5 mr-2" />
                   )}
-                  <span className="text-xs truncate">查看源文件</span>
+                  <span className="text-xs truncate">{t('relayStation.viewSourceFile')}</span>
                 </Button>
               </div>
             </div>
@@ -918,7 +919,7 @@ const RelayStationManager: React.FC<RelayStationManagerProps> = ({ onBack }) => 
                     </div>
                   </div>
                   <Badge variant={activeStation.enabled ? "default" : "secondary"} className="text-xs">
-                    {activeStation.enabled ? '已启用' : '已禁用'}
+                    {activeStation.enabled ? t('relayStation.statusEnabled') : t('relayStation.statusDisabled')}
                   </Badge>
                 </div>
               </CardHeader>
@@ -1211,6 +1212,7 @@ const CreateStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'packycode' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'packycode'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'packycode'
                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
@@ -1223,7 +1225,7 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://www.packyapi.com'
                 }))}
               >
-                <div className="text-xl">📦</div>
+                <div className="text-xl" aria-hidden="true">📦</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">PackyCode</div>
                 </div>
@@ -1232,6 +1234,7 @@ const CreateStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'deepseek' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'deepseek'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'deepseek'
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
@@ -1244,16 +1247,17 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://api.deepseek.com/anthropic'
                 }))}
               >
-                <div className="text-xl">🚀</div>
+                <div className="text-xl" aria-hidden="true">🚀</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">DeepSeek</div>
-                  <div className="text-xs opacity-80 mt-1">深度求索</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.deepseekDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'glm' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'glm'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'glm'
                     ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
@@ -1266,10 +1270,10 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://open.bigmodel.cn/api/anthropic'
                 }))}
               >
-                <div className="text-xl">🤖</div>
+                <div className="text-xl" aria-hidden="true">🤖</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">GLM</div>
-                  <div className="text-xs opacity-80 mt-1">清华智谱</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.glmDesc')}</div>
                 </div>
               </Button>
 
@@ -1277,6 +1281,7 @@ const CreateStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'qwen' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'qwen'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'qwen'
                     ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
@@ -1289,16 +1294,17 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
                 }))}
               >
-                <div className="text-xl">🎯</div>
+                <div className="text-xl" aria-hidden="true">🎯</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">Qwen</div>
-                  <div className="text-xs opacity-80 mt-1">阿里通义</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.qwenDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'kimi' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'kimi'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'kimi'
                     ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
@@ -1311,16 +1317,17 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://api.moonshot.cn/anthropic'
                 }))}
               >
-                <div className="text-xl">🌙</div>
+                <div className="text-xl" aria-hidden="true">🌙</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">Kimi</div>
-                  <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.kimiDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'minimax' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'minimax'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'minimax'
                     ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
@@ -1333,10 +1340,10 @@ const CreateStationDialog: React.FC<{
                   api_url: 'https://api.minimaxi.com/anthropic'
                 }))}
               >
-                <div className="text-xl">✨</div>
+                <div className="text-xl" aria-hidden="true">✨</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">MiniMax</div>
-                  <div className="text-xs opacity-80 mt-1">海螺AI</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.minimaxDesc')}</div>
                 </div>
               </Button>
 
@@ -1344,6 +1351,7 @@ const CreateStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'custom' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'custom'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'custom'
                     ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
@@ -1356,7 +1364,7 @@ const CreateStationDialog: React.FC<{
                   api_url: ''
                 }))}
               >
-                <div className="text-xl">⚙️</div>
+                <div className="text-xl" aria-hidden="true">⚙️</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
                 </div>
@@ -1764,6 +1772,7 @@ const EditStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'packycode' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'packycode'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'packycode'
                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700'
@@ -1776,7 +1785,7 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://www.packyapi.com'
                 }))}
               >
-                <div className="text-xl">📦</div>
+                <div className="text-xl" aria-hidden="true">📦</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">PackyCode</div>
                 </div>
@@ -1785,6 +1794,7 @@ const EditStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'deepseek' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'deepseek'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'deepseek'
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-700'
@@ -1797,16 +1807,17 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://api.deepseek.com/anthropic'
                 }))}
               >
-                <div className="text-xl">🚀</div>
+                <div className="text-xl" aria-hidden="true">🚀</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">DeepSeek</div>
-                  <div className="text-xs opacity-80 mt-1">深度求索</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.deepseekDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'glm' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'glm'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'glm'
                     ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-2 border-cyan-700'
@@ -1819,10 +1830,10 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://open.bigmodel.cn/api/anthropic'
                 }))}
               >
-                <div className="text-xl">🤖</div>
+                <div className="text-xl" aria-hidden="true">🤖</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">GLM</div>
-                  <div className="text-xs opacity-80 mt-1">清华智谱</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.glmDesc')}</div>
                 </div>
               </Button>
 
@@ -1830,6 +1841,7 @@ const EditStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'qwen' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'qwen'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'qwen'
                     ? 'bg-amber-600 hover:bg-amber-700 text-white border-2 border-amber-700'
@@ -1842,16 +1854,17 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy'
                 }))}
               >
-                <div className="text-xl">🎯</div>
+                <div className="text-xl" aria-hidden="true">🎯</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">Qwen</div>
-                  <div className="text-xs opacity-80 mt-1">阿里通义</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.qwenDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'kimi' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'kimi'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'kimi'
                     ? 'bg-violet-600 hover:bg-violet-700 text-white border-2 border-violet-700'
@@ -1864,16 +1877,17 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://api.moonshot.cn/anthropic'
                 }))}
               >
-                <div className="text-xl">🌙</div>
+                <div className="text-xl" aria-hidden="true">🌙</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">Kimi</div>
-                  <div className="text-xs opacity-80 mt-1">月之暗面</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.kimiDesc')}</div>
                 </div>
               </Button>
 
               <Button
                 type="button"
                 variant={formData.adapter === 'minimax' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'minimax'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'minimax'
                     ? 'bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-700'
@@ -1886,10 +1900,10 @@ const EditStationDialog: React.FC<{
                   api_url: 'https://api.minimaxi.com/anthropic'
                 }))}
               >
-                <div className="text-xl">✨</div>
+                <div className="text-xl" aria-hidden="true">✨</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">MiniMax</div>
-                  <div className="text-xs opacity-80 mt-1">海螺AI</div>
+                  <div className="text-xs opacity-80 mt-1">{t('relayStation.adapters.minimaxDesc')}</div>
                 </div>
               </Button>
 
@@ -1897,6 +1911,7 @@ const EditStationDialog: React.FC<{
               <Button
                 type="button"
                 variant={formData.adapter === 'custom' ? 'default' : 'outline'}
+                aria-pressed={formData.adapter === 'custom'}
                 className={`p-3 h-auto flex flex-col items-center space-y-1 transition-all ${
                   formData.adapter === 'custom'
                     ? 'bg-gray-600 hover:bg-gray-700 text-white border-2 border-gray-700'
@@ -1909,7 +1924,7 @@ const EditStationDialog: React.FC<{
                   api_url: ''
                 }))}
               >
-                <div className="text-xl">⚙️</div>
+                <div className="text-xl" aria-hidden="true">⚙️</div>
                 <div className="text-center">
                   <div className="font-semibold text-sm">{t('relayStation.custom')}</div>
                 </div>

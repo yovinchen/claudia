@@ -1,11 +1,11 @@
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 /// Flush system DNS cache across platforms
 #[tauri::command]
 pub async fn flush_dns() -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("ipconfig")
+        let output = crate::utils::process::std_command("ipconfig")
             .arg("/flushdns")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -25,7 +25,7 @@ pub async fn flush_dns() -> Result<String, String> {
 
     #[cfg(target_os = "macos")]
     {
-        let output = Command::new("dscacheutil")
+        let output = crate::utils::process::std_command("dscacheutil")
             .arg("-flushcache")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -59,7 +59,7 @@ pub async fn flush_dns() -> Result<String, String> {
         ];
 
         for (cmd, args) in attempts {
-            if let Ok(output) = Command::new(cmd)
+            if let Ok(output) = crate::utils::process::std_command(cmd)
                 .args(&args)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

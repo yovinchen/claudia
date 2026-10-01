@@ -60,6 +60,7 @@ function AppContent() {
     createSettingsTab,
     createUsageTab,
     createMCPTab,
+    createPromptFilesTab,
     createChatTab,
     canAddTab,
     updateTab,
@@ -266,7 +267,7 @@ function AppContent() {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
-      setError(t('failedToLoadProjects'));
+      setError(t('messages.failedToLoadProjects'));
     } finally {
       setLoading(false);
     }
@@ -284,7 +285,7 @@ function AppContent() {
       setSelectedProject(project);
     } catch (err) {
       console.error("Failed to load sessions:", err);
-      setError(t('failedToLoadSessions'));
+      setError(t('messages.failedToLoadSessions'));
     } finally {
       setLoading(false);
     }
@@ -314,7 +315,7 @@ function AppContent() {
   const handleSmartQuickStart = async () => {
     try {
       if (!canAddTab()) {
-        setToast({ message: t('maximumTabsReached'), type: "error" });
+        setToast({ message: t('messages.maximumTabsReached', { max: 20 }), type: "error" });
         return;
       }
 
@@ -475,8 +476,9 @@ function AppContent() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleViewChange("welcome")}
+                    aria-label={t('app.back')}
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   </Button>
                   <div>
                     <h1 className="text-3xl font-bold tracking-tight">{t('ccProjects')}</h1>
@@ -559,7 +561,7 @@ function AppContent() {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            {t('noProjectsFound')}
+                            {t('messages.noProjectsFound')}
                           </p>
                         </div>
                       )}
@@ -631,7 +633,7 @@ function AppContent() {
         onMCPClick={() => view === 'tabs' ? createMCPTab() : handleViewChange('mcp')}
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => view === 'tabs' ? setShowAgentsModal(true) : handleViewChange('cc-agents')}
-        onPromptFilesClick={() => handleViewChange('prompt-files')}
+        onPromptFilesClick={() => view === 'tabs' ? createPromptFilesTab() : handleViewChange('prompt-files')}
       />
       
       {/* Analytics Consent Banner */}
@@ -656,7 +658,7 @@ function AppContent() {
         open={showClaudeBinaryDialog}
         onOpenChange={setShowClaudeBinaryDialog}
         onSuccess={() => {
-          setToast({ message: t('claudeBinaryPathSaved'), type: "success" });
+          setToast({ message: t('messages.claudeBinaryPathSaved'), type: "success" });
           // Trigger a refresh of the Claude version check
           window.location.reload();
         }}

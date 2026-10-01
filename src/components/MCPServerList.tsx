@@ -18,6 +18,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { api, type MCPServer } from "@/lib/api";
 import { useTrackEvent } from "@/hooks";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -57,6 +65,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [copiedServer, setCopiedServer] = useState<string | null>(null);
   const [connectedServers] = useState<string[]>([]);
+  const [serverToDelete, setServerToDelete] = useState<string | null>(null);
 
   // Analytics tracking
   const trackEvent = useTrackEvent();
@@ -98,9 +107,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   };
 
   /**
-   * Removes a server
+   * Confirms and removes the server selected for deletion
    */
-  const handleRemoveServer = async (name: string) => {
+  const confirmRemoveServer = async () => {
+    if (!serverToDelete) return;
+    const name = serverToDelete;
     try {
       setRemovingServer(name);
 
@@ -120,6 +131,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       console.error("Failed to remove server:", error);
     } finally {
       setRemovingServer(null);
+      setServerToDelete(null);
     }
   };
 
@@ -237,6 +249,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                     size="sm"
                     onClick={() => toggleExpanded(server.name)}
                     className="h-6 px-2 text-xs hover:bg-primary/10"
+                    aria-expanded={false}
                   >
                     <ChevronDown className="h-3 w-3 mr-1" />
                     {t('mcp.showFull')}
@@ -259,31 +272,35 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleTestConnection(server.name)}
                 disabled={testingServer === server.name}
+                aria-label={t('mcp.testConnectionLabel', { name: server.name })}
+                title={t('mcp.testConnection')}
                 className="hover:bg-green-500/10 hover:text-green-600"
               >
                 {testingServer === server.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Play className="h-4 w-4" />
+                  <Play className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRemoveServer(server.name)}
+                onClick={() => setServerToDelete(server.name)}
                 disabled={removingServer === server.name}
+                aria-label={t('mcp.deleteServerLabel', { name: server.name })}
+                title={t('mcp.deleteServerButton')}
                 className="hover:bg-destructive/10 hover:text-destructive"
               >
                 {removingServer === server.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
             </div>
@@ -317,6 +334,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                         size="sm"
                         onClick={() => toggleExpanded(server.name)}
                         className="h-6 px-2 text-xs hover:bg-primary/10"
+                        aria-expanded={true}
                       >
                         <ChevronUp className="h-3 w-3 mr-1" />
                         {t('mcp.hide')}
@@ -388,7 +406,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
         <div>
           <h3 className="text-base font-semibold">{t('mcp.configuredServers')}</h3>
           <p className="text-sm text-muted-foreground">
-            {servers.length} {t('mcp.serversCount', { count: servers.length })}
+            {t('mcp.serversCount', { count: servers.length })}
           </p>
         </div>
         <Button
@@ -408,9 +426,9 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
           <div className="p-4 bg-primary/10 rounded-full mb-4">
             <Network className="h-12 w-12 text-primary" />
           </div>
-          <p className="text-muted-foreground mb-2 font-medium">{t('noMcpServersConfigured')}</p>
+          <p className="text-muted-foreground mb-2 font-medium">{t('mcp.noMcpServersConfigured')}</p>
           <p className="text-sm text-muted-foreground">
-            {t('addServerToGetStarted')}
+            {t('mcp.addServerToGetStarted')}
           </p>
         </div>
       ) : (
@@ -431,6 +449,54 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={serverToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !removingServer) setServerToDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              {t('mcp.deleteServerTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('mcp.deleteServerConfirmation', { name: serverToDelete ?? '' })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setServerToDelete(null)}
+              disabled={removingServer !== null}
+              className="w-full sm:w-auto"
+            >
+              {t('app.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmRemoveServer}
+              disabled={removingServer !== null}
+              className="w-full sm:w-auto"
+            >
+              {removingServer !== null ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {t('mcp.deletingServer')}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {t('mcp.deleteServerButton')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

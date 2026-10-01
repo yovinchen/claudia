@@ -87,25 +87,25 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
   // Credits content
   const creditsContent = [
     { type: "header", text: "CLAUDIA v0.1.0" },
-    { type: "subheader", text: "[ A STRATEGIC PROJECT BY ASTERISK ]" },
+    { type: "subheader", text: `[ ${t('credits.strategicProject')} ]` },
     { type: "spacer" },
-    { type: "section", title: "━━━ CREDITS ━━━" },
-    { type: "credit", role: "POWERED BY", name: "Anthropic Claude 4" },
-    { type: "credit", role: "CLAUDE CODE", name: "The Ultimate Coding Assistant" },
+    { type: "section", title: `━━━ ${t('credits.sectionCredits')} ━━━` },
+    { type: "credit", role: t('credits.poweredBy'), name: "Anthropic Claude 4" },
+    { type: "credit", role: "CLAUDE CODE", name: t('credits.ultimateCodingAssistant') },
     { type: "credit", role: "MCP PROTOCOL", name: "Model Context Protocol" },
     { type: "spacer" },
-    { type: "section", title: "━━━ DEPENDENCIES ━━━" },
-    { type: "credit", role: "RUNTIME", name: "Tauri Framework" },
-    { type: "credit", role: "UI FRAMEWORK", name: "React + TypeScript" },
-    { type: "credit", role: "STYLING", name: "Tailwind CSS + shadcn/ui" },
-    { type: "credit", role: "ANIMATIONS", name: "Framer Motion" },
-    { type: "credit", role: "BUILD TOOL", name: "Vite" },
-    { type: "credit", role: "PACKAGE MANAGER", name: "Bun" },
+    { type: "section", title: `━━━ ${t('credits.sectionDependencies')} ━━━` },
+    { type: "credit", role: t('credits.runtime'), name: "Tauri Framework" },
+    { type: "credit", role: t('credits.uiFramework'), name: "React + TypeScript" },
+    { type: "credit", role: t('credits.styling'), name: "Tailwind CSS + shadcn/ui" },
+    { type: "credit", role: t('credits.animations'), name: "Framer Motion" },
+    { type: "credit", role: t('credits.buildTool'), name: "Vite" },
+    { type: "credit", role: t('credits.packageManager'), name: "Bun" },
     { type: "spacer" },
-    { type: "section", title: "━━━ SPECIAL THANKS ━━━" },
-    { type: "text", content: "To the open source community" },
-    { type: "text", content: "To all the beta testers" },
-    { type: "text", content: "To everyone who believed in this project" },
+    { type: "section", title: `━━━ ${t('credits.sectionSpecialThanks')} ━━━` },
+    { type: "text", content: t('credits.thanksOpenSource') },
+    { type: "text", content: t('credits.thanksBetaTesters') },
+    { type: "text", content: t('credits.thanksBelievers') },
     { type: "spacer" },
     { type: "ascii", content: `
      ▄▄▄· .▄▄ · ▄▄▄▄▄▄▄▄ .▄▄▄  ▪  .▄▄ · ▄ •▄ 
@@ -115,8 +115,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
      ▀  ▀  ▀▀▀▀  ▀▀▀  ▀▀▀ .▀  ▀▀▀▀ ▀▀▀▀ ·▀  ▀
     ` },
     { type: "spacer" },
-    { type: "text", content: "Remember: Sharing is caring!" },
-    { type: "text", content: "Support the developers!" },
+    { type: "text", content: t('credits.sharingIsCaring') },
+    { type: "text", content: t('credits.supportDevelopers') },
     { type: "spacer" },
     { type: "spacer" },
     { type: "spacer" },
@@ -163,7 +163,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   className="flex items-center gap-1 h-auto px-2 py-1"
                   title={t('app.fileABug')}
                 >
-                  <Github className="h-3 w-3" />
+                  <Github className="h-3 w-3" aria-hidden="true" />
                   <span className="text-xs">{t('app.fileABug')}</span>
                 </Button>
                 <Button
@@ -174,8 +174,10 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     toggleMute();
                   }}
                   className="h-6 w-6 p-0"
+                  aria-label={t('credits.muteMusic')}
+                  aria-pressed={isMuted}
                 >
-                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  {isMuted ? <VolumeX className="h-4 w-4" aria-hidden="true" /> : <Volume2 className="h-4 w-4" aria-hidden="true" />}
                 </Button>
                 <Button
                   variant="ghost"
@@ -185,8 +187,9 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     onClose();
                   }}
                   className="h-6 w-6 p-0"
+                  aria-label={t('app.close')}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -209,7 +212,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   />
                 </button>
                 <div className="text-muted-foreground text-sm font-mono mt-2 tracking-wider">
-                  A strategic project by Asterisk
+                  {t('credits.strategicProject')}
                 </div>
               </div>
               
@@ -235,7 +238,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         return (
                           <div 
                             key={index} 
-                            className="text-muted-foreground text-lg text-center mb-8 tracking-wide"
+                            className="text-muted-foreground text-lg text-center mb-8 tracking-wide uppercase"
                           >
                             {item.text}
                           </div>
@@ -244,7 +247,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         return (
                           <div 
                             key={index} 
-                            className="text-foreground text-xl font-bold text-center my-6 tracking-wider"
+                            className="text-foreground text-xl font-bold text-center my-6 tracking-wider uppercase"
                           >
                             {item.title}
                           </div>
@@ -255,7 +258,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                             key={index} 
                             className="flex justify-between items-center mb-2 text-foreground"
                           >
-                            <span className="text-sm text-muted-foreground">{item.role}:</span>
+                            <span className="text-sm text-muted-foreground uppercase">{item.role}:</span>
                             <span className="text-base tracking-wide">{item.name}</span>
                           </div>
                         );

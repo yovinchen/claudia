@@ -1,11 +1,13 @@
 import React from "react";
 import { StreamMessage } from "./StreamMessage";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+import { useTranslation } from "@/hooks/useTranslation";
 
 /**
  * Demo component showing all the different message types and tools
  */
 export const AgentExecutionDemo: React.FC = () => {
+  const { t } = useTranslation();
   // Sample messages based on the provided JSONL session
   const messages: ClaudeStreamMessage[] = [
     // Skip meta message (should not render)
@@ -171,7 +173,7 @@ body {
 
   return (
     <div className="max-w-4xl mx-auto p-8 space-y-4">
-      <h1 className="text-2xl font-bold mb-6">Agent Execution Demo</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('agents.executionDemoTitle')}</h1>
       
       {messages.map((message, idx) => (
         <StreamMessage key={idx} message={message} streamMessages={messages} />

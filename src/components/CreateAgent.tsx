@@ -132,8 +132,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
               size="icon"
               onClick={handleBack}
               className="h-8 w-8"
+              aria-label={t('app.back')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div>
               <h2 className="text-lg font-semibold">
@@ -226,6 +227,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   <button
                     type="button"
                     onClick={() => setModel("sonnet")}
+                    aria-pressed={model === "sonnet"}
                     className={cn(
                       "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
                       "hover:scale-[1.02] active:scale-[0.98]",
@@ -244,7 +246,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         )}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Sonnet</div>
+                        <div className="text-sm font-semibold">{t('agents.sonnetName')}</div>
                         <div className="text-xs opacity-80">{t('agents.sonnetDescription')}</div>
                       </div>
                     </div>
@@ -253,6 +255,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   <button
                     type="button"
                     onClick={() => setModel("opus")}
+                    aria-pressed={model === "opus"}
                     className={cn(
                       "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
                       "hover:scale-[1.02] active:scale-[0.98]",
@@ -271,7 +274,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         )}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4.1 Opus</div>
+                        <div className="text-sm font-semibold">{t('agents.opusName')}</div>
                         <div className="text-xs opacity-80">{t('agents.opusDescription')}</div>
                       </div>
                     </div>

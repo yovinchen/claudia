@@ -186,13 +186,13 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'running':
-        return <Loader2 className="w-4 h-4 animate-spin" />;
+        return <Loader2 className="w-4 h-4 animate-spin" role="img" aria-label={t('agents.statusRunning')} />;
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" role="img" aria-label={t('agents.statusCompleted')} />;
       case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-red-500" role="img" aria-label={t('agents.statusFailed')} />;
       default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+        return <Clock className="w-4 h-4 text-muted-foreground" role="img" aria-label={t('agents.statusPending')} />;
     }
   };
 
@@ -254,7 +254,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 </div>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" role="status" aria-label={t('app.loading')} />
                   </div>
                 ) : agents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
@@ -359,9 +359,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                 {run.task}
                               </p>
                               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                <span>Started: {formatISOTimestamp(run.created_at)}</span>
+                                <span>{t('app.started')}: {formatISOTimestamp(run.created_at)}</span>
                                 <Badge variant="outline" className="text-xs">
-                                  {run.model === 'opus' ? 'Claude 4.1 Opus' : 'Claude 4 Sonnet'}
+                                  {run.model === 'opus' ? t('agents.opusName') : t('agents.sonnetName')}
                                 </Badge>
                               </div>
                             </div>

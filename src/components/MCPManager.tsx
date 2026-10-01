@@ -57,7 +57,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       setServers(serverList);
     } catch (err) {
       console.error("MCPManager: Failed to load MCP servers:", err);
-      setError(t('loadMcpServersFailed'));
+      setError(t('mcp.loadMcpServersFailed'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    */
   const handleServerAdded = () => {
     loadServers();
-    setToast({ message: t('mcpServerAdded'), type: "success" });
+    setToast({ message: t('mcp.mcpServerAdded'), type: "success" });
     setActiveTab("servers");
   };
 
@@ -77,7 +77,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    */
   const handleServerRemoved = (name: string) => {
     setServers(prev => prev.filter(s => s.name !== name));
-    setToast({ message: t('serverRemovedSuccess', { name }), type: "success" });
+    setToast({ message: t('mcp.serverRemovedSuccess', { name }), type: "success" });
   };
 
   /**
@@ -87,12 +87,12 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
     loadServers();
     if (failed === 0) {
       setToast({ 
-        message: t('importedServersSuccess', { count: imported, plural: imported > 1 ? 's' : '' }), 
+        message: t('mcp.importedServersSuccess', { count: imported, plural: imported > 1 ? 's' : '' }), 
         type: "success" 
       });
     } else {
       setToast({ 
-        message: t('importedServersFailed', { imported, importedPlural: imported > 1 ? 's' : '', failed }), 
+        message: t('mcp.importedServersFailed', { imported, importedPlural: imported > 1 ? 's' : '', failed }), 
         type: "error" 
       });
     }
@@ -114,8 +114,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               size="icon"
               onClick={onBack}
               className="h-8 w-8"
+              aria-label={t('app.back')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div>
               <h2 className="text-lg font-semibold flex items-center gap-2">

@@ -151,7 +151,7 @@ export const usePromptFilesStore = create<PromptFilesState>((set, get) => ({
       return file;
     } catch (error) {
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to import from CLAUDE.md',
+        error: error instanceof Error ? error.message : typeof error === 'string' ? error : 'Failed to import from CLAUDE.md',
         isLoading: false 
       });
       throw error;

@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface SidePanelProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   className,
   position = 'left'
 }) => {
+  const { t } = useTranslation();
   return (
     <div className={cn(
       'flex flex-col h-full',
@@ -35,8 +37,9 @@ export const SidePanel: React.FC<SidePanelProps> = ({
               size="icon"
               onClick={onClose}
               className="h-6 w-6"
+              aria-label={t('app.close')}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </div>

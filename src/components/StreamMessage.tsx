@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import {
   TodoWidget,
@@ -55,6 +56,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
+  const { t } = useTranslation();
+
   // Get current theme
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
@@ -283,7 +286,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div className="flex items-center gap-2">
                           <Terminal className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm font-medium">
-                            Using tool: <code className="font-mono">{content.name}</code>
+                            {t('streamMessage.usingTool')} <code className="font-mono">{content.name}</code>
                           </span>
                         </div>
                         {content.input && (
@@ -302,7 +305,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 
                 {msg.usage && (
                   <div className="text-xs text-muted-foreground mt-2">
-                    Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
+                    {t('streamMessage.tokensInOut', { input: msg.usage.input_tokens, output: msg.usage.output_tokens })}
                   </div>
                 )}
               </div>
@@ -424,7 +427,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Tool Result</span>
+                            <span className="text-sm font-medium">{t('streamMessage.toolResult')}</span>
                           </div>
                           
                           {beforeReminder && (
@@ -459,7 +462,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Edit Result</span>
+                            <span className="text-sm font-medium">{t('streamMessage.editResult')}</span>
                           </div>
                           <EditResultWidget content={contentText} />
                         </div>
@@ -477,7 +480,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">MultiEdit Result</span>
+                            <span className="text-sm font-medium">{t('streamMessage.multiEditResult')}</span>
                           </div>
                           <MultiEditResultWidget content={contentText} />
                         </div>
@@ -527,7 +530,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Directory Contents</span>
+                            <span className="text-sm font-medium">{t('streamMessage.directoryContents')}</span>
                           </div>
                           <LSResultWidget content={contentText} />
                         </div>
@@ -566,7 +569,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Read Result</span>
+                            <span className="text-sm font-medium">{t('streamMessage.readResult')}</span>
                           </div>
                           <ReadResultWidget content={contentText} filePath={filePath} />
                         </div>
@@ -580,10 +583,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Tool Result</span>
+                            <span className="text-sm font-medium">{t('streamMessage.toolResult')}</span>
                           </div>
                           <div className="ml-6 p-3 bg-muted/50 rounded-md border text-sm text-muted-foreground italic">
-                            Tool did not return any output
+                            {t('streamMessage.noToolOutput')}
                           </div>
                         </div>
                       );
@@ -598,7 +601,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           ) : (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           )}
-                          <span className="text-sm font-medium">Tool Result</span>
+                          <span className="text-sm font-medium">{t('streamMessage.toolResult')}</span>
                         </div>
                         <div className="ml-6 p-2 bg-background rounded-md border">
                           <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
@@ -653,7 +656,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
               )}
               <div className="flex-1 space-y-2">
                 <h4 className="font-semibold text-sm">
-                  {isError ? "Execution Failed" : "Execution Complete"}
+                  {isError ? t('streamMessage.executionFailed') : t('streamMessage.executionComplete')}
                 </h4>
                 
                 {message.result && (
@@ -691,18 +694,21 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 
                 <div className="text-xs text-muted-foreground space-y-1 mt-2">
                   {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
-                    <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
+                    <div>{t('streamMessage.cost', { cost: ((message.cost_usd || message.total_cost_usd)!).toFixed(4) })}</div>
                   )}
                   {message.duration_ms !== undefined && (
-                    <div>Duration: {(message.duration_ms / 1000).toFixed(2)}s</div>
+                    <div>{t('streamMessage.duration', { seconds: (message.duration_ms / 1000).toFixed(2) })}</div>
                   )}
                   {message.num_turns !== undefined && (
-                    <div>Turns: {message.num_turns}</div>
+                    <div>{t('streamMessage.turns', { count: message.num_turns })}</div>
                   )}
                   {message.usage && (
                     <div>
-                      Total tokens: {message.usage.input_tokens + message.usage.output_tokens} 
-                      ({message.usage.input_tokens} in, {message.usage.output_tokens} out)
+                      {t('streamMessage.totalTokens', {
+                        total: message.usage.input_tokens + message.usage.output_tokens,
+                        input: message.usage.input_tokens,
+                        output: message.usage.output_tokens,
+                      })}
                     </div>
                   )}
                 </div>
@@ -724,9 +730,9 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Error rendering message</p>
+              <p className="text-sm font-medium">{t('streamMessage.renderError')}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {error instanceof Error ? error.message : 'Unknown error'}
+                {error instanceof Error ? error.message : t('messages.unknownError')}
               </p>
             </div>
           </div>

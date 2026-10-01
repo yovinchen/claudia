@@ -103,7 +103,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
    */
   const handleAddStdioServer = async () => {
     if (!stdioName.trim()) {
-      onError(t('serverNameRequired'));
+      onError(t('mcp.serverNameRequired'));
       return;
     }
     
@@ -166,7 +166,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
    */
   const handleAddSseServer = async () => {
     if (!sseName.trim()) {
-      onError(t('serverNameRequired'));
+      onError(t('mcp.serverNameRequired'));
       return;
     }
     
@@ -245,13 +245,15 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
               <div key={envVar.id} className="flex items-center gap-2">
                 <Input
                   placeholder={t('settings.placeholders.envVarKey')}
+                  aria-label={t('settings.environment.variableKey')}
                   value={envVar.key}
                   onChange={(e) => updateEnvVar(type, envVar.id, "key", e.target.value)}
                   className="flex-1 font-mono text-sm"
                 />
-                <span className="text-muted-foreground">=</span>
+                <span className="text-muted-foreground" aria-hidden="true">=</span>
                 <Input
                   placeholder={t('settings.placeholders.envVarValue')}
+                  aria-label={t('settings.environment.variableValue')}
                   value={envVar.value}
                   onChange={(e) => updateEnvVar(type, envVar.id, "value", e.target.value)}
                   className="flex-1 font-mono text-sm"
@@ -261,8 +263,9 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   size="icon"
                   onClick={() => removeEnvVar(type, envVar.id)}
                   className="h-8 w-8 hover:text-destructive"
+                  aria-label={t('settings.environment.removeVariable')}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             ))}

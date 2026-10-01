@@ -100,14 +100,14 @@ const getFileIcon = (filename: string) => {
 };
 
 // 组织文件到文件夹结构（改进版，支持更深层级）
-const organizeFilesByFolder = (files: FileNode[]): Map<string, FileNode[]> => {
+const organizeFilesByFolder = (files: FileNode[], rootLabel: string): Map<string, FileNode[]> => {
   const folderMap = new Map<string, FileNode[]>();
   
   const processNode = (node: FileNode, parentPath: string = "", depth: number = 0) => {
     // 限制最大深度为 10 层
     if (depth > 10) return;
     
-    const currentPath = parentPath || "根目录";
+    const currentPath = parentPath || rootLabel;
     
     if (node.file_type === "file") {
       if (!folderMap.has(currentPath)) {
@@ -288,11 +288,11 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
       setExpandedNodes(new Set());
     } catch (err) {
       console.error("Failed to load file tree:", err);
-      setError(err instanceof Error ? err.message : "Failed to load file tree");
+      setError(err instanceof Error ? err.message : t("fileExplorer.failedToLoadTree"));
     } finally {
       setLoading(false);
     }
-  }, [projectPath]);
+  }, [projectPath, t]);
 
   // 处理文件打开
   const handleOpenFile = useCallback((path: string) => {
@@ -555,7 +555,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
             </ContextMenuItem>
             {!isDirectory && onFileSelect && (
               <ContextMenuItem onClick={() => onFileSelect(node.path)}>
-                {t("app.addToMentions")}
+                {t("app.addToChat")}
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={() => navigator.clipboard.writeText(node.path)}>
@@ -575,7 +575,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
 
   // 渲染文件夹分组视图
   const renderFolderView = () => {
-    const folderMap = organizeFilesByFolder(filteredTree);
+    const folderMap = organizeFilesByFolder(filteredTree, t("fileExplorer.rootFolder"));
     const folders = Array.from(folderMap.keys()).sort();
     
     return (
@@ -602,7 +602,7 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                   {folderPath}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {files.length} 个文件
+                  {t("fileExplorer.fileCount", { count: files.length })}
                 </span>
               </div>
               
@@ -666,12 +666,13 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                       size="icon"
                       className="h-7 w-7"
                       onClick={handleExpandAllClick}
+                      aria-label={selectedPath ? t("app.expandCurrentFolder") : t("app.expandAllFolders")}
                     >
-                      <Maximize2 className="h-4 w-4" />
+                      <Maximize2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{selectedPath ? '展开当前文件夹' : '展开所有文件夹'}</p>
+                    <p>{selectedPath ? t("app.expandCurrentFolder") : t("app.expandAllFolders")}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -684,12 +685,13 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                       size="icon"
                       className="h-7 w-7"
                       onClick={handleCollapseAllClick}
+                      aria-label={selectedPath ? t("app.collapseCurrentFolder") : t("app.collapseAllFolders")}
                     >
-                      <Minimize2 className="h-4 w-4" />
+                      <Minimize2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{selectedPath ? '收起当前文件夹' : '收起所有文件夹'}</p>
+                    <p>{selectedPath ? t("app.collapseCurrentFolder") : t("app.collapseAllFolders")}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -703,16 +705,17 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                       size="icon"
                       className="h-7 w-7"
                       onClick={() => setViewMode(viewMode === 'tree' ? 'folder' : 'tree')}
+                      aria-label={viewMode === 'tree' ? t("fileExplorer.switchToFolderView") : t("fileExplorer.switchToTreeView")}
                     >
                       {viewMode === 'tree' ? (
-                        <FileStack className="h-4 w-4" />
+                        <FileStack className="h-4 w-4" aria-hidden="true" />
                       ) : (
-                        <FolderTree className="h-4 w-4" />
+                        <FolderTree className="h-4 w-4" aria-hidden="true" />
                       )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{viewMode === 'tree' ? '切换到文件夹视图' : '切换到树形视图'}</p>
+                    <p>{viewMode === 'tree' ? t("fileExplorer.switchToFolderView") : t("fileExplorer.switchToTreeView")}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -723,11 +726,12 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                 onClick={loadFileTree}
                 disabled={loading}
                 className="h-7 w-7"
+                aria-label={t("app.refresh")}
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
               <Button
@@ -735,8 +739,9 @@ export const FileExplorerPanelEnhanced: React.FC<FileExplorerPanelEnhancedProps>
                 size="icon"
                 onClick={onToggle}
                 className="h-7 w-7"
+                aria-label={t("app.close")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </div>

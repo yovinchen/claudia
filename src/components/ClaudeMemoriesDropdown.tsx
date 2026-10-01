@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { api, type ClaudeMdFile } from "@/lib/api";
 import { formatUnixTimestamp } from "@/lib/date-utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface ClaudeMemoriesDropdownProps {
   /**
@@ -36,6 +37,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
   onEditFile,
   className,
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState<ClaudeMdFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
       setFiles(foundFiles);
     } catch (err) {
       console.error("Failed to load CLAUDE.md files:", err);
-      setError("Failed to load CLAUDE.md files");
+      setError(t('claudeMemories.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -75,10 +77,11 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors"
+          aria-expanded={isOpen}
         >
           <div className="flex items-center space-x-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">CLAUDE.md Memories</span>
+            <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <span className="text-sm font-medium">{t('claudeMemories.title')}</span>
             {files.length > 0 && !loading && (
               <span className="text-xs text-muted-foreground">({files.length})</span>
             )}
@@ -87,7 +90,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </motion.div>
         </button>
         
@@ -110,7 +113,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
                   <div className="p-3 text-xs text-destructive">{error}</div>
                 ) : files.length === 0 ? (
                   <div className="p-3 text-xs text-muted-foreground text-center">
-                    No CLAUDE.md files found in this project
+                    {t('claudeMemories.noFiles')}
                   </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto">
@@ -129,7 +132,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
                               {formatFileSize(file.size)}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              Modified {formatUnixTimestamp(file.modified)}
+                              {t('claudeMemories.modified', { time: formatUnixTimestamp(file.modified) })}
                             </span>
                           </div>
                         </div>
@@ -141,8 +144,10 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
                             e.stopPropagation();
                             onEditFile(file);
                           }}
+                          aria-label={t('claudeMemories.editFile', { file: file.relative_path })}
+                          title={t('app.edit')}
                         >
-                          <Edit2 className="h-3 w-3" />
+                          <Edit2 className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </motion.div>
                     ))}

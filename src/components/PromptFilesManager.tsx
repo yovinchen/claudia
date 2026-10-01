@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle2,
   RefreshCw,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,15 +38,17 @@ import type { PromptFile } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { PromptFileEditor } from './PromptFileEditor';
 import { PromptFilePreview } from './PromptFilePreview';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open as openFileDialog } from '@tauri-apps/plugin-dialog';
 
 interface PromptFilesManagerProps {
   onBack?: () => void;
   className?: string;
+  /** Path of the current project (used to import the project's CLAUDE.md) */
+  projectPath?: string;
 }
 
-export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, className }) => {
-  const { t } = useTranslation();
+export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, className, projectPath }) => {
+  const { t, currentLanguage } = useTranslation();
   const {
     files,
     isLoading,
@@ -89,9 +92,9 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
     setApplyingFileId(file.id);
     try {
       const path = await applyFile(file.id);
-      showToast(`已应用到: ${path}`, 'success');
+      showToast(t('promptFiles.appliedTo', { path }), 'success');
     } catch (error) {
-      showToast('应用失败', 'error');
+      showToast(t('promptFiles.applyFailed'), 'error');
     } finally {
       setApplyingFileId(null);
     }
@@ -104,14 +107,14 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
         defaultPath: 'CLAUDE.md',
         filters: [
           { name: 'Markdown', extensions: ['md'] },
-          { name: 'All Files', extensions: ['*'] },
+          { name: t('promptFiles.allFilesFilter'), extensions: ['*'] },
         ],
       });
       if (!selectedPath) return; // 用户取消
 
       setApplyingFileId(file.id);
       const resultPath = await applyFile(file.id, String(selectedPath));
-      showToast(`已应用到: ${resultPath}`, 'success');
+      showToast(t('promptFiles.appliedTo', { path: resultPath }), 'success');
       await loadFiles();
     } catch (error) {
       showToast(t('promptFiles.applyToCustomPathFailed'), 'error');
@@ -123,9 +126,9 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
   const handleDeactivate = async () => {
     try {
       await deactivateAll();
-      showToast('已取消使用', 'success');
+      showToast(t('promptFiles.deactivateSuccess'), 'success');
     } catch (error) {
-      showToast('取消失败', 'error');
+      showToast(t('promptFiles.deactivateFailed'), 'error');
     }
   };
 
@@ -134,10 +137,10 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
     try {
       // 同步当前激活的文件到 ~/.claude/CLAUDE.md
       const path = await applyFile(file.id);
-      showToast(`文件已同步到: ${path}`, 'success');
+      showToast(t('promptFiles.syncSuccess', { path }), 'success');
       await loadFiles(); // 重新加载以更新状态
     } catch (error) {
-      showToast('同步失败', 'error');
+      showToast(t('promptFiles.syncFailed'), 'error');
     } finally {
       setSyncingFileId(null);
     }
@@ -149,19 +152,20 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
       await deleteFile(selectedFile.id);
       setShowDeleteDialog(false);
       setSelectedFile(null);
-      showToast('删除成功', 'success');
+      showToast(t('promptFiles.deleteSuccess'), 'success');
     } catch (error) {
-      showToast('删除失败', 'error');
+      showToast(t('promptFiles.deleteFailed'), 'error');
     }
   };
 
-  const handleImportFromClaudeMd = async (name: string, description?: string) => {
+  const handleImportFromClaudeMd = async (name: string, description?: string, sourcePath?: string) => {
     try {
-      await importFromClaudeMd(name, description);
+      await importFromClaudeMd(name, description, sourcePath);
       setShowImportDialog(false);
-      showToast('导入成功', 'success');
+      showToast(t('promptFiles.importSuccess'), 'success');
     } catch (error) {
-      showToast('导入失败', 'error');
+      const detail = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+      showToast(detail ? t('promptFiles.importFailedWithDetail', { detail }) : t('promptFiles.importFailed'), 'error');
     }
   };
 
@@ -202,7 +206,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
             <div className="flex items-center gap-3">
               {onBack && (
                 <Button variant="ghost" size="sm" onClick={onBack} className="flex items-center gap-2">
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   {t('app.back')}
                 </Button>
               )}
@@ -213,21 +217,22 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                从 CLAUDE.md 导入
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('promptFiles.importFromClaudeMd')}
               </Button>
               <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                新建
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('promptFiles.create')}
               </Button>
             </div>
           </div>
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
-              placeholder="搜索提示词文件..."
+              placeholder={t('promptFiles.searchPlaceholder')}
+              aria-label={t('promptFiles.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -253,8 +258,8 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
           {!isLoading && activeFiles.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                当前使用
+                <CheckCircle2 className="h-5 w-5 text-green-600" aria-hidden="true" />
+                {t('promptFiles.currentActive')}
               </h2>
               {activeFiles.map((file) => (
                 <Card key={file.id} className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
@@ -265,7 +270,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                           <FileText className="h-5 w-5" />
                           {file.name}
                           <Badge variant="secondary" className="bg-green-100 dark:bg-green-900">
-                            使用中
+                            {t('promptFiles.inUse')}
                           </Badge>
                         </CardTitle>
                         {file.description && (
@@ -288,7 +293,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                       {file.last_used_at && (
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {new Date(file.last_used_at * 1000).toLocaleString('zh-CN')}
+                          {new Date(file.last_used_at * 1000).toLocaleString(currentLanguage)}
                         </div>
                       )}
                     </div>
@@ -303,13 +308,13 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                       >
                         {syncingFileId === file.id ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            同步中...
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                            {t('promptFiles.syncing')}
                           </>
                         ) : (
                           <>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            同步文件
+                            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+                            {t('promptFiles.syncFile')}
                           </>
                         )}
                       </Button>
@@ -323,15 +328,15 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                         {t('promptFiles.applyToCustomPath')}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => openPreview(file)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        查看内容
+                        <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                        {t('promptFiles.viewContent')}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(file)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        编辑
+                        <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
+                        {t('promptFiles.edit')}
                       </Button>
                       <Button variant="outline" size="sm" onClick={handleDeactivate}>
-                        取消使用
+                        {t('promptFiles.deactivate')}
                       </Button>
                     </div>
                   </CardContent>
@@ -344,19 +349,19 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
           {!isLoading && (
             <div>
               <h2 className="text-lg font-semibold mb-3">
-                全部提示词文件 ({inactiveFiles.length})
+                {t('promptFiles.allFiles')} ({inactiveFiles.length})
               </h2>
               {inactiveFiles.length === 0 ? (
                 <Card className="p-12">
                   <div className="text-center">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground mb-4">
-                      {searchQuery ? '没有找到匹配的提示词文件' : '还没有提示词文件'}
+                      {searchQuery ? t('promptFiles.noMatchingFiles') : t('promptFiles.noFiles')}
                     </p>
                     {!searchQuery && (
                       <Button onClick={() => setShowCreateDialog(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        创建第一个提示词文件
+                        <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                        {t('promptFiles.createFirst')}
                       </Button>
                     )}
                   </div>
@@ -397,13 +402,13 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                         >
                           {applyingFileId === file.id ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              应用中...
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                              {t('promptFiles.applying')}
                             </>
                           ) : (
                             <>
-                              <Play className="mr-2 h-4 w-4 flex-shrink-0" />
-                              使用此文件
+                              <Play className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                              {t('promptFiles.useFile')}
                             </>
                           )}
                         </Button>
@@ -423,27 +428,30 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
                             size="sm"
                             className="flex-1"
                             onClick={() => openPreview(file)}
-                            title="查看内容"
+                            title={t('promptFiles.viewContent')}
+                            aria-label={t('promptFiles.viewContent')}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             className="flex-1"
                             onClick={() => openEdit(file)}
-                            title="编辑"
+                            title={t('promptFiles.edit')}
+                            aria-label={t('promptFiles.edit')}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             className="flex-1"
                             onClick={() => openDelete(file)}
-                            title="删除"
+                            title={t('app.delete')}
+                            aria-label={t('app.delete')}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </div>
                       </CardContent>
@@ -458,9 +466,9 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>删除提示词文件</DialogTitle>
+                <DialogTitle>{t('promptFiles.deleteFile')}</DialogTitle>
                 <DialogDescription>
-                  确定要删除这个提示词文件吗？此操作无法撤销。
+                  {t('promptFiles.deleteConfirm')}
                 </DialogDescription>
               </DialogHeader>
               {selectedFile && (
@@ -473,11 +481,11 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
               )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                  取消
+                  {t('app.cancel')}
                 </Button>
                 <Button variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  删除
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t('app.delete')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -488,6 +496,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
             open={showImportDialog}
             onOpenChange={setShowImportDialog}
             onImport={handleImportFromClaudeMd}
+            projectPath={projectPath}
           />
 
           {/* Create/Edit Dialogs */}
@@ -497,7 +506,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
               onOpenChange={setShowCreateDialog}
               onSuccess={() => {
                 setShowCreateDialog(false);
-                showToast('创建成功', 'success');
+                showToast(t('promptFiles.createSuccess'), 'success');
               }}
             />
           )}
@@ -510,7 +519,7 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
               onSuccess={() => {
                 setShowEditDialog(false);
                 setSelectedFile(null);
-                showToast('更新成功', 'success');
+                showToast(t('promptFiles.updateSuccess'), 'success');
               }}
             />
           )}
@@ -559,47 +568,150 @@ export const PromptFilesManager: React.FC<PromptFilesManagerProps> = ({ onBack, 
 };
 
 // Import from CLAUDE.md Dialog
+type ImportSource = 'project' | 'global' | 'custom';
+
+const joinPath = (dir: string, file: string): string => {
+  const sep = dir.includes('\\') && !dir.includes('/') ? '\\' : '/';
+  return dir.endsWith('/') || dir.endsWith('\\') ? `${dir}${file}` : `${dir}${sep}${file}`;
+};
+
 const ImportFromClaudeMdDialog: React.FC<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (name: string, description?: string) => Promise<void>;
-}> = ({ open, onOpenChange, onImport }) => {
+  onImport: (name: string, description?: string, sourcePath?: string) => Promise<void>;
+  projectPath?: string;
+}> = ({ open, onOpenChange, onImport, projectPath }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [importing, setImporting] = useState(false);
+  const [source, setSource] = useState<ImportSource>(projectPath ? 'project' : 'global');
+  const [customPath, setCustomPath] = useState('');
+
+  // Reset the default source whenever the dialog opens / project changes
+  useEffect(() => {
+    if (open) {
+      setSource(projectPath ? 'project' : 'global');
+    }
+  }, [open, projectPath]);
+
+  const projectClaudeMd = projectPath ? joinPath(projectPath, 'CLAUDE.md') : undefined;
+
+  const resolvedSourcePath: string | undefined =
+    source === 'project' ? projectClaudeMd
+    : source === 'custom' ? (customPath.trim() || undefined)
+    : undefined; // global: backend defaults to ~/.claude/CLAUDE.md
+
+  const handleBrowse = async () => {
+    try {
+      const selected = await openFileDialog({
+        multiple: false,
+        directory: false,
+        defaultPath: projectPath,
+        filters: [
+          { name: 'Markdown', extensions: ['md', 'markdown'] },
+          { name: t('promptFiles.allFilesFilter'), extensions: ['*'] },
+        ],
+      });
+      if (typeof selected === 'string' && selected) {
+        setCustomPath(selected);
+        setSource('custom');
+        if (!name.trim()) {
+          const fileName = selected.split(/[\\/]/).pop() || '';
+          setName(fileName.replace(/\.(md|markdown)$/i, ''));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to open file dialog:', error);
+    }
+  };
 
   const handleImport = async () => {
     if (!name.trim()) return;
+    if (source === 'custom' && !resolvedSourcePath) return;
     setImporting(true);
     try {
-      await onImport(name, description || undefined);
+      await onImport(name, description || undefined, resolvedSourcePath);
       setName('');
       setDescription('');
+      setCustomPath('');
     } finally {
       setImporting(false);
     }
   };
 
+  const sourceOption = (value: ImportSource, label: string, detail?: string, disabled = false) => (
+    <label
+      className={cn(
+        'flex items-start gap-2 rounded-md border p-2 text-sm cursor-pointer',
+        source === value ? 'border-primary bg-accent/50' : 'border-border',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      <input
+        type="radio"
+        name="claude-md-source"
+        className="mt-1"
+        checked={source === value}
+        disabled={disabled}
+        onChange={() => setSource(value)}
+      />
+      <span className="min-w-0">
+        <span className="font-medium">{label}</span>
+        {detail && <span className="block text-xs text-muted-foreground break-all">{detail}</span>}
+      </span>
+    </label>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>从 CLAUDE.md 导入</DialogTitle>
-          <DialogDescription>导入当前项目的 CLAUDE.md 文件作为提示词模板</DialogDescription>
+          <DialogTitle>{t('promptFiles.importFromClaudeMd')}</DialogTitle>
+          <DialogDescription>{t('promptFiles.importDialogDesc')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          <div className="space-y-2" role="radiogroup" aria-labelledby="claude-md-source-label">
+            <span id="claude-md-source-label" className="text-sm font-medium">{t('promptFiles.importSource')}</span>
+            <div className="space-y-2">
+              {sourceOption(
+                'project',
+                t('promptFiles.importSourceProject'),
+                projectClaudeMd ?? t('promptFiles.noProjectDetected'),
+                !projectClaudeMd
+              )}
+              {sourceOption('global', t('promptFiles.importSourceGlobal'), '~/.claude/CLAUDE.md')}
+              {sourceOption('custom', t('promptFiles.importSourceCustom'))}
+              {source === 'custom' && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t('promptFiles.customPathPlaceholder')}
+                    aria-label={t('promptFiles.customPathPlaceholder')}
+                    value={customPath}
+                    onChange={(e) => setCustomPath(e.target.value)}
+                  />
+                  <Button type="button" variant="outline" onClick={handleBrowse}>
+                    <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t('promptFiles.browse')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">文件名称 *</label>
+            <label htmlFor="import-claude-md-name" className="text-sm font-medium">{t('promptFiles.fileName')} *</label>
             <Input
-              placeholder="例如: 我的项目指南"
+              id="import-claude-md-name"
+              placeholder={t('promptFiles.importNamePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">描述</label>
+            <label htmlFor="import-claude-md-description" className="text-sm font-medium">{t('promptFiles.fileDescription')}</label>
             <Input
-              placeholder="简短描述这个提示词文件的用途"
+              id="import-claude-md-description"
+              placeholder={t('promptFiles.importDescriptionPlaceholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -607,19 +719,22 @@ const ImportFromClaudeMdDialog: React.FC<{
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('app.cancel')}
           </Button>
-          <Button onClick={handleImport} disabled={!name.trim() || importing}>
+          <Button
+            onClick={handleImport}
+            disabled={!name.trim() || importing || (source === 'custom' && !resolvedSourcePath)}
+          >
             {importing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                导入中...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                {t('promptFiles.importing')}
               </>
             ) : (
               <>
-                <Upload className="mr-2 h-4 w-4" />
-                导入
-              </>
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('promptFiles.import')}
+</>
             )}
           </Button>
         </DialogFooter>

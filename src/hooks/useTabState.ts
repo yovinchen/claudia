@@ -20,6 +20,7 @@ interface UseTabStateReturn {
   createUsageTab: () => string | null;
   createMCPTab: () => string | null;
   createSettingsTab: () => string | null;
+  createPromptFilesTab: () => string | null;
   // Removed: createClaudeFileTab
   createCreateAgentTab: () => string;
   createImportAgentTab: () => string;
@@ -160,7 +161,42 @@ export const useTabState = (): UseTabStateReturn => {
     });
   }, [addTab, tabs, setActiveTab, t]);
 
-  // Removed createClaudeMdTab: using Prompt Files manager instead
+  // Opens the Prompt Files (CLAUDE.md) manager as a tab so the tab bar stays visible.
+  // Remembers the project path of the current (or most recent) chat tab so the manager
+  // can import that project's CLAUDE.md.
+  const createPromptFilesTab = useCallback((): string | null => {
+    const getChatProjectPath = (tab?: Tab): string | undefined =>
+      tab && tab.type === 'chat'
+        ? tab.initialProjectPath || tab.sessionData?.project_path || undefined
+        : undefined;
+
+    const currentTab = activeTabId ? tabs.find(tab => tab.id === activeTabId) : undefined;
+    const projectPath =
+      getChatProjectPath(currentTab) ??
+      [...tabs]
+        .filter(tab => tab.type === 'chat')
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .map(getChatProjectPath)
+        .find(Boolean);
+
+    const existingTab = tabs.find(tab => tab.type === 'prompt-files');
+    if (existingTab) {
+      if (projectPath && existingTab.initialProjectPath !== projectPath) {
+        updateTab(existingTab.id, { initialProjectPath: projectPath });
+      }
+      setActiveTab(existingTab.id);
+      return existingTab.id;
+    }
+
+    return addTab({
+      type: 'prompt-files',
+      title: t('promptFiles.title'),
+      initialProjectPath: projectPath,
+      status: 'idle',
+      hasUnsavedChanges: false,
+      icon: 'file-text'
+    });
+  }, [addTab, tabs, activeTabId, updateTab, setActiveTab, t]);
 
   // Removed: project-level CLAUDE.md file tab creation
 
@@ -296,6 +332,7 @@ export const useTabState = (): UseTabStateReturn => {
     createUsageTab,
     createMCPTab,
     createSettingsTab,
+    createPromptFilesTab,
     createCreateAgentTab,
     createImportAgentTab,
     closeTab,

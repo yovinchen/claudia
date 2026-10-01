@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { X, Plus, MessageSquare, Bot, AlertCircle, Loader2, Folder, BarChart, Server, Settings } from 'lucide-react';
+import { X, Plus, MessageSquare, Bot, AlertCircle, Loader2, Folder, BarChart, Server, Settings, FileText } from 'lucide-react';
 import { useTabState } from '@/hooks/useTabState';
 import { Tab, useTabContext } from '@/contexts/TabContext';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,8 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
         return Server;
       case 'settings':
         return Settings;
+      case 'prompt-files':
+        return FileText;
       case 'agent-execution':
         return Bot;
       case 'create-agent':
@@ -48,9 +50,19 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
   const getStatusIcon = () => {
     switch (tab.status) {
       case 'running':
-        return <Loader2 className="w-3 h-3 animate-spin" />;
+        return (
+          <>
+            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+            <span className="sr-only">{t('tabs.running')}</span>
+          </>
+        );
       case 'error':
-        return <AlertCircle className="w-3 h-3 text-red-500" />;
+        return (
+          <>
+            <AlertCircle className="w-3 h-3 text-red-500" aria-hidden="true" />
+            <span className="sr-only">{t('app.error')}</span>
+          </>
+        );
       default:
         return null;
     }
@@ -83,11 +95,11 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
     >
       {/* Tab Icon */}
       <div className="flex-shrink-0">
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4" aria-hidden="true" />
       </div>
       
       {/* Tab Title */}
-      <span className="flex-1 truncate text-xs font-medium min-w-0">
+      <span className="flex-1 truncate text-xs font-medium min-w-0" title={tab.title}>
         {tab.title}
       </span>
 
@@ -102,7 +114,9 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
         {tab.hasUnsavedChanges && !statusIcon && (
           <span 
             className="w-1.5 h-1.5 bg-primary rounded-full"
-            title={t('app.unsavedChanges')}
+            title={t('messages.unsavedChanges')}
+            role="img"
+            aria-label={t('messages.unsavedChanges')}
           />
         )}
       </div>
@@ -114,15 +128,18 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
           onClose(tab.id);
         }}
         className={cn(
-          "flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-sm",
+          "relative flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-sm",
+          // Expand the hit area to 24x24 without changing the visual size
+          "after:absolute after:-inset-1 after:content-['']",
           "transition-all duration-100 hover:bg-destructive/20 hover:text-destructive",
           "focus:outline-none focus:ring-1 focus:ring-destructive/50",
-          (isHovered || isActive) ? "opacity-100" : "opacity-0"
+          (isHovered || isActive) ? "opacity-100" : "opacity-0 focus-visible:opacity-100 group-focus-within:opacity-100"
         )}
-        title={`${t('app.close')} ${tab.title}`}
+        title={t('tabs.closeTab', { title: tab.title })}
+        aria-label={t('tabs.closeTab', { title: tab.title })}
         tabIndex={-1}
       >
-        <X className="w-3 h-3" />
+        <X className="w-3 h-3" aria-hidden="true" />
       </button>
 
     </Reorder.Item>
@@ -221,7 +238,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         // Update the tab with session data immediately
         updateTab(tabId, {
           type: 'chat',
-          title: session.project_path.split('/').pop() || 'Session',
+          title: session.project_path.split('/').pop() || t('tabs.defaultSessionTitle'),
           sessionId: session.id,
           sessionData: session,
           initialProjectPath: projectPath || session.project_path,
@@ -346,8 +363,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
               "bg-background/98 backdrop-blur-xl backdrop-saturate-[1.8] shadow-sm border border-border/60"
             )}
             title={t('tabs.scrollLeft')}
+            aria-label={t('tabs.scrollLeft')}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg aria-hidden="true" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M15 18l-6-6 6-6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.button>
@@ -400,8 +418,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
               "bg-background/98 backdrop-blur-xl backdrop-saturate-[1.8] shadow-sm border border-border/60"
             )}
             title={t('tabs.scrollRight')}
+            aria-label={t('tabs.scrollRight')}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg aria-hidden="true" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M9 18l6-6-6-6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.button>
@@ -420,8 +439,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
             : "opacity-50 cursor-not-allowed bg-muted/30"
         )}
         title={canAddTab() ? t('tabs.browseProjectsShortcut') : t('tabs.maximumTabsReached', { count: tabs.length })}
+        aria-label={canAddTab() ? t('tabs.newTab') : t('tabs.maximumTabsReached', { count: tabs.length })}
       >
-        <Plus className="w-3.5 h-3.5" />
+        <Plus className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
     </div>
   );
