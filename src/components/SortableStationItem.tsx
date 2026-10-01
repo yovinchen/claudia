@@ -27,7 +27,7 @@ interface SortableStationItemProps {
 
 /**
  * 可排序的中转站卡片组件
- * @author yovinchen
+ * @author Owlbay
  */
 export const SortableStationItem: React.FC<SortableStationItemProps> = ({
   station,

@@ -309,7 +309,7 @@ function AppContent() {
 
   /**
    * Creates a smart quick start session and opens it in a new tab
-   * @author yovinchen
+   * @author Owlbay
    */
   const handleSmartQuickStart = async () => {
     try {
