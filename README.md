@@ -19,7 +19,7 @@
 
 基于 Tauri 2 的 Claude Code 图形界面，集成项目管理、AI代理、使用分析、MCP服务器、API中转站等强大功能。
 
-> 基于 [Asterisk Claudia](https://github.com/getAsterisk/claudia) 改进，参考 [Claude Suite](https://github.com/xinhai-ai/claude-suite) 和 [PackyCode Cost](https://github.com/94mashiro/packycode-cost)。
+> 基于 [opcode（原 Asterisk Claudia）](https://github.com/winfunc/opcode) 改进，参考 [Claude Suite](https://github.com/xinhai-ai/claude-suite) 和 [PackyCode Cost](https://github.com/94mashiro/packycode-cost)。
 
 ## 📸 应用截图
 
@@ -202,7 +202,7 @@ claudia/
 ## 🙏 致谢
 
 - [Tauri](https://tauri.app/) - 安全高效的桌面应用框架
-- [Asterisk Claudia](https://github.com/getAsterisk/claudia) - 原始项目灵感
+- [opcode（原 Asterisk Claudia）](https://github.com/winfunc/opcode) - 原始项目灵感
 - [Claude](https://claude.ai) by Anthropic - AI 核心能力
 - [Monaco Editor](https://microsoft.github.io/monaco-editor/) - 强大的代码编辑器
 - [shadcn/ui](https://ui.shadcn.com/) - 现代化 UI 组件库

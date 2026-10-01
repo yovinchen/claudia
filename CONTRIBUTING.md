@@ -1,6 +1,6 @@
 # Welcome Contributors
 
-We welcome contributions to enhance Claudia's capabilities and improve its performance. To report bugs, create a [GitHub issue](https://github.com/getAsterisk/claudia/issues).
+We welcome contributions to enhance Claudia's capabilities and improve its performance. To report bugs, create a [GitHub issue](https://github.com/yovinchen/claudia/issues).
 
 > Before contributing, read through the existing issues and pull requests to see if someone else is already working on something similar. That way you can avoid duplicating efforts.
 

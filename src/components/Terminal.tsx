@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface TerminalProps {
   className?: string;
@@ -23,6 +24,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   onToggleMaximize,
   projectPath
 }) => {
+  const { t } = useTranslation();
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const isInitializedRef = useRef(false);
@@ -234,7 +236,7 @@ export const Terminal: React.FC<TerminalProps> = ({
         // 如果没有有效的 projectPath,跳过创建终端会话
         if (!projectPath || projectPath.trim() === '') {
           if (xtermRef.current) {
-            xtermRef.current.write('\r\n\x1b[33mNo project directory selected. Please select a project to use the terminal.\x1b[0m\r\n');
+            xtermRef.current.write(`\r\n\x1b[33m${t('terminal.noProjectSelected')}\x1b[0m\r\n`);
           }
           return;
         }
@@ -271,7 +273,7 @@ export const Terminal: React.FC<TerminalProps> = ({
       } catch (error) {
         console.error('[Terminal] Failed to initialize:', error);
         if (xtermRef.current && isMounted) {
-          xtermRef.current.write('\r\n\x1b[31mFailed to start terminal session\x1b[0m\r\n');
+          xtermRef.current.write(`\r\n\x1b[31m${t('terminal.failedToStart')}\x1b[0m\r\n`);
         }
       }
     };
@@ -345,12 +347,16 @@ export const Terminal: React.FC<TerminalProps> = ({
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <div className={cn(
-              'w-2 h-2 rounded-full',
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            )} />
+            <div
+              role="img"
+              aria-label={isConnected ? t('status.connected') : t('status.disconnected')}
+              className={cn(
+                'w-2 h-2 rounded-full',
+                isConnected ? 'bg-green-500' : 'bg-red-500'
+              )}
+            />
             <span className="text-sm text-gray-300">
-              Terminal {sessionId ? `(${sessionId.slice(0, 8)})` : ''}
+              {t('widgets.terminal.title')} {sessionId ? `(${sessionId.slice(0, 8)})` : ''}
             </span>
           </div>
           {projectPath && (
@@ -362,7 +368,7 @@ export const Terminal: React.FC<TerminalProps> = ({
             {terminalSize.cols}×{terminalSize.rows}
           </span>
           <span className="text-xs text-yellow-400">
-            容器宽度: {containerWidth.toFixed(0)}px
+            {t('terminal.containerWidth', { width: containerWidth.toFixed(0) })}
           </span>
         </div>
 
@@ -373,11 +379,12 @@ export const Terminal: React.FC<TerminalProps> = ({
               size="icon"
               onClick={onToggleMaximize}
               className="h-6 w-6 text-gray-400 hover:text-white"
+              aria-label={isMaximized ? t('terminal.restore') : t('terminal.maximize')}
             >
               {isMaximized ? (
-                <Minimize2 className="h-3 w-3" />
+                <Minimize2 className="h-3 w-3" aria-hidden="true" />
               ) : (
-                <Maximize2 className="h-3 w-3" />
+                <Maximize2 className="h-3 w-3" aria-hidden="true" />
               )}
             </Button>
           )}
@@ -387,8 +394,9 @@ export const Terminal: React.FC<TerminalProps> = ({
               size="icon"
               onClick={onClose}
               className="h-6 w-6 text-gray-400 hover:text-white hover:bg-red-600"
+              aria-label={t('app.close')}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </div>
@@ -408,7 +416,7 @@ export const Terminal: React.FC<TerminalProps> = ({
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2" />
-              <p className="text-gray-300 text-sm">正在连接终端...</p>
+              <p className="text-gray-300 text-sm">{t('terminal.connecting')}</p>
             </div>
           </div>
         )}

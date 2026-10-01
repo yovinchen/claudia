@@ -32,9 +32,9 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
   onApply,
 }) => {
   const { applyFile } = usePromptFilesStore();
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString('zh-CN', {
+    return new Date(timestamp * 1000).toLocaleString(currentLanguage, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -48,7 +48,7 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
       defaultPath: 'CLAUDE.md',
       filters: [
         { name: 'Markdown', extensions: ['md'] },
-        { name: 'All Files', extensions: ['*'] },
+        { name: t('promptFiles.allFilesFilter'), extensions: ['*'] },
       ],
     });
     if (!selectedPath) return;
@@ -70,7 +70,7 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
         <div className="flex flex-wrap gap-4 py-4 border-y text-sm text-muted-foreground">
           {file.tags.length > 0 && (
             <div className="flex items-center gap-2">
-              <TagIcon className="h-4 w-4" />
+              <TagIcon className="h-4 w-4" aria-hidden="true" />
               <div className="flex gap-1 flex-wrap">
                 {file.tags.map((tag) => (
                   <Badge key={tag} variant="secondary">
@@ -81,19 +81,19 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            创建于: {formatDate(file.created_at)}
+            <Calendar className="h-4 w-4" aria-hidden="true" />
+            {t('promptFiles.createdAt')}: {formatDate(file.created_at)}
           </div>
           {file.updated_at !== file.created_at && (
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              更新于: {formatDate(file.updated_at)}
+              <Clock className="h-4 w-4" aria-hidden="true" />
+              {t('promptFiles.updatedAt')}: {formatDate(file.updated_at)}
             </div>
           )}
           {file.last_used_at && (
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              最后使用: {formatDate(file.last_used_at)}
+              <Clock className="h-4 w-4" aria-hidden="true" />
+              {t('promptFiles.lastUsed')}: {formatDate(file.last_used_at)}
             </div>
           )}
         </div>
@@ -105,21 +105,21 @@ export const PromptFilePreview: React.FC<PromptFilePreviewProps> = ({
 
         <DialogFooter className="flex items-center justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            关闭
+            {t('app.close')}
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onEdit}>
-              <Edit className="mr-2 h-4 w-4" />
-              编辑
+              <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t('promptFiles.edit')}
             </Button>
             {!file.is_active && (
               <Button onClick={onApply}>
-                <Play className="mr-2 h-4 w-4" />
-                使用此文件
+                <Play className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('promptFiles.useFile')}
               </Button>
             )}
             <Button variant="outline" onClick={handleApplyToCustom}>
-              <Play className="mr-2 h-4 w-4" />
+              <Play className="mr-2 h-4 w-4" aria-hidden="true" />
               {/** 使用管理页 i18n key，避免重复 */}
               {t('promptFiles.applyToCustomPath')}
             </Button>

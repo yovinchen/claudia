@@ -275,11 +275,11 @@ export const FileExplorerPanel: React.FC<FileExplorerPanelProps> = ({
       }
     } catch (err) {
       console.error("Failed to load file tree:", err);
-      setError(err instanceof Error ? err.message : "Failed to load file tree");
+      setError(err instanceof Error ? err.message : t('fileExplorer.failedToLoadTree'));
     } finally {
       setLoading(false);
     }
-  }, [projectPath]);
+  }, [projectPath, t]);
 
   // 搜索文件
   const searchFiles = useCallback(async (query: string) => {
@@ -461,7 +461,7 @@ export const FileExplorerPanel: React.FC<FileExplorerPanelProps> = ({
       <div className="border-t">
         <div className="p-2 text-xs text-muted-foreground">
           {searchResults.length > 0
-            ? `Found ${searchResults.length} results`
+            ? t('fileExplorer.foundResults', { count: searchResults.length })
             : t('app.noFilesFound')}
         </div>
         <div className="max-h-64 overflow-y-auto">
@@ -485,7 +485,7 @@ export const FileExplorerPanel: React.FC<FileExplorerPanelProps> = ({
         </div>
       </div>
     );
-  }, [searchQuery, searchResults, projectPath, onFileSelect]);
+  }, [searchQuery, searchResults, projectPath, onFileSelect, t]);
 
   return (
     <>
@@ -517,11 +517,12 @@ export const FileExplorerPanel: React.FC<FileExplorerPanelProps> = ({
                     onClick={loadFileTree}
                     disabled={loading}
                     className="h-6 w-6"
+                    aria-label={t('app.refresh')}
                   >
                     {loading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                     ) : (
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className="h-3 w-3" aria-hidden="true" />
                     )}
                   </Button>
                   <Button
@@ -529,8 +530,9 @@ export const FileExplorerPanel: React.FC<FileExplorerPanelProps> = ({
                     size="icon"
                     onClick={onToggle}
                     className="h-6 w-6"
+                    aria-label={t('app.close')}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3 w-3" aria-hidden="true" />
                   </Button>
                 </div>
               </div>

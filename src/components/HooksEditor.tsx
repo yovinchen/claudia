@@ -195,7 +195,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
         })
         .catch((err) => {
           console.error("Failed to load hooks configuration:", err);
-          setLoadError(err instanceof Error ? err.message : "Failed to load hooks configuration");
+          setLoadError(err instanceof Error ? err.message : t('hooks.loadFailed'));
           setHooks({});
         })
         .finally(() => {
@@ -326,7 +326,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Failed to save hooks:', error);
-      setLoadError(error instanceof Error ? error.message : 'Failed to save hooks');
+      setLoadError(error instanceof Error ? error.message : t('hooks.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -520,8 +520,10 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           size="sm"
           className="p-0 h-6 w-6"
           onClick={() => updateMatcher(event, matcher.id, { expanded: !matcher.expanded })}
+          aria-expanded={!!matcher.expanded}
+          aria-label={matcher.expanded ? t('hooks.collapseMatcher') : t('hooks.expandMatcher')}
         >
-          {matcher.expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {matcher.expanded ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
         </Button>
         
         <div className="flex-1 space-y-2">
@@ -530,7 +532,13 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground" />
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label={t('hooks.patternHelp')}
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('hooks.toolNamePatternTooltip')}</p>
@@ -542,7 +550,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           <div className="flex items-center gap-2">
             <Input
               id={`matcher-${matcher.id}`}
-              placeholder="e.g., Bash, Edit|Write, mcp__.*"
+              placeholder={t('hooks.patternPlaceholder')}
               value={matcher.matcher || ''}
               onChange={(e) => updateMatcher(event, matcher.id, { matcher: e.target.value })}
               disabled={readOnly}
@@ -558,11 +566,11 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
               }}
               disabled={readOnly}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40" aria-label={t('hooks.commonPatterns')}>
                 <SelectValue placeholder={t('hooks.commonPatterns')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="custom">{t('settings.custom')}</SelectItem>
                 {COMMON_TOOL_MATCHERS.map(pattern => (
                   <SelectItem key={pattern} value={pattern}>{pattern}</SelectItem>
                 ))}
@@ -574,8 +582,10 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => removeMatcher(event, matcher.id)}
+                aria-label={t('hooks.removeMatcher')}
+                title={t('hooks.removeMatcher')}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
               </Button>
             )}
           </div>
@@ -606,7 +616,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
               </div>
               
               {matcher.hooks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No commands added yet</p>
+                <p className="text-sm text-muted-foreground">{t('hooks.noCommandsYet')}</p>
               ) : (
                 <div className="space-y-2">
                   {matcher.hooks.map((hook) => (
@@ -615,6 +625,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                         <div className="flex-1 space-y-2">
                           <Textarea
                             placeholder={t('hooks.enterShellCommand')}
+                            aria-label={t('hooks.command')}
                             value={hook.command || ''}
                             onChange={(e) => updateCommand(event, matcher.id, hook.id, { command: e.target.value })}
                             disabled={readOnly}
@@ -623,10 +634,11 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                           
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <Clock className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
                               <Input
                                 type="number"
                                 placeholder="60"
+                                aria-label={t('hooks.timeoutSeconds')}
                                 value={hook.timeout || ''}
                                 onChange={(e) => updateCommand(event, matcher.id, hook.id, { 
                                   timeout: e.target.value ? parseInt(e.target.value) : undefined 
@@ -642,8 +654,10 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => removeCommand(event, matcher.id, hook.id)}
+                                aria-label={t('hooks.removeCommand')}
+                                title={t('hooks.removeCommand')}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
                               </Button>
                             )}
                           </div>
@@ -681,6 +695,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
         <div className="flex-1 space-y-2">
           <Textarea
             placeholder={t('hooks.enterShellCommand')}
+            aria-label={t('hooks.command')}
             value={command.command || ''}
             onChange={(e) => updateDirectCommand(event, command.id, { command: e.target.value })}
             disabled={readOnly}
@@ -689,10 +704,11 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-3 w-3 text-muted-foreground" />
+              <Clock className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
               <Input
                 type="number"
                 placeholder="60"
+                aria-label={t('hooks.timeoutSeconds')}
                 value={command.timeout || ''}
                 onChange={(e) => updateDirectCommand(event, command.id, { 
                   timeout: e.target.value ? parseInt(e.target.value) : undefined 
@@ -700,7 +716,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                 disabled={readOnly}
                 className="w-20 h-8"
               />
-              <span className="text-sm text-muted-foreground">seconds</span>
+              <span className="text-sm text-muted-foreground">{t('hooks.seconds')}</span>
             </div>
             
             {!readOnly && (
@@ -708,8 +724,10 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => removeDirectCommand(event, command.id)}
+                aria-label={t('hooks.removeCommand')}
+                title={t('hooks.removeCommand')}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
               </Button>
             )}
           </div>

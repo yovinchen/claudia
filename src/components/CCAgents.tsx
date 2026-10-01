@@ -306,8 +306,9 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 size="icon"
                 onClick={onBack}
                 className="h-8 w-8"
+                aria-label={t('app.back')}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">{t('navigation.agents')}</h1>
@@ -476,7 +477,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                           {t('app.previous')}
                         </Button>
                         <span className="flex items-center px-3 text-sm">
-                          {t('app.page')} {currentPage} {t('app.of')} {totalPages}
+                          {t('ui.pageOf', { current: currentPage, total: totalPages })}
                         </span>
                         <Button
                           size="sm"

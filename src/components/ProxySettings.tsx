@@ -150,7 +150,7 @@ export function ProxySettings({ setToast, onChange }: ProxySettingsProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="all-proxy">All Proxy ({t('agents.optional')})</Label>
+            <Label htmlFor="all-proxy">{t('settings.allProxy')} ({t('agents.optional')})</Label>
             <Input
               id="all-proxy"
               placeholder="socks5://proxy.example.com:1080"

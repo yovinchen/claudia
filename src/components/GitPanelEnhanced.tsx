@@ -172,11 +172,11 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
       setGitStatus(status);
     } catch (err) {
       console.error("Failed to load git status:", err);
-      setError(err instanceof Error ? err.message : "Failed to load git status");
+      setError(err instanceof Error ? err.message : t('gitPanel.failedToLoadStatus'));
     } finally {
       setLoading(false);
     }
-  }, [projectPath]);
+  }, [projectPath, t]);
 
   // 加载提交历史
   const loadCommits = useCallback(async () => {
@@ -629,8 +629,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                       size="icon"
                       className="h-7 w-7"
                       onClick={() => expandAll(selectedPath || undefined)}
+                      aria-label={selectedPath ? t('app.expandCurrentFolder') : t('app.expandAllFolders')}
                     >
-                      <Maximize2 className="h-4 w-4" />
+                      <Maximize2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -647,8 +648,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                       size="icon"
                       className="h-7 w-7"
                       onClick={() => collapseAll(selectedPath || undefined)}
+                      aria-label={selectedPath ? t('app.collapseCurrentFolder') : t('app.collapseAllFolders')}
                     >
-                      <Minimize2 className="h-4 w-4" />
+                      <Minimize2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -668,11 +670,12 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                 onClick={loadGitStatus}
                 disabled={loading}
                 className="h-7 w-7"
+                aria-label={t('app.refresh')}
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
               <Button
@@ -680,8 +683,9 @@ export const GitPanelEnhanced: React.FC<GitPanelEnhancedProps> = ({
                 size="icon"
                 onClick={onToggle}
                 className="h-7 w-7"
+                aria-label={t('app.close')}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </div>

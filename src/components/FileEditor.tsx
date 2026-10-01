@@ -127,11 +127,11 @@ export const FileEditor: React.FC<FileEditorProps> = ({
       setHasChanges(false);
     } catch (err) {
       console.error("Failed to load file:", err);
-      setError(err instanceof Error ? err.message : "Failed to load file");
+      setError(err instanceof Error ? err.message : t("fileEditor.failedToLoadFile"));
     } finally {
       setLoading(false);
     }
-  }, [filePath]);
+  }, [filePath, t]);
   
   // 保存文件
   const saveFile = useCallback(async () => {
@@ -154,11 +154,11 @@ export const FileEditor: React.FC<FileEditorProps> = ({
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error("Failed to save file:", err);
-      setError(err instanceof Error ? err.message : "Failed to save file");
+      setError(err instanceof Error ? err.message : t("fileEditor.failedToSaveFile"));
     } finally {
       setSaving(false);
     }
-  }, [filePath, content, hasChanges]);
+  }, [filePath, content, hasChanges, t]);
   
   // 处理内容变化
   const handleContentChange = (value: string | undefined) => {
@@ -236,12 +236,14 @@ export const FileEditor: React.FC<FileEditorProps> = ({
               size="sm"
               onClick={saveFile}
               disabled={saving}
+              aria-label={t("app.save")}
+              aria-busy={saving}
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-4 w-4 mr-1" aria-hidden="true" />
                   {t("app.save")}
                 </>
               )}
@@ -253,8 +255,9 @@ export const FileEditor: React.FC<FileEditorProps> = ({
             size="icon"
             onClick={handleClose}
             className="h-7 w-7"
+            aria-label={t("app.close")}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>

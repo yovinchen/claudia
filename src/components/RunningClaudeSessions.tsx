@@ -78,7 +78,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   if (loading && runningSessions.length === 0) {
     return (
       <div className={cn("flex items-center justify-center py-4", className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label={t('app.loading')} />
       </div>
     );
   }
@@ -86,7 +86,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   if (error) {
     return (
       <div className={cn("flex items-center gap-2 text-destructive text-sm", className)}>
-        <AlertCircle className="h-4 w-4" />
+        <AlertCircle className="h-4 w-4" aria-hidden="true" />
         <span>{error}</span>
       </div>
     );
@@ -130,7 +130,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <Terminal className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <Terminal className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-xs text-muted-foreground truncate">
@@ -162,7 +162,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                       variant="ghost"
                       className="flex-shrink-0"
                     >
-                      <Play className="h-3 w-3 mr-1" />
+                      <Play className="h-3 w-3 mr-1" aria-hidden="true" />
                       {t('runningSessions.resume')}
                     </Button>
                   </div>

@@ -196,11 +196,12 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
                       size="icon"
                       onClick={onToggleMaximize}
                       className="h-7 w-7"
+                      aria-label={isMaximized ? t('webview.exitFullScreen') : t('webview.enterFullScreen')}
                     >
                       {isMaximized ? (
-                        <Minimize2 className="h-3.5 w-3.5" />
+                        <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
                       ) : (
-                        <Maximize2 className="h-3.5 w-3.5" />
+                        <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
                       )}
                     </Button>
                   </TooltipTrigger>
@@ -215,8 +216,9 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               size="icon"
               onClick={onClose}
               className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+              aria-label={t('app.close')}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -231,8 +233,9 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               onClick={handleGoBack}
               disabled={true} // TODO: Enable when implementing actual navigation
               className="h-8 w-8"
+              aria-label={t('webview.goBack')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
@@ -240,8 +243,9 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               onClick={handleGoForward}
               disabled={true} // TODO: Enable when implementing actual navigation
               className="h-8 w-8"
+              aria-label={t('webview.goForward')}
             >
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
@@ -249,16 +253,18 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               onClick={handleRefresh}
               disabled={isLoading}
               className="h-8 w-8"
+              aria-label={t('app.refresh')}
             >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleGoHome}
               className="h-8 w-8"
+              aria-label={t('webview.goHome')}
             >
-              <Home className="h-4 w-4" />
+              <Home className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
           
@@ -269,6 +275,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               onChange={(e) => setInputUrl(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('webview.enterUrl')}
+              aria-label={t('webview.addressBar')}
               className="pr-10 h-8 text-sm font-mono"
             />
             {inputUrl !== currentUrl && (
@@ -277,8 +284,9 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
                 size="icon"
                 onClick={handleNavigate}
                 className="absolute right-1 top-1 h-6 w-6"
+                aria-label={t('webview.navigate')}
               >
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
               </Button>
             )}
           </div>

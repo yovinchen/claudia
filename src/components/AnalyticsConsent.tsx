@@ -242,9 +242,10 @@ export const AnalyticsConsentBanner: React.FC<AnalyticsConsentBannerProps> = ({
               </div>
               <button
                 onClick={handleClose}
+                aria-label={t('app.close')}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </Card>

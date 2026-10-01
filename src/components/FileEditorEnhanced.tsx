@@ -195,11 +195,11 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       setLastCheckTime(Date.now());
     } catch (err) {
       console.error("[FileEditor] Failed to load file:", err);
-      setError(err instanceof Error ? err.message : "Failed to load file");
+      setError(err instanceof Error ? err.message : t("fileEditor.failedToLoadFile"));
     } finally {
       setLoading(false);
     }
-  }, [filePath]);
+  }, [filePath, t]);
   
   // 保存文件
   const saveFile = useCallback(async () => {
@@ -224,11 +224,11 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error("Failed to save file:", err);
-      setError(err instanceof Error ? err.message : "Failed to save file");
+      setError(err instanceof Error ? err.message : t("fileEditor.failedToSaveFile"));
     } finally {
       setSaving(false);
     }
-  }, [filePath, content, hasChanges]);
+  }, [filePath, content, hasChanges, t]);
   
   // 自动保存
   useEffect(() => {
@@ -499,7 +499,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               loadFile();
             } else {
               // 显示提示
-              setError("文件已被外部程序修改，点击重新加载按钮查看最新内容");
+              setError(t("fileEditor.externallyModified"));
             }
           }
         }
@@ -535,7 +535,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
                 loadFile();
               } else {
                 // 显示提示
-                setError("文件已被外部程序修改，点击重新加载按钮查看最新内容");
+                setError(t("fileEditor.externallyModified"));
               }
             }
           }
@@ -605,7 +605,7 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
         clearInterval(fileCheckIntervalRef.current);
       }
     };
-  }, [filePath, hasChanges, lastCheckTime, originalContent, loadFile]);
+  }, [filePath, hasChanges, lastCheckTime, originalContent, loadFile, t]);
   
   // 移除旧的轮询实现
   
@@ -614,14 +614,12 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
     if (!filePath) return;
     
     if (hasChanges) {
-      const shouldReload = window.confirm(
-        "您有未保存的更改。重新加载将丢失这些更改。是否继续？"
-      );
+      const shouldReload = window.confirm(t("fileEditor.reloadUnsavedConfirm"));
       if (!shouldReload) return;
     }
-    
+
     await loadFile();
-  }, [filePath, hasChanges, loadFile]);
+  }, [filePath, hasChanges, loadFile, t]);
   
   // 加载文件
   useEffect(() => {
@@ -702,12 +700,12 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1 text-xs text-green-500">
-                    <Zap className="h-3 w-3" />
-                    Auto
+                    <Zap className="h-3 w-3" aria-hidden="true" />
+                    {t("fileEditor.autoSaveShort")}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>自动保存已启用</p>
+                  <p>{t("fileEditor.autoSaveEnabled")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -721,12 +719,13 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handleFormat}
+                  aria-label={t("fileEditor.formatCode")}
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>格式化代码 (Alt+Shift+F)</p>
+                <p>{t("fileEditor.formatCode")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -735,68 +734,68 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Info className="h-4 w-4" />
+                <Button variant="ghost" size="sm" aria-label={t("fileEditor.info.editorTitle")}>
+                  <Info className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-md p-4">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-semibold mb-1">🎨 语法高亮支持</h4>
+                    <h4 className="font-semibold mb-1">🎨 {t("fileEditor.info.syntaxTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, Dart, Scala, R, MATLAB, SQL, HTML, CSS, JSON, XML, YAML, Markdown 等 40+ 语言
+                      {t("fileEditor.info.syntaxDesc", { languages: "JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, Dart, Scala, R, MATLAB, SQL, HTML, CSS, JSON, XML, YAML, Markdown" })}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 className="font-semibold mb-1">🔧 代码格式化</h4>
+                    <h4 className="font-semibold mb-1">🔧 {t("fileEditor.info.formatTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      快捷键: Ctrl/Cmd + Shift + F<br/>
-                      支持: JS/TS (Prettier), Python (Black), Java, C/C++, Go (gofmt), Rust (rustfmt), HTML/CSS/JSON
+                      {t("fileEditor.info.formatShortcut", { shortcut: "Ctrl/Cmd + Shift + F" })}<br/>
+                      {t("fileEditor.info.formatSupport", { list: "JS/TS (Prettier), Python (Black), Java, C/C++, Go (gofmt), Rust (rustfmt), HTML/CSS/JSON" })}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 className="font-semibold mb-1">💡 智能提示</h4>
+                    <h4 className="font-semibold mb-1">💡 {t("fileEditor.info.intellisenseTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      • 代码补全 (IntelliSense)<br/>
-                      • 参数提示<br/>
-                      • 悬浮文档<br/>
-                      • 快速修复建议<br/>
-                      • 重构建议
+                      • {t("fileEditor.info.codeCompletion")}<br/>
+                      • {t("fileEditor.info.parameterHints")}<br/>
+                      • {t("fileEditor.info.hoverDocs")}<br/>
+                      • {t("fileEditor.info.quickFixes")}<br/>
+                      • {t("fileEditor.info.refactorings")}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 className="font-semibold mb-1">🔍 错误检查</h4>
+                    <h4 className="font-semibold mb-1">🔍 {t("fileEditor.info.diagnosticsTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      实时语法检查、类型检查 (TypeScript/Flow)、Linting (ESLint/TSLint)
+                      {t("fileEditor.info.diagnosticsDesc")}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 className="font-semibold mb-1">⚙️ 编辑器功能</h4>
+                    <h4 className="font-semibold mb-1">⚙️ {t("fileEditor.info.editorTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      • 行号显示<br/>
-                      • 代码折叠<br/>
-                      • 括号匹配高亮<br/>
-                      • 多光标编辑<br/>
-                      • 列选择 (Alt + 鼠标)<br/>
-                      • 小地图导航<br/>
-                      • Sticky Scroll (固定显示上下文)
+                      • {t("fileEditor.info.lineNumbers")}<br/>
+                      • {t("fileEditor.info.codeFolding")}<br/>
+                      • {t("fileEditor.info.bracketMatching")}<br/>
+                      • {t("fileEditor.info.multiCursor")}<br/>
+                      • {t("fileEditor.info.columnSelection")}<br/>
+                      • {t("fileEditor.info.minimapNav")}<br/>
+                      • {t("fileEditor.info.stickyScroll")}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 className="font-semibold mb-1">⌨️ 快捷键</h4>
+                    <h4 className="font-semibold mb-1">⌨️ {t("fileEditor.info.shortcutsTitle")}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Ctrl/Cmd + S: 保存<br/>
-                      Ctrl/Cmd + Shift + F: 格式化<br/>
-                      Ctrl/Cmd + F: 查找<br/>
-                      Ctrl/Cmd + H: 替换<br/>
-                      Ctrl/Cmd + /: 注释<br/>
-                      F11: 全屏<br/>
-                      Alt + Shift + F: 格式化选中代码
+                      Ctrl/Cmd + S: {t("app.save")}<br/>
+                      Ctrl/Cmd + Shift + F: {t("fileEditor.info.shortcutFormat")}<br/>
+                      Ctrl/Cmd + F: {t("fileEditor.info.shortcutFind")}<br/>
+                      Ctrl/Cmd + H: {t("fileEditor.info.shortcutReplace")}<br/>
+                      Ctrl/Cmd + /: {t("fileEditor.info.shortcutComment")}<br/>
+                      F11: {t("fileEditor.info.shortcutFullscreen")}<br/>
+                      Alt + Shift + F: {t("fileEditor.info.shortcutFormatSelection")}
                     </p>
                   </div>
                 </div>
@@ -807,37 +806,37 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
           {/* 设置菜单 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Settings2 className="h-4 w-4" />
+              <Button variant="ghost" size="sm" aria-label={t("fileEditor.editorSettings")}>
+                <Settings2 className="h-4 w-4" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTheme('vs-dark')}>
-                主题: VS Dark
+                {t("fileEditor.themeOption", { theme: "VS Dark" })}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme('vs')}>
-                主题: VS Light
+                {t("fileEditor.themeOption", { theme: "VS Light" })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setFontSize(fontSize + 1)}>
-                字体放大
+                {t("fileEditor.increaseFontSize")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setFontSize(fontSize - 1)}>
-                字体缩小
+                {t("fileEditor.decreaseFontSize")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setMinimap(!minimap)}>
-                {minimap ? '隐藏' : '显示'}小地图
+                {minimap ? t("fileEditor.hideMinimap") : t("fileEditor.showMinimap")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setWordWrap(wordWrap === 'on' ? 'off' : 'on')}>
-                {wordWrap === 'on' ? '关闭' : '开启'}自动换行
+                {wordWrap === 'on' ? t("fileEditor.disableWordWrap") : t("fileEditor.enableWordWrap")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowDiagnostics(!showDiagnostics)}>
-                {showDiagnostics ? '隐藏' : '显示'}诊断信息
+                {showDiagnostics ? t("fileEditor.hideDiagnostics") : t("fileEditor.showDiagnostics")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setAutoSave(!autoSave)}>
-                {autoSave ? '关闭' : '开启'}自动保存
+                {autoSave ? t("fileEditor.disableAutoSave") : t("fileEditor.enableAutoSave")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -853,12 +852,12 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
                     onClick={reloadFile}
                     className="flex items-center gap-1 border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
                   >
-                    <AlertTriangle className="h-4 w-4" />
-                    重新加载
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                    {t("fileEditor.reload")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>文件已被外部程序修改，点击重新加载最新内容</p>
+                  <p>{t("fileEditor.reloadTooltip")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -871,12 +870,14 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
               size="sm"
               onClick={saveFile}
               disabled={saving}
+              aria-label={t("app.save")}
+              aria-busy={saving}
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-4 w-4 mr-1" aria-hidden="true" />
                   {t("app.save")}
                 </>
               )}
@@ -892,16 +893,17 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
                   size="icon"
                   onClick={toggleFullscreen}
                   className="h-7 w-7"
+                  aria-label={isFullscreen ? t("fileEditor.exitFullscreen") : t("fileEditor.enterFullscreen")}
                 >
                   {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
+                    <Minimize2 className="h-4 w-4" aria-hidden="true" />
                   ) : (
-                    <Maximize2 className="h-4 w-4" />
+                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isFullscreen ? '退出全屏 (Esc)' : '全屏 (F11)'}</p>
+                <p>{isFullscreen ? t("fileEditor.exitFullscreen") : t("fileEditor.enterFullscreen")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -912,8 +914,9 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
             size="icon"
             onClick={handleClose}
             className="h-7 w-7"
+            aria-label={t("app.close")}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -1044,12 +1047,12 @@ export const FileEditorEnhanced: React.FC<FileEditorEnhancedProps> = ({
         <div className="flex items-center gap-4">
           <span>{language.toUpperCase()}</span>
           <span>UTF-8</span>
-          <span>行 {cursorPosition.line}, 列 {cursorPosition.column}</span>
+          <span>{t("fileEditor.cursorPosition", { line: cursorPosition.line, column: cursorPosition.column })}</span>
           <span>LF</span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Ln 1, Col 1</span>
-          <span>Spaces: 2</span>
+          <span>{t("fileEditor.cursorPosition", { line: 1, column: 1 })}</span>
+          <span>{t("fileEditor.indentSpaces", { size: 2 })}</span>
         </div>
       </div>
     </div>

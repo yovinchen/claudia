@@ -148,7 +148,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     // If no data, create empty hours
     if (last24HoursTotals.total_cost === 0) {
       for (let i = 0; i < 24; i++) {
-        const timeAgo = i === 0 ? 'Now' : i === 1 ? '1h ago' : `${i}h ago`;
+        const timeAgo = i === 0 ? t('usage.hourNow') : t('usage.hoursAgo', { count: i });
         hours.unshift({
           hour: timeAgo,
           cost: 0,
@@ -182,7 +182,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     for (let i = 23; i >= 0; i--) {
       const hoursAgo = 23 - i;
       const weight = normalizedWeights[hoursAgo];
-      const timeLabel = hoursAgo === 0 ? 'Now' : hoursAgo === 1 ? '1h ago' : `${hoursAgo}h ago`;
+      const timeLabel = hoursAgo === 0 ? t('usage.hourNow') : t('usage.hoursAgo', { count: hoursAgo });
       
       hours.push({
         hour: timeLabel,
@@ -280,8 +280,9 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               size="icon"
               onClick={onBack}
               className="h-8 w-8"
+              aria-label={t('app.back')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div>
               <h1 className="text-lg font-semibold">{t('usage.usageDashboardTitle')}</h1>
@@ -300,11 +301,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               disabled={isRefreshing}
               className="h-8 w-8"
               title={t('usage.refreshData')}
+              aria-label={t('usage.refreshData')}
             >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden="true" />
             </Button>
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex space-x-1">
+            <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <div className="flex space-x-1" role="group" aria-label={t('usage.dateRange')}>
               {(["all", "30d", "7d", "24h"] as const).map((range) => (
                 <Button
                   key={range}
@@ -312,6 +314,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   size="sm"
                   onClick={() => setSelectedDateRange(range)}
                   className="text-xs"
+                  aria-pressed={selectedDateRange === range}
                 >
                   {range === "all" ? t('usage.allTime') : 
                    range === "24h" ? t('usage.last24Hours') :
@@ -463,7 +466,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             yAxisId="left"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `${value}K`}
-                            label={{ value: 'Tokens (K)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                            label={{ value: t('usage.axisTokensK'), angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <YAxis 
@@ -471,7 +474,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             orientation="right"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `$${value.toFixed(2)}`}
-                            label={{ value: 'Cost (USD)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+                            label={{ value: t('usage.axisCostUsd'), angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <YAxis 
@@ -479,7 +482,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             orientation="right"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `${value}`}
-                            label={{ value: 'Requests', angle: 90, position: 'insideRight', dx: 40, style: { fontSize: 10 } }}
+                            label={{ value: t('usage.requests'), angle: 90, position: 'insideRight', dx: 40, style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <RechartsTooltip
@@ -524,7 +527,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               if (name === 'cost') {
                                 formattedValue = formatCurrency(value);
                               } else if (name.includes('Tokens')) {
-                                formattedValue = `${formatTokens(value * 1000)} tokens`;
+                                formattedValue = `${formatTokens(value * 1000)} ${t('usage.tokens')}`;
                               } else if (name === 'requests') {
                                 formattedValue = `${value} ${t('usage.times')}`;
                               }
@@ -651,7 +654,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             yAxisId="left"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `${value}K`}
-                            label={{ value: 'Tokens (K)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                            label={{ value: t('usage.axisTokensK'), angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <YAxis 
@@ -659,7 +662,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             orientation="right"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `$${value.toFixed(2)}`}
-                            label={{ value: 'Cost (USD)', angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
+                            label={{ value: t('usage.axisCostUsd'), angle: 90, position: 'insideRight', style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <YAxis 
@@ -667,7 +670,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             orientation="right"
                             tick={{ fontSize: 10 }}
                             tickFormatter={(value) => `${value}`}
-                            label={{ value: 'Requests', angle: 90, position: 'insideRight', dx: 40, style: { fontSize: 10 } }}
+                            label={{ value: t('usage.requests'), angle: 90, position: 'insideRight', dx: 40, style: { fontSize: 10 } }}
                             className="text-muted-foreground"
                           />
                           <RechartsTooltip 
@@ -715,7 +718,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               if (name === 'cost') {
                                 formattedValue = formatCurrency(value);
                               } else if (name.includes('Tokens')) {
-                                formattedValue = `${formatTokens(value * 1000)} tokens`;
+                                formattedValue = `${formatTokens(value * 1000)} ${t('usage.tokens')}`;
                               } else if (name === 'requests') {
                                 formattedValue = `${value} ${t('usage.times')}`;
                               }
@@ -868,7 +871,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               if (name === 'value') {
                                 return [
                                   formatCurrency(value),
-                                  `${props.payload.sessions} sessions, ${formatTokens(props.payload.tokens)} tokens`
+                                  `${props.payload.sessions} ${t('usage.sessions')}, ${formatTokens(props.payload.tokens)} ${t('usage.tokens')}`
                                 ];
                               }
                               return [value, name];
@@ -886,7 +889,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
 
                   {/* 详细列表 */}
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">详细统计</h3>
+                    <h3 className="text-sm font-semibold mb-4">{t('usage.detailedStats')}</h3>
                     <div className="space-y-4">
                       {stats.by_model.map((model) => (
                         <div key={model.model} className="space-y-2">
@@ -916,11 +919,11 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               <span className="font-medium">{formatTokens(model.output_tokens)}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Cache W: </span>
+                              <span className="text-muted-foreground">{t('usage.cacheWrite')}: </span>
                               <span className="font-medium">{formatTokens(model.cache_creation_tokens)}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Cache R: </span>
+                              <span className="text-muted-foreground">{t('usage.cacheRead')}: </span>
                               <span className="font-medium">{formatTokens(model.cache_read_tokens)}</span>
                             </div>
                           </div>
@@ -940,7 +943,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                     <Card className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-muted-foreground">{t('usage.totalProjects')}</p>
+                          <p className="text-xs text-muted-foreground">{t('totalProjects')}</p>
                           <p className="text-2xl font-bold mt-1">
                             {stats.by_project.length}
                           </p>
@@ -1030,7 +1033,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                   if (name === 'value') {
                                     return [
                                       formatCurrency(value),
-                                      `${props.payload.sessions} ${t('usage.sessions')}, ${formatTokens(props.payload.tokens)} tokens`
+                                      `${props.payload.sessions} ${t('usage.sessions')}, ${formatTokens(props.payload.tokens)} ${t('usage.tokens')}`
                                     ];
                                   }
                                   return [value, name];
@@ -1097,7 +1100,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                 }}
                                 formatter={(value: number, name: string) => {
                                   if (name === 'totalTokens') {
-                                    return `${formatTokens(value * 1000)} tokens`;
+                                    return `${formatTokens(value * 1000)} ${t('usage.tokens')}`;
                                   } else if (name === 'cost') {
                                     return `$${value.toFixed(2)}`;
                                   }

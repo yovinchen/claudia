@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { HooksEditor } from '@/components/HooksEditor';
 import { SlashCommandsManager } from '@/components/SlashCommandsManager';
 import { api } from '@/lib/api';
@@ -72,11 +72,11 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         content += '\n# Claude local settings (machine-specific)\n.claude/settings.local.json\n';
         await api.saveClaudeMdFile(gitignorePath, content);
         setGitIgnoreLocal(true);
-        setToast({ message: 'Added to .gitignore', type: 'success' });
+        setToast({ message: t('projectSettings.addedToGitignore'), type: 'success' });
       }
     } catch (err) {
       console.error('Failed to update .gitignore:', err);
-      setToast({ message: 'Failed to update .gitignore', type: 'error' });
+      setToast({ message: t('projectSettings.updateGitignoreFailed'), type: 'error' });
     }
   };
 
@@ -86,8 +86,8 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={onBack} aria-label={t('app.back')}>
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
@@ -129,9 +129,11 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <div>
                     <h3 className="text-lg font-semibold mb-2">{t('slashCommands.projectSlashCommands')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Custom commands that are specific to this project. These commands are stored in
-                      <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/slash-commands/</code>
-                      and can be committed to version control.
+                      <Trans
+                        i18nKey="projectSettings.commandsDescription"
+                        values={{ path: '.claude/slash-commands/' }}
+                        components={{ code: <code className="mx-1 px-2 py-1 bg-muted rounded text-xs" /> }}
+                      />
                     </p>
                   </div>
                   
@@ -149,9 +151,11 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <div>
                     <h3 className="text-lg font-semibold mb-2">{t('hooks.projectHooks', 'Project Hooks')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      These hooks apply to all users working on this project. They are stored in
-                      <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.json</code>
-                      and should be committed to version control.
+                      <Trans
+                        i18nKey="projectSettings.projectHooksDescription"
+                        values={{ path: '.claude/settings.json' }}
+                        components={{ code: <code className="mx-1 px-2 py-1 bg-muted rounded text-xs" /> }}
+                      />
                     </p>
                   </div>
                   
@@ -169,9 +173,11 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <div>
                     <h3 className="text-lg font-semibold mb-2">{t('hooks.localHooks', 'Local Hooks')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      These hooks only apply to your machine. They are stored in
-                      <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.local.json</code>
-                      and should NOT be committed to version control.
+                      <Trans
+                        i18nKey="projectSettings.localHooksDescription"
+                        values={{ path: '.claude/settings.local.json' }}
+                        components={{ code: <code className="mx-1 px-2 py-1 bg-muted rounded text-xs" /> }}
+                      />
                     </p>
                     
                     {!gitIgnoreLocal && (

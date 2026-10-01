@@ -20,7 +20,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface FloatingPromptInputProps {
   /**
@@ -80,7 +80,7 @@ type ThinkingModeConfig = {
  */
 const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-0.5" aria-hidden="true">
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
@@ -125,6 +125,8 @@ const FloatingPromptInputInner = (
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
   const { t } = useTranslation();
+  const currentThinkingModeName = (modes: { id: string; name: string }[], id: string) =>
+    modes.find(m => m.id === id)?.name || t('messages.auto');
 
   // Define MODELS inside component to access translations
   const MODELS: Model[] = [
@@ -753,8 +755,9 @@ const FloatingPromptInputInner = (
                   size="icon"
                   onClick={() => setIsExpanded(false)}
                   className="h-8 w-8"
+                  aria-label={t('input.collapseEditor')}
                 >
-                  <Minimize2 className="h-4 w-4" />
+                  <Minimize2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
 
@@ -809,8 +812,9 @@ const FloatingPromptInputInner = (
                                 size="sm"
                                 onClick={() => setThinkingModePickerOpen(!thinkingModePickerOpen)}
                                 className="gap-2"
+                                aria-label={t('input.thinkingModeLabel', { mode: currentThinkingModeName(THINKING_MODES, selectedThinkingMode) })}
                               >
-                                <Brain className="h-4 w-4" />
+                                <Brain className="h-4 w-4" aria-hidden="true" />
                                 <ThinkingModeIndicator 
                                   level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
                                 />
@@ -838,7 +842,7 @@ const FloatingPromptInputInner = (
                                 selectedThinkingMode === mode.id && "bg-accent"
                               )}
                             >
-                              <Brain className="h-4 w-4 mt-0.5" />
+                              <Brain className="h-4 w-4 mt-0.5" aria-hidden="true" />
                               <div className="flex-1 space-y-1">
                                 <div className="font-medium text-sm">
                                   {mode.name}
@@ -865,11 +869,12 @@ const FloatingPromptInputInner = (
                   disabled={!prompt.trim() || disabled}
                   size="default"
                   className="min-w-[60px]"
+                  aria-label={t('input.send')}
                 >
                   {isLoading ? (
                     <div className="rotating-symbol text-primary-foreground" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-4 w-4" aria-hidden="true" />
                   )}
                 </Button>
               </div>
@@ -913,7 +918,7 @@ const FloatingPromptInputInner = (
                   >
                     {selectedModelData.icon}
                     <span className="flex-1 text-left">{selectedModelData.name}</span>
-                    <ChevronUp className="h-4 w-4 opacity-50" />
+                    <ChevronUp className="h-4 w-4 opacity-50" aria-hidden="true" />
                   </Button>
                 }
                 content={
@@ -959,8 +964,9 @@ const FloatingPromptInputInner = (
                           size="default"
                           disabled={disabled}
                           className="gap-2 h-8"
+                          aria-label={t('input.thinkingModeLabel', { mode: currentThinkingModeName(THINKING_MODES, selectedThinkingMode) })}
                         >
-                          <Brain className="h-4 w-4" />
+                          <Brain className="h-4 w-4" aria-hidden="true" />
                           <ThinkingModeIndicator 
                             level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
                           />
@@ -988,7 +994,7 @@ const FloatingPromptInputInner = (
                           selectedThinkingMode === mode.id && "bg-accent"
                         )}
                       >
-                        <Brain className="h-4 w-4 mt-0.5" />
+                        <Brain className="h-4 w-4 mt-0.5" aria-hidden="true" />
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-sm">
                             {mode.name}
@@ -1031,8 +1037,9 @@ const FloatingPromptInputInner = (
                   onClick={() => setIsExpanded(true)}
                   disabled={disabled}
                   className="absolute right-1 bottom-0 h-6 w-6"
+                  aria-label={t('input.expandEditor')}
                 >
-                  <Maximize2 className="h-4 w-4" />
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
 
                 {/* File Picker */}
@@ -1067,14 +1074,15 @@ const FloatingPromptInputInner = (
                 variant={isLoading ? "destructive" : "default"}
                 size="default"
                 className="min-w-[56px] h-8"
+                aria-label={isLoading ? undefined : t('input.send')}
               >
                 {isLoading ? (
                   <>
-                    <Square className="h-4 w-4 mr-1" />
-                    Stop
+                    <Square className="h-4 w-4 mr-1" aria-hidden="true" />
+                    {t('claudeSession.stop')}
                   </>
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
             </div>

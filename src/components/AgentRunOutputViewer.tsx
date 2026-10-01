@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/hooks/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Maximize2, 
@@ -395,7 +395,7 @@ export function AgentRunOutputViewer({
           type: "result",
           subtype: "error",
           is_error: true,
-          result: "Execution stopped by user",
+          result: t('agentRun.executionStopped'),
           duration_ms: 0,
           usage: {
             input_tokens: 0,
@@ -609,12 +609,14 @@ export function AgentRunOutputViewer({
                   size="sm"
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   title={isFullscreen ? t('webview.exitFullScreen') : t('webview.enterFullScreen')}
+                  aria-label={t('agents.fullscreen')}
+                  aria-pressed={isFullscreen}
                   className="h-8 px-2"
                 >
                   {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
+                    <Minimize2 className="h-4 w-4" aria-hidden="true" />
                   ) : (
-                    <Maximize2 className="h-4 w-4" />
+                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
                   )}
                 </Button>
                 <Button
@@ -623,9 +625,10 @@ export function AgentRunOutputViewer({
                   onClick={handleRefresh}
                   disabled={refreshing}
                   title={t('app.refresh')}
+                  aria-label={t('app.refresh')}
                   className="h-8 px-2"
                 >
-                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
                 </Button>
                 {run.status === 'running' && (
                   <Button
@@ -634,9 +637,10 @@ export function AgentRunOutputViewer({
                     onClick={handleStop}
                     disabled={refreshing}
                     title={t('agents.stop')}
+                    aria-label={t('agents.stop')}
                     className="h-8 px-2 text-destructive hover:text-destructive"
                   >
-                    <StopCircle className="h-4 w-4" />
+                    <StopCircle className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 )}
               </div>
@@ -731,8 +735,10 @@ export function AgentRunOutputViewer({
                 size="sm"
                 onClick={handleRefresh}
                 disabled={refreshing}
+                title={t('app.refresh')}
+                aria-label={t('app.refresh')}
               >
-                <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
               </Button>
               {run.status === 'running' && (
                 <Button

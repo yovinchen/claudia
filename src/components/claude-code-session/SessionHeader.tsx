@@ -66,8 +66,9 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
             size="icon"
             onClick={onBack}
             className="h-8 w-8"
+            aria-label={t('app.back')}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
           
           <div className="flex items-center gap-2">
@@ -115,8 +116,8 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               open={copyPopoverOpen}
               onOpenChange={setCopyPopoverOpen}
               trigger={
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Copy className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('app.copyOutput')}>
+                  <Copy className="h-4 w-4" aria-hidden="true" />
                 </Button>
               }
               content={
@@ -151,14 +152,16 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               "h-8 w-8 transition-colors",
               showTimeline && "bg-accent text-accent-foreground"
             )}
+            aria-label={t('app.sessionTimeline')}
+            aria-pressed={showTimeline}
           >
-            <GitBranch className="h-4 w-4" />
+            <GitBranch className="h-4 w-4" aria-hidden="true" />
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Settings className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('navigation.settings')}>
+                <Settings className="h-4 w-4" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

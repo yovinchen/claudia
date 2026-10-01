@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
 import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/hooks/useTranslation';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -400,7 +400,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       </Badge>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      {messages.length} messages
+                      {t('claudeSession.messageCount', { count: messages.length })}
                     </span>
                   </div>
                 </div>
@@ -413,8 +413,10 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       size="sm"
                       onClick={() => setIsFullscreen(!isFullscreen)}
                       title={t('agents.fullscreen')}
+                      aria-label={t('agents.fullscreen')}
+                      aria-pressed={isFullscreen}
                     >
-                      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      {isFullscreen ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
                     </Button>
                     <Popover
                       trigger={
@@ -423,9 +425,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                           size="sm"
                           className="flex items-center gap-2"
                         >
-                          <Copy className="h-4 w-4" />
+                          <Copy className="h-4 w-4" aria-hidden="true" />
                           {t('app.copyOutput')}
-                          <ChevronDown className="h-3 w-3" />
+                          <ChevronDown className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       }
                       content={
@@ -460,11 +462,12 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   onClick={refreshOutput}
                   disabled={refreshing}
                   title={t('app.refresh')}
+                  aria-label={t('app.refresh')}
                 >
-                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={onClose}>
-                  <X className="h-4 w-4" />
+                <Button variant="outline" size="sm" onClick={onClose} aria-label={t('app.close')}>
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -568,9 +571,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       size="sm"
                       className="flex items-center gap-2"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-4 w-4" aria-hidden="true" />
                       {t('app.copyOutput')}
-                      <ChevronDown className="h-3 w-3" />
+                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
                     </Button>
                   }
                   content={
@@ -604,7 +607,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                 onClick={() => setIsFullscreen(false)}
                 className="flex items-center gap-2"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
                 {t('app.close')}
               </Button>
             </div>

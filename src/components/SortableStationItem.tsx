@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +47,7 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
     isDragging,
     isOver,
   } = useSortable({ id: station.id });
+  const { t } = useTranslation();
 
   // 展开/收起状态，从 localStorage 读取
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -87,7 +89,7 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
             {...listeners}
           >
             <div className="mr-2 flex-shrink-0">
-              <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+              <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle className="text-sm font-medium">{station.name}</CardTitle>
@@ -108,8 +110,9 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
                 setSelectedStation(station);
                 setShowEditDialog(true);
               }}
+              aria-label={t('relayStation.editStationLabel', { name: station.name })}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="ghost"
@@ -120,8 +123,9 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
                 e.stopPropagation();
                 openDeleteDialog(station);
               }}
+              aria-label={t('relayStation.deleteStationLabel', { name: station.name })}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -137,12 +141,13 @@ export const SortableStationItem: React.FC<SortableStationItemProps> = ({
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="ml-2 p-0.5 hover:bg-accent rounded transition-colors flex-shrink-0"
-                aria-label={isExpanded ? "收起详情" : "展开详情"}
+                aria-label={isExpanded ? t('relayStation.collapseDetails') : t('relayStation.expandDetails')}
+                aria-expanded={isExpanded}
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
               </button>
             )}

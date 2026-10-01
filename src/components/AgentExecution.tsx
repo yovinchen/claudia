@@ -26,7 +26,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -285,7 +286,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       console.error("Failed to select directory:", err);
       // More detailed error logging
       const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
+      setError(t('app.selectDirectoryFailed', { message: errorMessage }));
     }
   };
 
@@ -352,7 +353,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         const duration = executionStartTime ? Date.now() - executionStartTime : undefined;
         setExecutionStartTime(null);
         if (!event.payload) {
-          setError("Agent execution failed");
+          setError(t('agents.executionFailed'));
           // Track both the old event for compatibility and the new error event
           trackEvent.agentExecuted(agent.name || 'custom', false, agent.name, duration);
           trackEvent.agentError({
@@ -369,7 +370,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, () => {
         setIsRunning(false);
         setExecutionStartTime(null);
-        setError("Agent execution was cancelled");
+        setError(t('app.agentExecutionCancelled'));
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
@@ -422,7 +423,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         type: "result",
         subtype: "error",
         is_error: true,
-        result: "Execution stopped by user",
+        result: t('agentRun.executionStopped'),
         duration_ms: elapsedTime * 1000,
         usage: {
           input_tokens: totalTokens,
@@ -543,7 +544,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
   const renderIcon = () => {
     const Icon = agent.icon in AGENT_ICONS ? AGENT_ICONS[agent.icon as keyof typeof AGENT_ICONS] : Terminal;
-    return <Icon className="h-5 w-5" />;
+    return <Icon className="h-5 w-5" aria-hidden="true" />;
   };
 
   return (
@@ -566,8 +567,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     size="icon"
                     onClick={handleBackWithConfirmation}
                     className="h-8 w-8"
+                    aria-label={t('app.back')}
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   </Button>
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-primary/10 text-primary">
@@ -628,8 +630,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   size="icon"
                   onClick={handleSelectPath}
                   disabled={isRunning}
+                  aria-label={t('webview.selectProjectDirectory')}
+                  title={t('webview.selectProjectDirectory')}
                 >
-                  <FolderOpen className="h-4 w-4" />
+                  <FolderOpen className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   variant="outline"
@@ -650,6 +654,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <button
                   type="button"
                   onClick={() => !isRunning && setModel("sonnet")}
+                  aria-pressed={model === "sonnet"}
                   className={cn(
                     "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
                     !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
@@ -676,6 +681,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <button
                   type="button"
                   onClick={() => !isRunning && setModel("opus")}
+                  aria-pressed={model === "opus"}
                   className={cn(
                     "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
                     !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
@@ -772,7 +778,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">{t('agents.initializing') || 'Initializing agent...'}</span>
+                    <span className="text-sm text-muted-foreground">{t('agents.initializing')}</span>
                   </div>
                 </div>
               )}
@@ -914,7 +920,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">{t('agents.initializing') || 'Initializing agent...'}</span>
+                    <span className="text-sm text-muted-foreground">{t('agents.initializing')}</span>
                   </div>
                 </div>
               )}
@@ -961,21 +967,24 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           <DialogHeader>
             <DialogTitle>{t('agents.configureHooks')}</DialogTitle>
             <DialogDescription>
-              Configure hooks that run before, during, and after tool executions. Changes are saved immediately.
+              {t('agents.configureHooksDesc')}
             </DialogDescription>
           </DialogHeader>
           
           <Tabs value={activeHooksTab} onValueChange={setActiveHooksTab} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="project">{t('agents.projectSettings') || 'Project Settings'}</TabsTrigger>
-              <TabsTrigger value="local">{t('agents.localSettings') || 'Local Settings'}</TabsTrigger>
+              <TabsTrigger value="project">{t('agents.projectSettings')}</TabsTrigger>
+              <TabsTrigger value="local">{t('agents.localSettings')}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="project" className="flex-1 overflow-auto">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Project hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.json</code> and 
-                  are committed to version control.
+                  <Trans
+                    i18nKey="agents.projectHooksNote"
+                    values={{ file: '.claude/settings.json' }}
+                    components={{ code: <code className="bg-muted px-1 py-0.5 rounded" /> }}
+                  />
                 </p>
                 <HooksEditor
                   projectPath={projectPath}
@@ -988,8 +997,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             <TabsContent value="local" className="flex-1 overflow-auto">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Local hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.local.json</code> and 
-                  are not committed to version control.
+                  <Trans
+                    i18nKey="agents.localHooksNote"
+                    values={{ file: '.claude/settings.local.json' }}
+                    components={{ code: <code className="bg-muted px-1 py-0.5 rounded" /> }}
+                  />
                 </p>
                 <HooksEditor
                   projectPath={projectPath}

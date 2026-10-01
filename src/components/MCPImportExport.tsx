@@ -46,7 +46,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         const failedServers = result.servers.filter(s => !s.success);
         
         if (successfulServers.length > 0) {
-          const successMessage = `Successfully imported: ${successfulServers.map(s => s.name).join(", ")}`;
+          const successMessage = t('mcp.importedServerNames', { names: successfulServers.map(s => s.name).join(", ") });
           onImportCompleted(result.imported_count, result.failed_count);
           // Show success details
           if (failedServers.length === 0) {
@@ -56,16 +56,16 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         
         if (failedServers.length > 0) {
           const failureDetails = failedServers
-            .map(s => `${s.name}: ${s.error || "Unknown error"}`)
+            .map(s => `${s.name}: ${s.error || t('mcp.unknownError')}`)
             .join("\n");
-          onError(`Failed to import some servers:\n${failureDetails}`);
+          onError(t('mcp.importSomeFailed', { details: failureDetails }));
         }
       } else {
         onImportCompleted(result.imported_count, result.failed_count);
       }
     } catch (error: any) {
       console.error("Failed to import from Claude Desktop:", error);
-      onError(error.toString() || "Failed to import from Claude Desktop");
+      onError(error.toString() || t('mcp.importFromDesktopFailed'));
     } finally {
       setImportingDesktop(false);
     }
@@ -87,7 +87,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       try {
         jsonData = JSON.parse(content);
       } catch (e) {
-        onError("Invalid JSON file. Please check the format.");
+        onError(t('mcp.invalidJsonFile'));
         return;
       }
 
@@ -120,7 +120,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onImportCompleted(imported, failed);
       } else if (jsonData.type && jsonData.command) {
         // Single server format
-        const name = prompt("Enter a name for this server:");
+        const name = prompt(t('mcp.enterServerName'));
         if (!name) return;
 
         const result = await api.mcpAddJson(name, content, importScope);
@@ -130,11 +130,11 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
           onError(result.message);
         }
       } else {
-        onError("Unrecognized JSON format. Expected MCP server configuration.");
+        onError(t('mcp.unrecognizedJsonFormat'));
       }
     } catch (error) {
       console.error("Failed to import JSON:", error);
-      onError("Failed to import JSON file");
+      onError(t('mcp.importJsonFailed'));
     } finally {
       setImportingJson(false);
       // Reset the input
@@ -151,7 +151,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       const result = await api.mcpExportServers();
       
       if (result.servers.length === 0) {
-        onError("No MCP servers configured to export");
+        onError(t('mcp.noServersToExport'));
         return;
       }
 
@@ -213,11 +213,11 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         // Use Tauri's file system API to write the file
         const { writeTextFile } = await import('@tauri-apps/plugin-fs');
         await writeTextFile(filePath, jsonContent);
-        onError(`Successfully exported ${result.servers.length} server(s) to ${filePath}`);
+        onError(t('mcp.exportedServers', { count: result.servers.length, path: filePath }));
       }
     } catch (error: any) {
       console.error("Failed to export servers:", error);
-      onError(error.toString() || "Failed to export servers");
+      onError(error.toString() || t('mcp.exportServersFailed'));
     } finally {
       setExporting(false);
     }
@@ -229,10 +229,10 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   const handleStartMCPServer = async () => {
     try {
       await api.mcpServe();
-      onError("Claude Code MCP server started. You can now connect to it from other applications.");
+      onError(t('mcp.mcpServerStarted'));
     } catch (error) {
       console.error("Failed to start MCP server:", error);
-      onError("Failed to start Claude Code as MCP server");
+      onError(t('mcp.startMcpServerFailed'));
     }
   };
 

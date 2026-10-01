@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Globe, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/useTranslation";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   // Extract domain for display
   const getDomain = (urlString: string) => {
     try {
@@ -65,21 +67,21 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            Open Preview?
+            <Globe className="h-5 w-5 text-primary" aria-hidden="true" />
+            {t('previewPrompt.title')}
           </DialogTitle>
           <DialogDescription>
-            A URL was detected in the terminal output. Would you like to open it in the preview pane?
+            {t('previewPrompt.description')}
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
           <div className="rounded-lg border bg-muted/50 p-4">
             <div className="flex items-start gap-3">
-              <ExternalLink className={`h-4 w-4 mt-0.5 ${isLocalhost ? 'text-green-500' : 'text-blue-500'}`} />
+              <ExternalLink className={`h-4 w-4 mt-0.5 ${isLocalhost ? 'text-green-500' : 'text-blue-500'}`} aria-hidden="true" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
-                  {isLocalhost ? 'Local Development Server' : 'External URL'}
+                  {isLocalhost ? t('previewPrompt.localServer') : t('previewPrompt.externalUrl')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 break-all">
                   {url}
@@ -94,17 +96,17 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
             transition={{ delay: 0.1 }}
             className="mt-3 text-xs text-muted-foreground"
           >
-            The preview will open in a split view on the right side of the screen.
+            {t('previewPrompt.splitViewHint')}
           </motion.div>
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {t('app.cancel')}
           </Button>
           <Button onClick={onConfirm} className="gap-2">
-            <ExternalLink className="h-4 w-4" />
-            Open Preview
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            {t('previewPrompt.openPreview')}
           </Button>
         </DialogFooter>
       </DialogContent>

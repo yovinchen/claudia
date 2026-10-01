@@ -402,8 +402,9 @@ export const Settings: React.FC<SettingsProps> = ({
           size="icon"
           onClick={onBack}
           className="h-8 w-8"
+          aria-label={t('app.back')}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
         <div>
           <h2 className="text-lg font-semibold">{t('settings.title')}</h2>
@@ -793,6 +794,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           >
                             <Input
                               placeholder={t('settings.placeholders.allowRuleExample')}
+                              aria-label={t('settings.permissions.allowRuleLabel')}
                               value={rule.value}
                               onChange={(e) => updatePermissionRule("allow", rule.id, e.target.value)}
                               className="flex-1"
@@ -802,8 +804,9 @@ export const Settings: React.FC<SettingsProps> = ({
                               size="icon"
                               onClick={() => removePermissionRule("allow", rule.id)}
                               className="h-8 w-8"
+                              aria-label={t('settings.permissions.removeRule')}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           </motion.div>
                         ))
@@ -840,6 +843,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           >
                             <Input
                               placeholder={t('settings.placeholders.denyRuleExample')}
+                              aria-label={t('settings.permissions.denyRuleLabel')}
                               value={rule.value}
                               onChange={(e) => updatePermissionRule("deny", rule.id, e.target.value)}
                               className="flex-1"
@@ -849,8 +853,9 @@ export const Settings: React.FC<SettingsProps> = ({
                               size="icon"
                               onClick={() => removePermissionRule("deny", rule.id)}
                               className="h-8 w-8"
+                              aria-label={t('settings.permissions.removeRule')}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           </motion.div>
                         ))
@@ -911,13 +916,15 @@ export const Settings: React.FC<SettingsProps> = ({
                         >
                           <Input
                             placeholder={t('settings.placeholders.envVarKey')}
+                            aria-label={t('settings.environment.variableKey')}
                             value={envVar.key}
                             onChange={(e) => updateEnvVar(envVar.id, "key", e.target.value)}
                             className="flex-1 font-mono text-sm"
                           />
-                          <span className="text-muted-foreground">=</span>
+                          <span className="text-muted-foreground" aria-hidden="true">=</span>
                           <Input
                             placeholder={t('settings.placeholders.envVarValue')}
+                            aria-label={t('settings.environment.variableValue')}
                             value={envVar.value}
                             onChange={(e) => updateEnvVar(envVar.id, "value", e.target.value)}
                             className="flex-1 font-mono text-sm"
@@ -927,8 +934,9 @@ export const Settings: React.FC<SettingsProps> = ({
                             size="icon"
                             onClick={() => removeEnvVar(envVar.id)}
                             className="h-8 w-8 hover:text-destructive"
+                            aria-label={t('settings.environment.removeVariable')}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </motion.div>
                       ))

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover } from "@/components/ui/popover";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 import { api, type AgentRunWithMetrics } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
@@ -227,7 +227,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   if (loading) {
     return (
       <div className={cn("flex items-center justify-center h-full", className)}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" role="status" aria-label={t('app.loading')}></div>
       </div>
     );
   }
@@ -257,8 +257,9 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
               size="icon"
               onClick={onBack}
               className="h-8 w-8"
+              aria-label={t('app.back')}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <div className="flex items-center gap-2">
               {renderIcon(run.agent_icon)}

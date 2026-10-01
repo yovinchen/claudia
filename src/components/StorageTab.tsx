@@ -364,7 +364,7 @@ export const StorageTab: React.FC = () => {
           {/* Table Selector and Search */}
           <div className="flex items-center gap-3">
             <Select value={selectedTable} onValueChange={setSelectedTable}>
-              <SelectTrigger className="w-[200px] h-8 text-xs">
+              <SelectTrigger className="w-[200px] h-8 text-xs" aria-label={t('storageTab.selectTable')}>
                 <SelectValue placeholder={t('storageTab.selectTable')}>
                   {selectedTable && (
                     <div className="flex items-center gap-2">
@@ -392,6 +392,7 @@ export const StorageTab: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
                 placeholder={t('storageTab.searchInTable')}
+                aria-label={t('storageTab.searchInTable')}
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 h-8 text-xs"
@@ -428,7 +429,7 @@ export const StorageTab: React.FC = () => {
                       <div className="flex items-center gap-1">
                         {column.name}
                         {column.pk && (
-                          <span className="text-[10px] text-primary">PK</span>
+                          <abbr className="text-[10px] text-primary no-underline" title={t('storageTab.primaryKey')}>PK</abbr>
                         )}
                       </div>
                       <div className="text-[10px] font-normal">
@@ -496,16 +497,20 @@ export const StorageTab: React.FC = () => {
                             size="icon"
                             onClick={() => setEditingRow(row)}
                             className="h-6 w-6"
+                            aria-label={t('storageTab.editRow')}
+                            title={t('storageTab.editRow')}
                           >
-                            <Edit3 className="h-3 w-3" />
+                            <Edit3 className="h-3 w-3" aria-hidden="true" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeletingRow(row)}
                             className="h-6 w-6 hover:text-destructive"
+                            aria-label={t('storageTab.deleteRow')}
+                            title={t('storageTab.deleteRow')}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
                           </Button>
                         </div>
                       </td>

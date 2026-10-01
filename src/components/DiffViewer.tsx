@@ -58,7 +58,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
         staged: staged
       });
       
-      setDiffContent(diff || "No changes");
+      setDiffContent(diff || t("diffViewer.noChanges"));
       
       // 计算差异统计
       const lines = diff.split('\n');
@@ -71,11 +71,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
       setDiffStats({ additions, deletions });
     } catch (err) {
       console.error("Failed to load diff:", err);
-      setError(err instanceof Error ? err.message : "Failed to load diff");
+      setError(err instanceof Error ? err.message : t("diffViewer.failedToLoadDiff"));
     } finally {
       setLoading(false);
     }
-  }, [filePath, projectPath, staged]);
+  }, [filePath, projectPath, staged, t]);
   
   // 处理关闭
   const handleClose = useCallback(() => {
@@ -131,7 +131,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                   <p className="text-xs text-muted-foreground font-mono">{filePath}</p>
                 </div>
                 <Badge variant="outline" className="text-xs">
-                  {staged ? "Staged" : "Modified"}
+                  {staged ? t("app.staged") : t("app.modified")}
                 </Badge>
                 {(diffStats.additions > 0 || diffStats.deletions > 0) && (
                   <>
@@ -157,8 +157,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                         size="icon"
                         onClick={handleClose}
                         className="h-8 w-8"
+                        aria-label={t("app.close")}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>

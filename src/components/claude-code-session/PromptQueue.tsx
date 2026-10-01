@@ -4,6 +4,7 @@ import { X, Clock, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface QueuedPrompt {
   id: string;
@@ -22,6 +23,7 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
   onRemove,
   className
 }) => {
+  const { t } = useTranslation();
   if (queuedPrompts.length === 0) return null;
 
   return (
@@ -33,8 +35,8 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
     >
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-2">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Queued Prompts</span>
+          <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <span className="text-sm font-medium">{t('claudeSession.queuedPrompts')}</span>
           <Badge variant="secondary" className="text-xs">
             {queuedPrompts.length}
           </Badge>
@@ -53,9 +55,9 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
               >
                 <div className="flex-shrink-0 mt-0.5">
                   {queuedPrompt.model === "opus" ? (
-                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                    <Sparkles className="h-3.5 w-3.5 text-purple-500" aria-hidden="true" />
                   ) : (
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <Zap className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
                   )}
                 </div>
                 
@@ -71,8 +73,9 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
                   size="icon"
                   className="h-6 w-6 flex-shrink-0"
                   onClick={() => onRemove(queuedPrompt.id)}
+                  aria-label={t('claudeSession.removeQueuedPrompt')}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </motion.div>
             ))}

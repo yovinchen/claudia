@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <Card className="max-w-md w-full">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <AlertCircle className="h-8 w-8 text-destructive flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-8 w-8 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="flex-1 space-y-2">
                   <h3 className="text-lg font-semibold">{i18n.t('errorBoundary.somethingWentWrong')}</h3>
                   <p className="text-sm text-muted-foreground">

@@ -147,10 +147,10 @@ export const GitPanel: React.FC<GitPanelProps> = ({
       setGitStatus(status);
     } catch (err) {
       console.error("Failed to fetch git status:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch git status");
+      setError(err instanceof Error ? err.message : t('gitPanel.failedToFetchStatus'));
       setGitStatus(null);
     }
-  }, [projectPath]);
+  }, [projectPath, t]);
 
   // 获取提交历史
   const fetchCommitHistory = useCallback(async () => {
@@ -497,11 +497,12 @@ export const GitPanel: React.FC<GitPanelProps> = ({
                           onClick={refreshAll}
                           disabled={isRefreshing}
                           className="h-6 w-6"
+                          aria-label={t('app.refresh')}
                         >
                           {isRefreshing ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                           ) : (
-                            <RefreshCw className="h-3 w-3" />
+                            <RefreshCw className="h-3 w-3" aria-hidden="true" />
                           )}
                         </Button>
                       </TooltipTrigger>
@@ -515,8 +516,9 @@ export const GitPanel: React.FC<GitPanelProps> = ({
                     size="icon"
                     onClick={onToggle}
                     className="h-6 w-6"
+                    aria-label={t('app.close')}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3 w-3" aria-hidden="true" />
                   </Button>
                 </div>
               </div>

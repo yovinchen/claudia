@@ -4,7 +4,7 @@ import { Play, Clock, Hash, Bot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import type { AgentRunWithMetrics } from "@/lib/api";
@@ -42,10 +42,10 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   onRunClick,
   className,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const { createAgentTab } = useTabState();
-  const currentLocale = i18n.language;
+  const currentLocale = currentLanguage;
   
   // Calculate pagination
   const totalPages = Math.ceil(runs.length / ITEMS_PER_PAGE);
@@ -64,19 +64,15 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   };
   
   const formatDuration = (ms?: number) => {
-    if (!ms) return "N/A";
+    if (!ms) return t('agents.notAvailable');
     const seconds = Math.floor(ms / 1000);
-    const isZhCN = currentLocale.startsWith('zh');
-    
+
     if (seconds < 60) {
-      return isZhCN ? `${seconds}秒` : `${seconds}s`;
+      return t('agents.durationSeconds', { seconds });
     }
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    if (isZhCN) {
-      return `${minutes}分${remainingSeconds}秒`;
-    }
-    return `${minutes}m ${remainingSeconds}s`;
+    return t('agents.durationMinutesSeconds', { minutes, seconds: remainingSeconds });
   };
   
   const formatTokens = (tokens?: number) => {
@@ -89,10 +85,10 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   
   const getStatusLabel = (status: string) => {
     const statusLabels: Record<string, string> = {
-      completed: t('agents.statusCompleted', 'Completed'),
-      running: t('agents.statusRunning', 'Running'),
-      failed: t('agents.statusFailed', 'Failed'),
-      pending: t('agents.statusPending', 'Pending')
+      completed: t('agents.statusCompleted'),
+      running: t('agents.statusRunning'),
+      failed: t('agents.statusFailed'),
+      pending: t('agents.statusPending')
     };
     return statusLabels[status] || status;
   };

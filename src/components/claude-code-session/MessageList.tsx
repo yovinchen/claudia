@@ -5,6 +5,7 @@ import { StreamMessage } from '../StreamMessage';
 import { Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClaudeStreamMessage } from '../AgentExecution';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface MessageListProps {
   messages: ClaudeStreamMessage[];
@@ -21,6 +22,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
   onLinkDetected,
   className
 }) => {
+  const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const userHasScrolledRef = useRef(false);
@@ -75,14 +77,14 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
           className="text-center space-y-4 max-w-md"
         >
           <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <Terminal className="h-8 w-8 text-primary" />
+            <Terminal className="h-8 w-8 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-2">Ready to start coding</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('claudeSession.readyToStart')}</h3>
             <p className="text-sm text-muted-foreground">
               {projectPath 
-                ? "Enter a prompt below to begin your Claude Code session"
-                : "Select a project folder to begin"}
+                ? t('claudeSession.enterPromptToBegin')
+                : t('claudeSession.selectProjectToBegin')}
             </p>
           </div>
         </motion.div>
@@ -146,7 +148,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
         >
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
-            <span>Claude is thinking...</span>
+            <span>{t('claudeSession.claudeThinking')}</span>
           </div>
         </motion.div>
       )}

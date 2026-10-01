@@ -52,7 +52,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save Claude binary path:", error);
-      onError(error instanceof Error ? error.message : "Failed to save Claude binary path");
+      onError(error instanceof Error ? error.message : t('messages.saveClaudeBinaryPathFailed'));
     } finally {
       setIsValidating(false);
     }
@@ -64,27 +64,27 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileQuestion className="w-5 h-5" />
-            {t('selectClaudeCodeInstallation')}
+            {t('messages.selectClaudeCodeInstallation')}
           </DialogTitle>
           <DialogDescription className="space-y-3 mt-4">
             {checkingInstallations ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">{t('searchingInstallations')}</span>
+                <span className="ml-2 text-sm text-muted-foreground">{t('messages.searchingInstallations')}</span>
               </div>
             ) : hasInstallations ? (
               <p>
-                {t('multipleInstallationsFound')}
+                {t('messages.multipleInstallationsFound')}
               </p>
             ) : (
               <>
                 <p>
-                  {t('claudeCodeNotFoundDialog')}
+                  {t('messages.claudeCodeNotFoundDialog')}
                 </p>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">{t('searchedLocations')}:</span> PATH, /usr/local/bin, 
+                    <span className="font-medium">{t('messages.searchedLocations')}:</span> PATH, /usr/local/bin, 
                     /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
                   </p>
                 </div>
@@ -94,7 +94,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
               <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                 <Terminal className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">{t('validation.required')}:</span> {t('installationTip')}{" "}
+                  <span className="font-medium">{t('validation.required')}:</span> {t('messages.installationTip')}{" "}
                   <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">npm install -g @claude</code>
                 </p>
               </div>
@@ -118,7 +118,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             className="mr-auto"
           >
             <ExternalLink className="w-4 h-4 mr-2" />
-            {t('installationGuide')}
+            {t('messages.installationGuide')}
           </Button>
           <Button
             variant="outline"
@@ -131,7 +131,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             onClick={handleSave} 
             disabled={isValidating || !selectedInstallation || !hasInstallations}
           >
-            {isValidating ? t('validating') : hasInstallations ? t('saveSelection') : t('noInstallationsFound')}
+            {isValidating ? t('messages.validating') : hasInstallations ? t('saveSelection') : t('messages.noInstallationsFound')}
           </Button>
         </DialogFooter>
       </DialogContent>

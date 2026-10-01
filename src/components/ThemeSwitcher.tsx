@@ -28,44 +28,44 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
   showText = false 
 }) => {
   const { theme, setTheme } = useTheme();
-  const { currentLanguage } = useTranslation();
+  const { t } = useTranslation();
 
   const themes = [
     {
       key: 'light',
-      name: currentLanguage === 'zh' ? '浅色' : 'Light',
+      name: t('settings.themeSelector.light'),
       icon: Sun,
-      description: currentLanguage === 'zh' ? '明亮模式' : 'Bright mode'
+      description: t('settings.themeSelector.lightDesc')
     },
     {
       key: 'gray',
-      name: currentLanguage === 'zh' ? '灰色' : 'Gray',
+      name: t('settings.themeSelector.gray'),
       icon: Monitor,
-      description: currentLanguage === 'zh' ? '舒适模式' : 'Comfortable mode'
+      description: t('settings.themeSelector.grayDesc')
     },
     {
       key: 'dark',
-      name: currentLanguage === 'zh' ? '深色' : 'Dark',
+      name: t('settings.themeSelector.dark'),
       icon: Moon,
-      description: currentLanguage === 'zh' ? '暗黑模式' : 'Dark mode'
+      description: t('settings.themeSelector.darkDesc')
     },
     {
       key: 'custom',
-      name: currentLanguage === 'zh' ? '自定义' : 'Custom',
+      name: t('settings.themeSelector.custom'),
       icon: Palette,
-      description: currentLanguage === 'zh' ? '个性化' : 'Personalized'
+      description: t('settings.themeSelector.customDesc')
     }
   ] as const;
 
   const getCurrentThemeIcon = () => {
-    const currentTheme = themes.find(t => t.key === theme);
+    const currentTheme = themes.find(item => item.key === theme);
     const IconComponent = currentTheme?.icon || Monitor;
     return IconComponent;
   };
 
   const getCurrentThemeName = () => {
-    const currentTheme = themes.find(t => t.key === theme);
-    return currentTheme?.name || (currentLanguage === 'zh' ? '主题' : 'Theme');
+    const currentTheme = themes.find(item => item.key === theme);
+    return currentTheme?.name || t('settings.theme');
   };
 
   const handleThemeChange = async (themeKey: string) => {
@@ -85,9 +85,10 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
           variant="ghost"
           size="sm"
           className={cn("gap-2", className)}
-          title={currentLanguage === 'zh' ? '切换主题' : 'Switch theme'}
+          title={t('settings.themeSelector.switchTheme')}
+          aria-label={t('settings.themeSelector.switchThemeCurrent', { theme: getCurrentThemeName() })}
         >
-          <IconComponent className="h-4 w-4" />
+          <IconComponent className="h-4 w-4" aria-hidden="true" />
           {showText && <span className="hidden sm:inline">{getCurrentThemeName()}</span>}
         </Button>
       </DropdownMenuTrigger>
@@ -101,14 +102,17 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
               className="flex items-center justify-between cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <ThemeIcon className="h-4 w-4" />
+                <ThemeIcon className="h-4 w-4" aria-hidden="true" />
                 <div className="flex flex-col">
                   <span className="font-medium">{themeOption.name}</span>
                   <span className="text-xs text-muted-foreground">{themeOption.description}</span>
                 </div>
               </div>
               {theme === themeOption.key && (
-                <Check className="h-4 w-4 text-primary" />
+                <>
+                  <Check className="h-4 w-4 text-primary" aria-hidden="true" />
+                  <span className="sr-only">{t('settings.selected')}</span>
+                </>
               )}
             </DropdownMenuItem>
           );

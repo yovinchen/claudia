@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/hooks/useTranslation";
 import { motion } from "framer-motion";
 import { 
   GitBranch, 
@@ -92,7 +92,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       }
     } catch (err) {
       console.error("Failed to load timeline:", err);
-      setError("Failed to load timeline");
+      setError(t('checkpoint.loadTimelineFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +145,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       await loadTimeline();
     } catch (err) {
       console.error("Failed to create checkpoint:", err);
-      setError("Failed to create checkpoint");
+      setError(t('checkpoint.createCheckpointFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -185,7 +185,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       onCheckpointSelect(checkpoint);
     } catch (err) {
       console.error("Failed to restore checkpoint:", err);
-      setError("Failed to restore checkpoint");
+      setError(t('checkpoint.restoreCheckpointFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -217,7 +217,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       setShowDiffDialog(true);
     } catch (err) {
       console.error("Failed to get diff:", err);
-      setError("Failed to compare checkpoints");
+      setError(t('checkpoint.compareCheckpointsFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -270,11 +270,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               size="icon"
               className="h-6 w-6 -ml-1"
               onClick={() => toggleNodeExpansion(node.checkpoint.id)}
+              aria-label={isExpanded ? t('checkpoint.collapseNode') : t('checkpoint.expandNode')}
+              aria-expanded={isExpanded}
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3" aria-hidden="true" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3 w-3" aria-hidden="true" />
               )}
             </Button>
           )}
@@ -294,7 +296,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     {isCurrent && (
-                      <Badge variant="default" className="text-xs">{t('checkpoint.current') || 'Current'}</Badge>
+                      <Badge variant="default" className="text-xs">{t('checkpoint.current')}</Badge>
                     )}
                     <span className="text-xs font-mono text-muted-foreground">
                       {node.checkpoint.id.slice(0, 8)}
@@ -309,17 +311,17 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                   )}
                   
                   <p className="text-xs text-muted-foreground line-clamp-2">
-                    {node.checkpoint.metadata.userPrompt || t('checkpoint.noPrompt') || 'No prompt'}
+                    {node.checkpoint.metadata.userPrompt || t('checkpoint.noPrompt')}
                   </p>
                   
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      {node.checkpoint.metadata.totalTokens.toLocaleString()} tokens
+                      <Hash className="h-3 w-3" aria-hidden="true" />
+                      {t('claudeSession.tokensCount', { count: node.checkpoint.metadata.totalTokens, formatted: node.checkpoint.metadata.totalTokens.toLocaleString() })}
                     </span>
                     <span className="flex items-center gap-1">
-                      <FileCode className="h-3 w-3" />
-                      {node.checkpoint.metadata.fileChanges} files
+                      <FileCode className="h-3 w-3" aria-hidden="true" />
+                      {t('checkpoint.fileCount', { count: node.checkpoint.metadata.fileChanges })}
                     </span>
                   </div>
                 </div>
@@ -337,11 +339,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleRestoreCheckpoint(node.checkpoint);
                           }}
+                          aria-label={t('checkpoint.restoreToThis')}
                         >
-                          <RotateCcw className="h-3 w-3" />
+                          <RotateCcw className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>{t('checkpoint.restoreToThis') || 'Restore to this checkpoint'}</TooltipContent>
+                      <TooltipContent>{t('checkpoint.restoreToThis')}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                   
@@ -356,11 +359,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleFork(node.checkpoint);
                           }}
+                          aria-label={t('checkpoint.forkFromThis')}
                         >
-                          <GitFork className="h-3 w-3" />
+                          <GitFork className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>{t('checkpoint.forkFromThis') || 'Fork from this checkpoint'}</TooltipContent>
+                      <TooltipContent>{t('checkpoint.forkFromThis')}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                   
@@ -375,11 +379,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleCompare(node.checkpoint);
                           }}
+                          aria-label={t('checkpoint.compareWithAnother')}
                         >
-                          <Diff className="h-3 w-3" />
+                          <Diff className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>{t('checkpoint.compareWithAnother') || 'Compare with another checkpoint'}</TooltipContent>
+                      <TooltipContent>{t('checkpoint.compareWithAnother')}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -413,7 +418,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       {/* Experimental Feature Warning */}
       <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3">
         <div className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+          <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" aria-hidden="true" />
           <div className="text-xs">
             <p className="font-medium text-yellow-600">{t('app.experimentalFeature')}</p>
             <p className="text-yellow-600/80">
@@ -426,8 +431,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <GitBranch className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-sm font-medium">{t('app.timeline')}</h3>
+          <GitBranch className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-sm font-medium">{t('checkpoint.timeline')}</h3>
           {timeline && (
             <Badge variant="outline" className="text-xs">
               {timeline.totalCheckpoints} {t('app.checkpoints')}
@@ -441,7 +446,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
           onClick={() => setShowCreateDialog(true)}
           disabled={isLoading}
         >
-          <Save className="h-3 w-3 mr-1" />
+          <Save className="h-3 w-3 mr-1" aria-hidden="true" />
           {t('checkpoint.createCheckpoint')}
         </Button>
       </div>
@@ -449,7 +454,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       {/* Error display */}
       {error && (
         <div className="flex items-center gap-2 text-xs text-destructive">
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="h-3 w-3" aria-hidden="true" />
           {error}
         </div>
       )}
@@ -471,16 +476,16 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
           <DialogHeader>
             <DialogTitle>{t('checkpoint.createCheckpoint')}</DialogTitle>
             <DialogDescription>
-              {t('checkpoint.createCheckpointDesc') || 'Save the current state of your session with an optional description.'}
+              {t('checkpoint.createCheckpointDesc')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="description">{t('checkpoint.descriptionOptional') || 'Description (optional)'}</Label>
+              <Label htmlFor="description">{t('checkpoint.descriptionOptional')}</Label>
               <Input
                 id="description"
-                placeholder={t('checkpoint.descriptionPlaceholder') || 'e.g., Before major refactoring'}
+                placeholder={t('checkpoint.descriptionPlaceholder')}
                 value={checkpointDescription}
                 onChange={(e) => setCheckpointDescription(e.target.value)}
                 onKeyPress={(e) => {
@@ -514,10 +519,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       <Dialog open={showDiffDialog} onOpenChange={setShowDiffDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{t('checkpoint.checkpointComparison') || 'Checkpoint Comparison'}</DialogTitle>
+            <DialogTitle>{t('checkpoint.checkpointComparison')}</DialogTitle>
             <DialogDescription>
-              Changes between "{selectedCheckpoint?.description || selectedCheckpoint?.id.slice(0, 8)}" 
-              and "{compareCheckpoint?.description || compareCheckpoint?.id.slice(0, 8)}"
+              {t('checkpoint.changesBetween', {
+                from: selectedCheckpoint?.description || selectedCheckpoint?.id.slice(0, 8),
+                to: compareCheckpoint?.description || compareCheckpoint?.id.slice(0, 8),
+              })}
             </DialogDescription>
           </DialogHeader>
           
@@ -527,19 +534,19 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-3">
-                    <div className="text-xs text-muted-foreground">{t('checkpoint.modifiedFiles') || 'Modified Files'}</div>
+                    <div className="text-xs text-muted-foreground">{t('checkpoint.modifiedFiles')}</div>
                     <div className="text-2xl font-bold">{diff.modifiedFiles.length}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3">
-                    <div className="text-xs text-muted-foreground">{t('checkpoint.addedFiles') || 'Added Files'}</div>
+                    <div className="text-xs text-muted-foreground">{t('checkpoint.addedFiles')}</div>
                     <div className="text-2xl font-bold text-green-600">{diff.addedFiles.length}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3">
-                    <div className="text-xs text-muted-foreground">{t('checkpoint.deletedFiles') || 'Deleted Files'}</div>
+                    <div className="text-xs text-muted-foreground">{t('checkpoint.deletedFiles')}</div>
                     <div className="text-2xl font-bold text-red-600">{diff.deletedFiles.length}</div>
                   </CardContent>
                 </Card>
@@ -555,7 +562,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               {/* File lists */}
               {diff.modifiedFiles.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.modifiedFiles') || 'Modified Files'}</h4>
+                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.modifiedFiles')}</h4>
                   <div className="space-y-1">
                     {diff.modifiedFiles.map((file) => (
                       <div key={file.path} className="flex items-center justify-between text-xs">
@@ -572,7 +579,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               
               {diff.addedFiles.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.addedFiles') || 'Added Files'}</h4>
+                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.addedFiles')}</h4>
                   <div className="space-y-1">
                     {diff.addedFiles.map((file) => (
                       <div key={file} className="text-xs font-mono text-green-600">
@@ -585,7 +592,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               
               {diff.deletedFiles.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.deletedFiles') || 'Deleted Files'}</h4>
+                  <h4 className="text-sm font-medium mb-2">{t('checkpoint.deletedFiles')}</h4>
                   <div className="space-y-1">
                     {diff.deletedFiles.map((file) => (
                       <div key={file} className="text-xs font-mono text-red-600">

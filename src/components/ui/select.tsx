@@ -2,6 +2,7 @@ import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const Select = SelectPrimitive.Root;
 
@@ -191,14 +192,15 @@ const SimpleSelect: React.FC<SelectProps> = ({
   value,
   onValueChange,
   options,
-  placeholder = "Select an option",
+  placeholder,
   disabled = false,
   className,
 }) => {
+  const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder ?? t('ui.selectAnOption')} />
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
