@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GitStatus {
@@ -52,7 +51,7 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
     }
 
     // Check if it's a git repository
-    let git_check = Command::new("git")
+    let git_check = crate::utils::process::std_command("git")
         .arg("rev-parse")
         .arg("--git-dir")
         .current_dir(path)
@@ -64,7 +63,7 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
     }
 
     // Get current branch
-    let branch_output = Command::new("git")
+    let branch_output = crate::utils::process::std_command("git")
         .args(&["rev-parse", "--abbrev-ref", "HEAD"])
         .current_dir(path)
         .output()
@@ -78,7 +77,7 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
     let (ahead, behind) = get_tracking_info(path)?;
 
     // Get status
-    let status_output = Command::new("git")
+    let status_output = crate::utils::process::std_command("git")
         .args(&["status", "--porcelain=v1"])
         .current_dir(path)
         .output()
@@ -88,7 +87,7 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
     let (staged, modified, untracked, conflicted) = parse_git_status(&status_text);
 
     // Get remote URL
-    let remote_output = Command::new("git")
+    let remote_output = crate::utils::process::std_command("git")
         .args(&["remote", "get-url", "origin"])
         .current_dir(path)
         .output()
@@ -119,12 +118,12 @@ pub async fn get_git_status(path: String) -> Result<GitStatus, String> {
 
 fn get_tracking_info(path: &Path) -> Result<(u32, u32), String> {
     // Get ahead/behind counts
-    let ahead_output = Command::new("git")
+    let ahead_output = crate::utils::process::std_command("git")
         .args(&["rev-list", "--count", "@{u}..HEAD"])
         .current_dir(path)
         .output();
 
-    let behind_output = Command::new("git")
+    let behind_output = crate::utils::process::std_command("git")
         .args(&["rev-list", "--count", "HEAD..@{u}"])
         .current_dir(path)
         .output();
@@ -257,7 +256,7 @@ pub async fn get_git_history(
     let branch = branch.unwrap_or_else(|| "HEAD".to_string());
 
     // Get commit logs with stats
-    let log_output = Command::new("git")
+    let log_output = crate::utils::process::std_command("git")
         .args(&[
             "log",
             &branch,
@@ -350,7 +349,7 @@ pub async fn get_git_branches(path: String) -> Result<Vec<GitBranch>, String> {
     }
 
     // Get all branches
-    let branch_output = Command::new("git")
+    let branch_output = crate::utils::process::std_command("git")
         .args(&["branch", "-a", "-v"])
         .current_dir(path)
         .output()
@@ -408,7 +407,7 @@ pub async fn get_git_diff(
         return Err(format!("Path does not exist: {}", path.display()));
     }
 
-    let mut cmd = Command::new("git");
+    let mut cmd = crate::utils::process::std_command("git");
     cmd.arg("diff");
 
     if staged.unwrap_or(false) {

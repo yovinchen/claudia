@@ -209,7 +209,7 @@ fn find_which_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
     // Create command with enhanced PATH for production environments
-    let mut cmd = Command::new(command_name);
+    let mut cmd = crate::utils::process::std_command(command_name);
     cmd.arg("claude");
 
     // In production (DMG), we need to ensure proper PATH is set
@@ -425,7 +425,7 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     }
 
     // Also check if claude is available in PATH (without full path)
-    let mut path_cmd = Command::new("claude");
+    let mut path_cmd = crate::utils::process::std_command("claude");
     path_cmd.arg("--version");
     path_cmd.env("PATH", build_enhanced_path());
 
@@ -587,7 +587,7 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 /// Helper function to create a Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
-    let mut cmd = Command::new(program);
+    let mut cmd = crate::utils::process::std_command(program);
 
     info!("Creating command for: {}", program);
 

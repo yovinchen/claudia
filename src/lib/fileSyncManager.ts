@@ -197,6 +197,8 @@ class FileSyncManager {
    */
   private normalizePath(filePath: string): string {
     return filePath
+      .replace(/^\\\\\?\\UNC\\/, '\\\\') // Windows 逐字 UNC 前缀 \\?\UNC\ -> \\
+      .replace(/^\\\\\?\\/, '') // Windows 逐字前缀 \\?\
       .replace(/\\/g, '/') // 统一使用正斜杠
       .replace(/\/+/g, '/') // 移除重复斜杠
       .replace(/\/$/, ''); // 移除结尾斜杠

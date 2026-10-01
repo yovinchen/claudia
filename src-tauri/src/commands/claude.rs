@@ -228,7 +228,7 @@ fn create_command_with_env(program: &str) -> Command {
     let _std_cmd = crate::claude_binary::create_command_with_env(program);
 
     // Create a new tokio Command from the program path
-    let mut tokio_cmd = Command::new(program);
+    let mut tokio_cmd = crate::utils::process::tokio_command(program);
 
     // Copy over all environment variables
     for (key, value) in std::env::vars() {
@@ -634,6 +634,8 @@ pub async fn open_new_session(app: AppHandle, path: Option<String>) -> Result<St
 
     #[cfg(debug_assertions)]
     {
+        // Intentionally visible: this launches an interactive Claude Code session
+        // for the user (debug builds only), so it must keep its console window.
         let mut cmd = std::process::Command::new(claude_path);
 
         // If a path is provided, use it; otherwise use current directory
@@ -1130,11 +1132,11 @@ pub async fn cancel_claude_execution(
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
                         let kill_result = if cfg!(target_os = "windows") {
-                            std::process::Command::new("taskkill")
+                            crate::utils::process::std_command("taskkill")
                                 .args(["/F", "/PID", &pid.to_string()])
                                 .output()
                         } else {
-                            std::process::Command::new("kill")
+                            crate::utils::process::std_command("kill")
                                 .args(["-KILL", &pid.to_string()])
                                 .output()
                         };
@@ -2202,7 +2204,7 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     log::info!("Validating hook command syntax");
 
     // Validate syntax without executing
-    let mut cmd = std::process::Command::new("bash");
+    let mut cmd = crate::utils::process::std_command("bash");
     cmd.arg("-n") // Syntax check only
         .arg("-c")
         .arg(&command);

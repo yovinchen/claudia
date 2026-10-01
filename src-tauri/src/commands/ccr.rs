@@ -2,7 +2,7 @@ use log::{debug, error, info};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -245,7 +245,7 @@ fn find_ccr_via_shell() -> Option<String> {
         vec!["-c", shell_cmd]
     };
 
-    if let Ok(output) = Command::new(shell)
+    if let Ok(output) = crate::utils::process::std_command(shell)
         .args(&shell_args)
         .env("PATH", get_extended_path())
         .stdout(Stdio::piped())
@@ -281,7 +281,7 @@ fn find_ccr_via_shell() -> Option<String> {
                     "source {} && (command -v ccr || command -v claude-code-router)",
                     config
                 );
-                if let Ok(output) = Command::new("sh")
+                if let Ok(output) = crate::utils::process::std_command("sh")
                     .args(&["-c", &cmd])
                     .env("PATH", get_extended_path())
                     .stdout(Stdio::piped())
@@ -368,7 +368,7 @@ fn find_ccr_path() -> Option<String> {
 
     // 然后尝试使用带有扩展 PATH 的 which/command -v 命令
     for name in ["ccr", "claude-code-router"] {
-        if let Ok(output) = Command::new("sh")
+        if let Ok(output) = crate::utils::process::std_command("sh")
             .env("PATH", &extended_path)
             .arg("-c")
             .arg(format!("command -v {} || which {}", name, name))
@@ -496,7 +496,7 @@ fn test_ccr_command(path: &str) -> bool {
 
     // 如果是 .js 文件，使用 node 来执行
     if real_path.ends_with(".js") {
-        let output = Command::new("node")
+        let output = crate::utils::process::std_command("node")
             .arg(&real_path)
             .arg("version")
             .env("PATH", get_extended_path())
@@ -521,7 +521,7 @@ fn test_ccr_command(path: &str) -> bool {
     } else {
         // 直接执行，尝试多种版本参数
         for arg in ["version", "-v", "--version"] {
-            let output = Command::new(path)
+            let output = crate::utils::process::std_command(path)
                 .arg(arg)
                 .env("PATH", get_extended_path())
                 .stdout(Stdio::piped())
@@ -561,7 +561,7 @@ pub async fn get_ccr_version() -> Result<String, String> {
 
     for arg in version_args {
         let output = if ccr_path.contains("node_modules") || ccr_path.contains(".nvm") {
-            Command::new("sh")
+            crate::utils::process::std_command("sh")
                 .arg("-c")
                 .arg(format!("{} {}", ccr_path, arg))
                 .env("PATH", get_extended_path())
@@ -569,7 +569,7 @@ pub async fn get_ccr_version() -> Result<String, String> {
                 .stderr(Stdio::piped())
                 .output()
         } else {
-            Command::new(&ccr_path)
+            crate::utils::process::std_command(&ccr_path)
                 .arg(arg)
                 .env("PATH", get_extended_path())
                 .stdout(Stdio::piped())
@@ -658,7 +658,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
 
         // 直接尝试第一个候选
         let direct_test = if let Some(first) = found_candidates.first() {
-            match Command::new(first)
+            match crate::utils::process::std_command(first)
                 .arg("-v")
                 .env("PATH", get_extended_path())
                 .stdout(Stdio::piped())
@@ -737,7 +737,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
     // 检查服务状态
     let mut cmd = if ccr_path.contains("node_modules") || ccr_path.contains(".nvm") {
         // 如果是 Node.js 安装的路径，可能需要使用 node 来执行
-        let mut c = Command::new("sh");
+        let mut c = crate::utils::process::std_command("sh");
         c.arg("-c")
             .arg(format!("{} status", ccr_path))
             .env("PATH", get_extended_path())
@@ -745,7 +745,7 @@ pub async fn get_ccr_service_status() -> Result<CcrServiceStatus, String> {
             .stderr(Stdio::piped());
         c
     } else {
-        let mut c = Command::new(&ccr_path);
+        let mut c = crate::utils::process::std_command(&ccr_path);
         c.arg("status")
             .env("PATH", get_extended_path())
             .stdout(Stdio::piped())
@@ -949,7 +949,7 @@ pub async fn start_ccr_service() -> Result<CcrServiceInfo, String> {
     }
 
     // 启动服务
-    let _output = Command::new(&ccr_path)
+    let _output = crate::utils::process::std_command(&ccr_path)
         .arg("start")
         .env("PATH", get_extended_path())
         .stdout(Stdio::piped())
@@ -983,7 +983,7 @@ pub async fn stop_ccr_service() -> Result<CcrServiceInfo, String> {
     // 获取 CCR 路径
     let ccr_path = find_ccr_path().ok_or("CCR not found")?;
 
-    let output = Command::new(&ccr_path)
+    let output = crate::utils::process::std_command(&ccr_path)
         .arg("stop")
         .env("PATH", get_extended_path())
         .output()
@@ -1013,7 +1013,7 @@ pub async fn restart_ccr_service() -> Result<CcrServiceInfo, String> {
     // 获取 CCR 路径
     let ccr_path = find_ccr_path().ok_or("CCR not found")?;
 
-    let output = Command::new(&ccr_path)
+    let output = crate::utils::process::std_command(&ccr_path)
         .arg("restart")
         .env("PATH", get_extended_path())
         .output()
@@ -1056,7 +1056,7 @@ pub async fn open_ccr_ui() -> Result<String, String> {
     let ccr_path = find_ccr_path().ok_or("CCR not found")?;
 
     // 执行 ccr ui 命令
-    let _output = Command::new(&ccr_path)
+    let _output = crate::utils::process::std_command(&ccr_path)
         .arg("ui")
         .env("PATH", get_extended_path())
         .spawn()

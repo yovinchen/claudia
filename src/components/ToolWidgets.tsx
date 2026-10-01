@@ -49,8 +49,8 @@ import {
   Hash,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
+import { cn, toArray } from "@/lib/utils";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
@@ -68,11 +68,24 @@ import { motion, AnimatePresence } from "framer-motion";
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
  */
-export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, result: _result }) => {
+export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos: rawTodos, result: _result }) => {
+  const { t } = useTranslation();
+  // todos comes from untrusted tool input; Claude may send it as a JSON string
+  const todos = toArray<any>(rawTodos, "todos").filter((item) => item && typeof item === "object");
   const statusIcons = {
-    completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
-    in_progress: <Clock className="h-4 w-4 text-blue-500 animate-pulse" />,
-    pending: <Circle className="h-4 w-4 text-muted-foreground" />
+    completed: <CheckCircle2 className="h-4 w-4 text-green-500" aria-hidden="true" />,
+    in_progress: <Clock className="h-4 w-4 text-blue-500 animate-pulse" aria-hidden="true" />,
+    pending: <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+  };
+  const statusLabels: Record<string, string> = {
+    completed: t('widgets.todo.status.completed'),
+    in_progress: t('widgets.todo.status.inProgress'),
+    pending: t('widgets.todo.status.pending'),
+  };
+  const priorityLabels: Record<string, string> = {
+    high: t('widgets.todo.priority.high'),
+    medium: t('widgets.todo.priority.medium'),
+    low: t('widgets.todo.priority.low'),
   };
 
   const priorityColors = {
@@ -84,8 +97,8 @@ export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, re
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-3">
-        <FileEdit className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">Todo List</span>
+        <FileEdit className="h-4 w-4 text-primary" aria-hidden="true" />
+        <span className="text-sm font-medium">{t('widgets.todo.title')}</span>
       </div>
       <div className="space-y-2">
         {todos.map((todo, idx) => (
@@ -98,6 +111,7 @@ export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, re
           >
             <div className="mt-0.5">
               {statusIcons[todo.status as keyof typeof statusIcons] || statusIcons.pending}
+              <span className="sr-only">{statusLabels[todo.status] || statusLabels.pending}</span>
             </div>
             <div className="flex-1 space-y-1">
               <p className={cn(
@@ -111,7 +125,7 @@ export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, re
                   variant="outline" 
                   className={cn("text-xs", priorityColors[todo.priority as keyof typeof priorityColors])}
                 >
-                  {todo.priority}
+                  {priorityLabels[todo.priority] || todo.priority}
                 </Badge>
               )}
             </div>
@@ -126,6 +140,7 @@ export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, re
  * Widget for LS (List Directory) tool
  */
 export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, result }) => {
+  const { t } = useTranslation();
   // If we have a result, show it using the LSResultWidget
   if (result) {
     let resultContent = '';
@@ -147,7 +162,7 @@ export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, resul
       <div className="space-y-2">
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
           <FolderOpen className="h-4 w-4 text-primary" />
-          <span className="text-sm">Directory contents for:</span>
+          <span className="text-sm">{t('widgets.ls.directoryContentsFor')}</span>
           <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
             {path}
           </code>
@@ -160,14 +175,14 @@ export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, resul
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
       <FolderOpen className="h-4 w-4 text-primary" />
-      <span className="text-sm">Listing directory:</span>
+      <span className="text-sm">{t('widgets.ls.listingDirectory')}</span>
       <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
         {path}
       </code>
       {!result && (
         <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
           <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-          <span>Loading...</span>
+          <span>{t('app.loading')}</span>
         </div>
       )}
     </div>
@@ -349,6 +364,7 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
  * Widget for Read tool
  */
 export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ filePath, result }) => {
+  const { t } = useTranslation();
   // If we have a result, show it using the ReadResultWidget
   if (result) {
     let resultContent = '';
@@ -370,7 +386,7 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
       <div className="space-y-2">
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
           <FileText className="h-4 w-4 text-primary" />
-          <span className="text-sm">File content:</span>
+          <span className="text-sm">{t('app.fileContent')}:</span>
           <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
             {filePath}
           </code>
@@ -383,14 +399,14 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
       <FileText className="h-4 w-4 text-primary" />
-      <span className="text-sm">Reading file:</span>
+      <span className="text-sm">{t('widgets.read.readingFile')}</span>
       <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
         {filePath}
       </code>
       {!result && (
         <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
           <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-          <span>Loading...</span>
+          <span>{t('app.loading')}</span>
         </div>
       )}
     </div>
@@ -516,17 +532,18 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
           </span>
           {isLargeFile && (
             <span className="text-xs text-muted-foreground">
-              ({lineCount} lines)
+              ({t('widgets.read.lineCount', { count: lineCount })})
             </span>
           )}
         </div>
         {isLargeFile && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
-            {isExpanded ? "Collapse" : "Expand"}
+            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} aria-hidden="true" />
+            {isExpanded ? t('widgets.common.collapse') : t('widgets.common.expand')}
           </button>
         )}
       </div>
@@ -563,7 +580,7 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
       
       {isLargeFile && !isExpanded && (
         <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-zinc-900/30">
-          Click "Expand" to view the full file
+          {t('widgets.read.clickExpandToView')}
         </div>
       )}
     </div>
@@ -607,7 +624,7 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
         {!result && (
           <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-            <span>Searching...</span>
+            <span>{t('widgets.common.searching')}</span>
           </div>
         )}
       </div>
@@ -620,7 +637,7 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
             ? "border-red-500/20 bg-red-500/5 text-red-400" 
             : "border-green-500/20 bg-green-500/5 text-green-300"
         )}>
-          {resultContent || (isError ? "Search failed" : "No matches found")}
+          {resultContent || (isError ? t('widgets.common.searchFailed') : t('widgets.common.noMatchesFound'))}
         </div>
       )}
     </div>
@@ -701,6 +718,7 @@ export const BashWidget: React.FC<{
  * Widget for Write tool
  */
 export const WriteWidget: React.FC<{ filePath: string; content: string; result?: any }> = ({ filePath, content, result: _result }) => {
+  const { t } = useTranslation();
   const [isMaximized, setIsMaximized] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
@@ -776,8 +794,9 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
               size="icon" 
               className="h-8 w-8"
               onClick={() => setIsMaximized(false)}
+              aria-label={t('app.close')}
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
           
@@ -816,19 +835,20 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
       }}
     >
       <div className="px-4 py-2 border-b bg-zinc-950 flex items-center justify-between sticky top-0 z-10">
-        <span className="text-xs font-mono text-muted-foreground">Preview</span>
+        <span className="text-xs font-mono text-muted-foreground">{t('widgets.common.preview')}</span>
         {isLargeContent && truncated && (
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs whitespace-nowrap">
-              Truncated to 1000 chars
+              {t('widgets.write.truncatedTo', { count: 1000 })}
             </Badge>
             <Button 
               variant="ghost" 
               size="icon" 
               className="h-6 w-6"
               onClick={() => setIsMaximized(true)}
+              aria-label={t('widgets.common.maximize')}
             >
-              <Maximize2 className="h-3 w-3" />
+              <Maximize2 className="h-3 w-3" aria-hidden="true" />
             </Button>
           </div>
         )}
@@ -857,7 +877,7 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
         <FileEdit className="h-4 w-4 text-primary" />
-        <span className="text-sm">Writing to file:</span>
+        <span className="text-sm">{t('widgets.write.writingToFile')}</span>
         <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
           {filePath}
         </code>
@@ -936,7 +956,7 @@ export const GrepWidget: React.FC<{
         {!result && (
           <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span>Searching...</span>
+            <span>{t('widgets.common.searching')}</span>
           </div>
         )}
       </div>
@@ -948,7 +968,7 @@ export const GrepWidget: React.FC<{
           <div className="flex items-start gap-3">
             <div className="flex items-center gap-1.5 min-w-[80px]">
               <Code className="h-3 w-3 text-emerald-500" />
-              <span className="text-xs font-medium text-muted-foreground">Pattern</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('widgets.grep.pattern')}</span>
             </div>
             <code className="flex-1 font-mono text-sm bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-md text-emerald-600 dark:text-emerald-400">
               {pattern}
@@ -960,7 +980,7 @@ export const GrepWidget: React.FC<{
             <div className="flex items-start gap-3">
               <div className="flex items-center gap-1.5 min-w-[80px]">
                 <FolderOpen className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">Path</span>
+                <span className="text-xs font-medium text-muted-foreground">{t('widgets.grep.path')}</span>
               </div>
               <code className="flex-1 font-mono text-xs bg-muted px-2 py-1 rounded truncate">
                 {path}
@@ -975,7 +995,7 @@ export const GrepWidget: React.FC<{
                 <div className="flex items-center gap-2 flex-1">
                   <div className="flex items-center gap-1.5">
                     <FilePlus className="h-3 w-3 text-green-500" />
-                    <span className="text-xs font-medium text-muted-foreground">Include</span>
+                    <span className="text-xs font-medium text-muted-foreground">{t('widgets.grep.include')}</span>
                   </div>
                   <code className="font-mono text-xs bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-600 dark:text-green-400">
                     {include}
@@ -987,7 +1007,7 @@ export const GrepWidget: React.FC<{
                 <div className="flex items-center gap-2 flex-1">
                   <div className="flex items-center gap-1.5">
                     <X className="h-3 w-3 text-red-500" />
-                    <span className="text-xs font-medium text-muted-foreground">Exclude</span>
+                    <span className="text-xs font-medium text-muted-foreground">{t('widgets.grep.exclude')}</span>
                   </div>
                   <code className="font-mono text-xs bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded text-red-600 dark:text-red-400">
                     {exclude}
@@ -1006,21 +1026,22 @@ export const GrepWidget: React.FC<{
             <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
               <div className="text-sm text-red-600 dark:text-red-400">
-                {resultContent || "Search failed"}
+                {resultContent || t('widgets.common.searchFailed')}
               </div>
             </div>
           ) : grepResults.length > 0 ? (
             <>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
+                aria-expanded={isExpanded}
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                <span>{grepResults.length} matches found</span>
+                <span>{t('widgets.grep.matchesFound', { count: grepResults.length })}</span>
               </button>
               
               {isExpanded && (
@@ -1071,7 +1092,7 @@ export const GrepWidget: React.FC<{
             <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <Info className="h-5 w-5 text-amber-500 flex-shrink-0" />
               <div className="text-sm text-amber-600 dark:text-amber-400">
-                No matches found for the given pattern.
+                {t('widgets.grep.noMatchesForPattern')}
               </div>
             </div>
           )}
@@ -1131,6 +1152,7 @@ export const EditWidget: React.FC<{
   new_string: string;
   result?: any;
 }> = ({ file_path, old_string, new_string, result: _result }) => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
 
@@ -1144,7 +1166,7 @@ export const EditWidget: React.FC<{
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
         <FileEdit className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">Applying Edit to:</span>
+        <span className="text-sm font-medium">{t('widgets.edit.applyingEditTo')}</span>
         <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
           {file_path}
         </code>
@@ -1162,7 +1184,7 @@ export const EditWidget: React.FC<{
             if (!part.added && !part.removed && part.count && part.count > 8) {
               return (
                 <div key={index} className="px-4 py-1 bg-zinc-900 border-y border-zinc-800 text-center text-zinc-500 text-xs">
-                  ... {part.count} unchanged lines ...
+                  ... {t('widgets.edit.unchangedLines', { count: part.count })} ...
                 </div>
               );
             }
@@ -1208,6 +1230,7 @@ export const EditWidget: React.FC<{
  * Widget for Edit tool result - shows a diff view
  */
 export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
   
@@ -1249,7 +1272,7 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
     <div className="rounded-lg border bg-zinc-950 overflow-hidden">
       <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center gap-2">
         <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
-        <span className="text-xs font-mono text-emerald-400">Edit Result</span>
+        <span className="text-xs font-mono text-emerald-400">{t('widgets.edit.editResult')}</span>
         {filePath && (
           <>
             <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -1296,6 +1319,7 @@ export const MCPWidget: React.FC<{
   input?: any;
   result?: any;
 }> = ({ toolName, input, result: _result }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
@@ -1347,7 +1371,7 @@ export const MCPWidget: React.FC<{
               <Package2 className="h-4 w-4 text-violet-500" />
               <Sparkles className="h-2.5 w-2.5 text-violet-400 absolute -top-1 -right-1" />
             </div>
-            <span className="text-sm font-medium text-violet-600 dark:text-violet-400">MCP Tool</span>
+            <span className="text-sm font-medium text-violet-600 dark:text-violet-400">{t('widgets.mcp.mcpTool')}</span>
           </div>
           {hasInput && (
             <div className="flex items-center gap-2">
@@ -1355,17 +1379,19 @@ export const MCPWidget: React.FC<{
                 variant="outline" 
                 className="text-xs border-violet-500/30 text-violet-600 dark:text-violet-400"
               >
-                ~{inputTokens} tokens
+                {t('widgets.mcp.approxTokens', { count: inputTokens })}
               </Badge>
               {isLargeInput && (
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
+                  aria-label={t('widgets.mcp.toggleParameters')}
+                  aria-expanded={isExpanded}
                   className="text-violet-500 hover:text-violet-600 transition-colors"
                 >
                   {isExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
                   ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
                 </button>
               )}
@@ -1405,7 +1431,7 @@ export const MCPWidget: React.FC<{
               )}>
                 <div className="px-3 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
                   <Code className="h-3 w-3 text-violet-500" />
-                  <span className="text-xs font-mono text-muted-foreground">Parameters</span>
+                  <span className="text-xs font-mono text-muted-foreground">{t('widgets.mcp.parameters')}</span>
                 </div>
                 <div className={cn(
                   "overflow-auto",
@@ -1441,8 +1467,8 @@ export const MCPWidget: React.FC<{
                   onClick={() => setIsExpanded(true)}
                   className="text-xs text-violet-500 hover:text-violet-600 transition-colors inline-flex items-center gap-1"
                 >
-                  <ChevronDown className="h-3 w-3" />
-                  Show full parameters
+                  <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                  {t('widgets.mcp.showFullParameters')}
                 </button>
               </div>
             )}
@@ -1452,7 +1478,7 @@ export const MCPWidget: React.FC<{
         {/* No input message */}
         {!hasInput && (
           <div className="text-xs text-muted-foreground italic px-2">
-            No parameters required
+            {t('widgets.mcp.noParametersRequired')}
           </div>
         )}
       </div>
@@ -1468,11 +1494,12 @@ export const CommandWidget: React.FC<{
   commandMessage: string;
   commandArgs?: string;
 }> = ({ commandName, commandMessage, commandArgs }) => {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border bg-zinc-950/50 overflow-hidden">
       <div className="px-4 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
         <Terminal className="h-3.5 w-3.5 text-blue-500" />
-        <span className="text-xs font-mono text-blue-400">Command</span>
+        <span className="text-xs font-mono text-blue-400">{t('widgets.command.title')}</span>
       </div>
       <div className="p-3 space-y-1">
         <div className="flex items-center gap-2">
@@ -1497,6 +1524,7 @@ export const CommandOutputWidget: React.FC<{
   output: string;
   onLinkDetected?: (url: string) => void;
 }> = ({ output, onLinkDetected }) => {
+  const { t } = useTranslation();
   // Check for links on mount and when output changes
   React.useEffect(() => {
     if (output && onLinkDetected) {
@@ -1552,11 +1580,11 @@ export const CommandOutputWidget: React.FC<{
     <div className="rounded-lg border bg-zinc-950/50 overflow-hidden">
       <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2">
         <ChevronRight className="h-3 w-3 text-green-500" />
-        <span className="text-xs font-mono text-green-400">Output</span>
+        <span className="text-xs font-mono text-green-400">{t('app.output')}</span>
       </div>
       <div className="p-3">
         <pre className="text-sm font-mono text-zinc-300 whitespace-pre-wrap">
-          {output ? parseAnsiToReact(output) : <span className="text-zinc-500 italic">No output</span>}
+          {output ? parseAnsiToReact(output) : <span className="text-zinc-500 italic">{t('app.noOutput')}</span>}
         </pre>
       </div>
     </div>
@@ -1570,6 +1598,7 @@ export const SummaryWidget: React.FC<{
   summary: string;
   leafUuid?: string;
 }> = ({ summary, leafUuid }) => {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 overflow-hidden">
       <div className="px-4 py-3 flex items-start gap-3">
@@ -1579,7 +1608,7 @@ export const SummaryWidget: React.FC<{
           </div>
         </div>
         <div className="flex-1 space-y-1">
-          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">AI Summary</div>
+          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('widgets.summary.title')}</div>
           <p className="text-sm text-foreground">{summary}</p>
           {leafUuid && (
             <div className="text-xs text-muted-foreground mt-2">
@@ -1599,7 +1628,9 @@ export const MultiEditWidget: React.FC<{
   file_path: string;
   edits: Array<{ old_string: string; new_string: string }>;
   result?: any;
-}> = ({ file_path, edits, result: _result }) => {
+}> = ({ file_path, edits: rawEdits, result: _result }) => {
+  const { t } = useTranslation();
+  const edits = toArray<{ old_string: string; new_string: string }>(rawEdits, "edits");
   const [isExpanded, setIsExpanded] = useState(false);
   const language = getLanguage(file_path);
   const { theme } = useTheme();
@@ -1609,7 +1640,7 @@ export const MultiEditWidget: React.FC<{
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
         <FileEdit className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Using tool: MultiEdit</span>
+        <span className="text-sm font-medium">{t('widgets.multiEdit.usingTool', { tool: 'MultiEdit' })}</span>
       </div>
       <div className="ml-6 space-y-2">
         <div className="flex items-center gap-2">
@@ -1620,10 +1651,11 @@ export const MultiEditWidget: React.FC<{
         <div className="space-y-1">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
-            {edits.length} edit{edits.length !== 1 ? 's' : ''}
+            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} aria-hidden="true" />
+            {t('widgets.multiEdit.editCount', { count: edits.length })}
           </button>
           
           {isExpanded && (
@@ -1636,7 +1668,7 @@ export const MultiEditWidget: React.FC<{
                 
                 return (
                   <div key={index} className="space-y-1">
-                    <div className="text-xs font-medium text-muted-foreground">Edit {index + 1}</div>
+                    <div className="text-xs font-medium text-muted-foreground">{t('widgets.multiEdit.editNumber', { index: index + 1 })}</div>
                     <div className="rounded-lg border bg-zinc-950 overflow-hidden text-xs font-mono">
                       <div className="max-h-[300px] overflow-y-auto overflow-x-auto">
                         {diffResult.map((part, partIndex) => {
@@ -1649,7 +1681,7 @@ export const MultiEditWidget: React.FC<{
                           if (!part.added && !part.removed && part.count && part.count > 8) {
                             return (
                               <div key={partIndex} className="px-4 py-1 bg-zinc-900 border-y border-zinc-800 text-center text-zinc-500 text-xs">
-                                ... {part.count} unchanged lines ...
+                                ... {t('widgets.edit.unchangedLines', { count: part.count })} ...
                               </div>
                             );
                           }
@@ -1704,28 +1736,30 @@ export const MultiEditWidget: React.FC<{
 export const MultiEditResultWidget: React.FC<{ 
   content: string;
   edits?: Array<{ old_string: string; new_string: string }>;
-}> = ({ content, edits }) => {
+}> = ({ content, edits: rawEdits }) => {
+  const { t } = useTranslation();
+  const edits = toArray<{ old_string: string; new_string: string }>(rawEdits, "edits");
   // If we have the edits array, show a nice diff view
-  if (edits && edits.length > 0) {
+  if (edits.length > 0) {
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-t-md border-b border-green-500/20">
           <GitBranch className="h-4 w-4 text-green-500" />
           <span className="text-sm font-medium text-green-600 dark:text-green-400">
-            {edits.length} Changes Applied
+            {t('widgets.multiEdit.changesApplied', { count: edits.length })}
           </span>
         </div>
         
         <div className="space-y-4">
           {edits.map((edit, index) => {
             // Split the strings into lines for diff display
-            const oldLines = edit.old_string.split('\n');
-            const newLines = edit.new_string.split('\n');
+            const oldLines = String(edit?.old_string ?? '').split('\n');
+            const newLines = String(edit?.new_string ?? '').split('\n');
             
             return (
               <div key={index} className="border border-border/50 rounded-md overflow-hidden">
                 <div className="px-3 py-1 bg-muted/50 border-b border-border/50">
-                  <span className="text-xs font-medium text-muted-foreground">Change {index + 1}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t('widgets.multiEdit.changeNumber', { index: index + 1 })}</span>
                 </div>
                 
                 <div className="font-mono text-xs">
@@ -1953,9 +1987,10 @@ export const SystemInitializedWidget: React.FC<{
               <div className="space-y-2">
                 <button
                   onClick={() => setMcpExpanded(!mcpExpanded)}
+                  aria-expanded={mcpExpanded}
                   className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Package className="h-3.5 w-3.5" />
+                  <Package className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>{t('app.mcpServices')} ({mcpTools.length})</span>
                   <ChevronDown className={cn(
                     "h-3 w-3 transition-transform",
@@ -1996,7 +2031,7 @@ export const SystemInitializedWidget: React.FC<{
             {/* Show message if no tools */}
             {tools.length === 0 && (
               <div className="text-xs text-muted-foreground italic">
-                No tools available
+                {t('widgets.system.noToolsAvailable')}
               </div>
             )}
           </div>
@@ -2014,6 +2049,7 @@ export const TaskWidget: React.FC<{
   prompt?: string;
   result?: any;
 }> = ({ description, prompt, result: _result }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   
   return (
@@ -2023,7 +2059,7 @@ export const TaskWidget: React.FC<{
           <Bot className="h-4 w-4 text-purple-500" />
           <Sparkles className="h-2.5 w-2.5 text-purple-400 absolute -top-1 -right-1" />
         </div>
-        <span className="text-sm font-medium">Spawning Sub-Agent Task</span>
+        <span className="text-sm font-medium">{t('widgets.task.spawningSubAgent')}</span>
       </div>
       
       <div className="ml-6 space-y-3">
@@ -2031,7 +2067,7 @@ export const TaskWidget: React.FC<{
           <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
             <div className="flex items-center gap-2 mb-1">
               <Zap className="h-3.5 w-3.5 text-purple-500" />
-              <span className="text-xs font-medium text-purple-600 dark:text-purple-400">Task Description</span>
+              <span className="text-xs font-medium text-purple-600 dark:text-purple-400">{t('widgets.task.taskDescription')}</span>
             </div>
             <p className="text-sm text-foreground ml-5">{description}</p>
           </div>
@@ -2041,10 +2077,11 @@ export const TaskWidget: React.FC<{
           <div className="space-y-2">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
+              aria-expanded={isExpanded}
               className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
-              <span>Task Instructions</span>
+              <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} aria-hidden="true" />
+              <span>{t('widgets.task.taskInstructions')}</span>
             </button>
             
             {isExpanded && (
@@ -2068,6 +2105,7 @@ export const WebSearchWidget: React.FC<{
   query: string; 
   result?: any;
 }> = ({ query, result }) => {
+  const { t } = useTranslation();
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   
   // Parse the result to extract all links sections and build a structured representation
@@ -2165,7 +2203,7 @@ export const WebSearchWidget: React.FC<{
       {/* Subtle Search Query Header */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
         <Globe className="h-4 w-4 text-blue-500/70" />
-        <span className="text-xs font-medium uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70">Web Search</span>
+        <span className="text-xs font-medium uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70">{t('widgets.webSearch.title')}</span>
         <span className="text-sm text-muted-foreground/80 flex-1 truncate">{query}</span>
       </div>
       
@@ -2179,13 +2217,13 @@ export const WebSearchWidget: React.FC<{
                 <div className="h-1 w-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div className="h-1 w-1 bg-blue-500 rounded-full animate-bounce"></div>
               </div>
-              <span className="text-sm">Searching...</span>
+              <span className="text-sm">{t('widgets.common.searching')}</span>
             </div>
           ) : searchResults.noResults ? (
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">No results found</span>
+                <span className="text-sm">{t('widgets.webSearch.noResults')}</span>
               </div>
             </div>
           ) : (
@@ -2206,14 +2244,15 @@ export const WebSearchWidget: React.FC<{
                       {/* Toggle Button */}
                       <button
                         onClick={() => toggleSection(idx)}
+                        aria-expanded={isExpanded}
                         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {isExpanded ? (
-                          <ChevronDown className="h-3 w-3" />
+                          <ChevronDown className="h-3 w-3" aria-hidden="true" />
                         ) : (
-                          <ChevronRight className="h-3 w-3" />
+                          <ChevronRight className="h-3 w-3" aria-hidden="true" />
                         )}
-                        <span>{links.length} result{links.length !== 1 ? 's' : ''}</span>
+                        <span>{t('widgets.webSearch.resultCount', { count: links.length })}</span>
                       </button>
                       
                       {/* Links Display */}
@@ -2281,6 +2320,7 @@ export const ThinkingWidget: React.FC<{
   thinking: string;
   signature?: string;
 }> = ({ thinking }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Strip whitespace from thinking content
@@ -2290,6 +2330,7 @@ export const ThinkingWidget: React.FC<{
     <div className="rounded-lg border border-gray-500/20 bg-gray-500/5 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-500/10 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -2298,7 +2339,7 @@ export const ThinkingWidget: React.FC<{
             <Sparkles className="h-2.5 w-2.5 text-gray-400 absolute -top-1 -right-1 animate-pulse" />
           </div>
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400 italic">
-            Thinking...
+            {t('widgets.thinking.thinking')}
           </span>
         </div>
         <ChevronRight className={cn(
@@ -2326,6 +2367,7 @@ export const WebFetchWidget: React.FC<{
   prompt?: string;
   result?: any;
 }> = ({ url, prompt, result }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   
@@ -2387,7 +2429,7 @@ export const WebFetchWidget: React.FC<{
         {/* URL Display */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
           <Globe className="h-4 w-4 text-purple-500/70" />
-          <span className="text-xs font-medium uppercase tracking-wider text-purple-600/70 dark:text-purple-400/70">Fetching</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-purple-600/70 dark:text-purple-400/70">{t('widgets.webFetch.fetching')}</span>
           <button
             onClick={handleUrlClick}
             className="text-sm text-foreground/80 hover:text-foreground flex-1 truncate text-left hover:underline decoration-purple-500/50"
@@ -2401,11 +2443,12 @@ export const WebFetchWidget: React.FC<{
           <div className="ml-6 space-y-1">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
+              aria-expanded={isExpanded}
               className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
-              <Info className="h-3 w-3" />
-              <span>Analysis Prompt</span>
+              <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} aria-hidden="true" />
+              <Info className="h-3 w-3" aria-hidden="true" />
+              <span>{t('widgets.webFetch.analysisPrompt')}</span>
             </button>
             
             {isExpanded && (
@@ -2428,7 +2471,7 @@ export const WebFetchWidget: React.FC<{
               <div className="h-1 w-1 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
               <div className="h-1 w-1 bg-purple-500 rounded-full animate-bounce"></div>
             </div>
-            <span className="text-sm">Fetching content from {getDomain(url)}...</span>
+            <span className="text-sm">{t('widgets.webFetch.fetchingFrom', { domain: getDomain(url) })}</span>
           </div>
         </div>
       ) : fetchedContent ? (
@@ -2437,7 +2480,7 @@ export const WebFetchWidget: React.FC<{
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">Failed to fetch content</span>
+                <span className="text-sm font-medium">{t('widgets.webFetch.fetchFailed')}</span>
               </div>
               <pre className="mt-2 text-xs font-mono text-muted-foreground whitespace-pre-wrap">
                 {fetchedContent}
@@ -2449,22 +2492,23 @@ export const WebFetchWidget: React.FC<{
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FileText className="h-3.5 w-3.5" />
-                  <span>Content from {getDomain(url)}</span>
+                  <span>{t('widgets.webFetch.contentFrom', { domain: getDomain(url) })}</span>
                 </div>
                 {isTruncated && (
                   <button
                     onClick={() => setShowFullContent(!showFullContent)}
+                    aria-expanded={showFullContent}
                     className="text-xs text-purple-500 hover:text-purple-600 transition-colors flex items-center gap-1"
                   >
                     {showFullContent ? (
                       <>
-                        <ChevronUp className="h-3 w-3" />
-                        Show less
+                        <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                        {t('widgets.common.showLess')}
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-3 w-3" />
-                        Show full content
+                        <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                        {t('widgets.webFetch.showFullContent')}
                       </>
                     )}
                   </button>
@@ -2493,7 +2537,7 @@ export const WebFetchWidget: React.FC<{
           <div className="px-3 py-2">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Info className="h-4 w-4" />
-              <span className="text-sm">No content returned</span>
+              <span className="text-sm">{t('widgets.webFetch.noContent')}</span>
             </div>
           </div>
         </div>
@@ -2506,21 +2550,17 @@ export const WebFetchWidget: React.FC<{
  * Widget for TodoRead tool - displays todos with advanced viewing capabilities
  */
 export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todos: inputTodos, result }) => {
+  const { t } = useTranslation();
   // Extract todos from result if not directly provided
-  let todos: any[] = inputTodos || [];
+  let todos: any[] = toArray<any>(inputTodos, "todos");
   if (!todos.length && result) {
     if (typeof result === 'object' && Array.isArray(result.todos)) {
       todos = result.todos;
     } else if (typeof result.content === 'string') {
-      try {
-        const parsed = JSON.parse(result.content);
-        if (Array.isArray(parsed)) todos = parsed;
-        else if (parsed.todos) todos = parsed.todos;
-      } catch (e) {
-        // Not JSON, ignore
-      }
+      todos = toArray<any>(result.content, "todos");
     }
   }
+  todos = todos.filter((item) => item && typeof item === "object");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -2530,40 +2570,40 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
   // Status icons and colors
   const statusConfig = {
     completed: {
-      icon: <CheckCircle2 className="h-4 w-4" />,
+      icon: <CheckCircle2 className="h-4 w-4" aria-hidden="true" />,
       color: "text-green-500",
       bgColor: "bg-green-500/10",
       borderColor: "border-green-500/20",
-      label: "Completed"
+      label: t('widgets.todo.status.completed')
     },
     in_progress: {
-      icon: <Clock className="h-4 w-4 animate-pulse" />,
+      icon: <Clock className="h-4 w-4 animate-pulse" aria-hidden="true" />,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
       borderColor: "border-blue-500/20",
-      label: "In Progress"
+      label: t('widgets.todo.status.inProgress')
     },
     pending: {
-      icon: <Circle className="h-4 w-4" />,
+      icon: <Circle className="h-4 w-4" aria-hidden="true" />,
       color: "text-muted-foreground",
       bgColor: "bg-muted/50",
       borderColor: "border-muted",
-      label: "Pending"
+      label: t('widgets.todo.status.pending')
     },
     cancelled: {
-      icon: <X className="h-4 w-4" />,
+      icon: <X className="h-4 w-4" aria-hidden="true" />,
       color: "text-red-500",
       bgColor: "bg-red-500/10",
       borderColor: "border-red-500/20",
-      label: "Cancelled"
+      label: t('widgets.todo.status.cancelled')
     }
   };
 
   // Filter todos based on search and status
   const filteredTodos = todos.filter(todo => {
     const matchesSearch = !searchQuery || 
-      todo.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (todo.id && todo.id.toLowerCase().includes(searchQuery.toLowerCase()));
+      String(todo.content ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (todo.id && String(todo.id).toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || todo.status === statusFilter;
     
@@ -2616,8 +2656,8 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
 
   // Export todos as Markdown
   const exportAsMarkdown = () => {
-    let markdown = "# Todo List\n\n";
-    markdown += `**Total**: ${stats.total} | **Completed**: ${stats.completed} | **In Progress**: ${stats.inProgress} | **Pending**: ${stats.pending}\n\n`;
+    let markdown = `# ${t('widgets.todo.title')}\n\n`;
+    markdown += `**${t('widgets.todoRead.total')}**: ${stats.total} | **${statusConfig.completed.label}**: ${stats.completed} | **${statusConfig.in_progress.label}**: ${stats.inProgress} | **${statusConfig.pending.label}**: ${stats.pending}\n\n`;
     
     const statusGroups = ["pending", "in_progress", "completed", "cancelled"];
     statusGroups.forEach(status => {
@@ -2628,7 +2668,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
           const checkbox = todo.status === "completed" ? "[x]" : "[ ]";
           markdown += `- ${checkbox} ${todo.content}${todo.id ? ` (${todo.id})` : ""}\n`;
           if (todo.dependencies?.length > 0) {
-            markdown += `  - Dependencies: ${todo.dependencies.join(", ")}\n`;
+            markdown += `  - ${t('widgets.todoRead.dependencies')}: ${todo.dependencies.join(", ")}\n`;
           }
         });
         markdown += "\n";
@@ -2683,14 +2723,14 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
               {todo.dependencies?.length > 0 && (
                 <div className="flex items-center gap-1">
                   <GitBranch className="h-3 w-3" />
-                  <span>{todo.dependencies.length} deps</span>
+                  <span>{t('widgets.todoRead.depsCount', { count: todo.dependencies.length })}</span>
                 </div>
               )}
             </div>
             
             {/* Expanded details */}
             <AnimatePresence>
-              {isExpanded && todo.dependencies?.length > 0 && (
+              {isExpanded && Array.isArray(todo.dependencies) && todo.dependencies.length > 0 && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -2698,7 +2738,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
                   className="overflow-hidden"
                 >
                   <div className="pt-2 mt-2 border-t space-y-1">
-                    <span className="text-xs font-medium text-muted-foreground">Dependencies:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{t('widgets.todoRead.dependencies')}:</span>
                     <div className="flex flex-wrap gap-1">
                       {todo.dependencies.map((dep: string) => (
                         <Badge
@@ -2726,7 +2766,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
       {/* Overall Progress */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium">Overall Progress</h4>
+          <h4 className="text-sm font-medium">{t('widgets.todoRead.overallProgress')}</h4>
           <span className="text-2xl font-bold text-primary">{stats.completionRate}%</span>
         </div>
         <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
@@ -2764,7 +2804,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Activity className="h-4 w-4 text-primary" />
-          <h4 className="text-sm font-medium">Activity Overview</h4>
+          <h4 className="text-sm font-medium">{t('widgets.todoRead.activityOverview')}</h4>
         </div>
         <div className="space-y-2">
           {Object.entries(statusConfig).map(([status, config]) => {
@@ -2816,7 +2856,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
               ))}
               {todos.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">
-                  No todos
+                  {t('widgets.todoRead.noTodos')}
                 </p>
               )}
             </div>
@@ -2882,9 +2922,9 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
         <div className="flex items-center gap-3">
           <ListChecks className="h-5 w-5 text-primary" />
           <div>
-            <h3 className="text-sm font-medium">Todo Overview</h3>
+            <h3 className="text-sm font-medium">{t('widgets.todoRead.overview')}</h3>
             <p className="text-xs text-muted-foreground">
-              {stats.total} total • {stats.completed} completed • {stats.completionRate}% done
+              {t('widgets.todoRead.summary', { total: stats.total, completed: stats.completed, rate: stats.completionRate })}
             </p>
           </div>
         </div>
@@ -2897,7 +2937,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
             className="h-7 text-xs"
             onClick={exportAsJson}
           >
-            <Download className="h-3 w-3 mr-1" />
+            <Download className="h-3 w-3 mr-1" aria-hidden="true" />
             JSON
           </Button>
           <Button
@@ -2906,7 +2946,7 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
             className="h-7 text-xs"
             onClick={exportAsMarkdown}
           >
-            <Download className="h-3 w-3 mr-1" />
+            <Download className="h-3 w-3 mr-1" aria-hidden="true" />
             Markdown
           </Button>
         </div>
@@ -2915,10 +2955,11 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             type="text"
-            placeholder="Search todos..."
+            placeholder={t('widgets.todoRead.searchPlaceholder')}
+            aria-label={t('widgets.todoRead.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9"
@@ -2934,8 +2975,9 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
                 variant={statusFilter === status ? "default" : "ghost"}
                 className="h-7 px-2 text-xs"
                 onClick={() => setStatusFilter(status)}
+                aria-pressed={statusFilter === status}
               >
-                {status === "all" ? "All" : statusConfig[status as keyof typeof statusConfig]?.label}
+                {status === "all" ? t('widgets.todoRead.all') : statusConfig[status as keyof typeof statusConfig]?.label}
                 {status === "all" && (
                   <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
                     {stats.total}
@@ -2951,20 +2993,20 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="list" className="text-xs">
-            <LayoutList className="h-4 w-4 mr-1" />
-            List
+            <LayoutList className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t('widgets.todoRead.view.list')}
           </TabsTrigger>
           <TabsTrigger value="board" className="text-xs">
-            <LayoutGrid className="h-4 w-4 mr-1" />
-            Board
+            <LayoutGrid className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t('widgets.todoRead.view.board')}
           </TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">
-            <GitBranch className="h-4 w-4 mr-1" />
-            Timeline
+            <GitBranch className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t('widgets.todoRead.view.timeline')}
           </TabsTrigger>
           <TabsTrigger value="stats" className="text-xs">
-            <BarChart3 className="h-4 w-4 mr-1" />
-            Stats
+            <BarChart3 className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t('widgets.todoRead.view.stats')}
           </TabsTrigger>
         </TabsList>
 
@@ -2982,8 +3024,8 @@ export const TodoReadWidget: React.FC<{ todos?: any[]; result?: any }> = ({ todo
             {filteredTodos.length === 0 && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 {searchQuery || statusFilter !== "all" 
-                  ? "No todos match your filters" 
-                  : "No todos available"}
+                  ? t('widgets.todoRead.noMatchingTodos')
+                  : t('widgets.todoRead.noTodosAvailable')}
               </div>
             )}
           </div>

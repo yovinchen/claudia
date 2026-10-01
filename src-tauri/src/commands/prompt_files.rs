@@ -399,8 +399,19 @@ pub async fn prompt_file_import_from_claude_md(
     info!("Importing from CLAUDE.md: {:?}", source_path);
 
     // 1. 确定源文件路径
-    let claude_md_path = if let Some(path) = source_path {
-        PathBuf::from(path)
+    let claude_md_path = if let Some(path) = source_path.filter(|p| !p.trim().is_empty()) {
+        let path = path.trim();
+        let mut p = if path == "~" || path.starts_with("~/") || path.starts_with("~\\") {
+            let home = dirs::home_dir().ok_or("无法获取用户主目录".to_string())?;
+            if path.len() > 2 { home.join(&path[2..]) } else { home }
+        } else {
+            PathBuf::from(path)
+        };
+        // Allow passing a project directory: read <dir>/CLAUDE.md
+        if p.is_dir() {
+            p = p.join("CLAUDE.md");
+        }
+        p
     } else {
         // 默认从 ~/.claude/CLAUDE.md 导入
         get_claude_config_dir()?.join("CLAUDE.md")
@@ -408,7 +419,7 @@ pub async fn prompt_file_import_from_claude_md(
 
     // 2. 读取文件内容
     if !claude_md_path.exists() {
-        return Err("CLAUDE.md 文件不存在".to_string());
+        return Err(format!("CLAUDE.md 文件不存在: {}", claude_md_path.display()));
     }
 
     let content = fs::read_to_string(&claude_md_path)

@@ -3,7 +3,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 export interface Tab {
   id: string;
-  type: 'chat' | 'agent' | 'projects' | 'usage' | 'mcp' | 'settings' | 'agent-execution' | 'create-agent' | 'import-agent';
+  type: 'chat' | 'agent' | 'projects' | 'usage' | 'mcp' | 'settings' | 'prompt-files' | 'agent-execution' | 'create-agent' | 'import-agent';
   title: string;
   sessionId?: string;  // for chat tabs
   sessionData?: any; // for chat tabs - stores full session object
@@ -113,7 +113,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addTab = useCallback((tabData: Omit<Tab, 'id' | 'order' | 'createdAt' | 'updatedAt'>): string => {
     if (tabs.length >= MAX_TABS) {
-      throw new Error(t('maximumTabsReached', { max: MAX_TABS }));
+      throw new Error(t('messages.maximumTabsReached', { max: MAX_TABS }));
     }
 
     const newTab: Tab = {
